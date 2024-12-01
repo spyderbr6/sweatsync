@@ -1,11 +1,26 @@
 import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
+import { uploadData } from 'aws-amplify/storage';
+import { useAuthenticator } from '@aws-amplify/ui-react';
+
 
 const client = generateClient<Schema>();
 
 function App() {
   const [workoutposts, setworkoutposts] = useState<Array<Schema["PostforWorkout"]["type"]>>([]);
+  const [content, setContent] = useState<string>(""); // Stores the post content
+  const [file, setFile] = useState<File | undefined>(); // Stores the selected file
+  const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({}); // Stores image URLs for each post
+
+  const handleContentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setContent(event.target.value); //capture user message input
+  };
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Set the selected file when a new file is chosen
+    const selectedFile = event.target.files?.[0];
+    setFile(selectedFile);
+  };
 
   useEffect(() => {
     client.models.PostforWorkout.observeQuery().subscribe({
@@ -14,16 +29,41 @@ function App() {
   }, []);
 
   function createTodo() {
-    client.models.PostforWorkout.create({ content: window.prompt("Todo content") });
+    if (content && file) {
+      try {
+
+        uploadData({
+          path: `picture-submissions/${file.name}`,
+          data: file,
+        })
+
+        client.models.PostforWorkout.create({ content });
+      } catch (error) {
+        console.error("Error Creating Post");
+
+      }
+    }
   }
 
   return (
     <main>
-      <h1>My todos</h1>
-      <button onClick={createTodo}>+ new</button>
+            <h1>My Workouts</h1>
+      <input 
+          type="text" 
+          value={content}
+          onChange={handleContentChange}
+          placeholder="How did your workout go?"
+        />
+         <input 
+          type="file" 
+          onChange={handleFileChange} 
+          accept="image/*"
+        />
+
+      <button onClick={createTodo}>Create Post</button>
       <ul>
         {workoutposts.map((PostforWorkout) => (
-          <li key={PostforWorkout.id}>{PostforWorkout.content}</li>
+          <li key={PostforWorkout.id}>{PostforWorkout.content}{PostforWorkout.url}{PostforWorkout.createdAt}</li>
         ))}
       </ul>
 
