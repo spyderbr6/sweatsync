@@ -86,9 +86,9 @@ function App() {
       <button
         onClick={createPost}
         className="create-button"
-      >
-        Create Post
-      </button>
+          disabled={loading}
+        >
+          {loading ? "Creating..." : "Create Post"}      </button>
     </div>
 
     <div className="posts-container">
