@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { uploadData } from 'aws-amplify/storage';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+//import { useAuthenticator } from '@aws-amplify/ui-react';
 
 
 const client = generateClient<Schema>();
@@ -11,7 +11,7 @@ function App() {
   const [workoutposts, setworkoutposts] = useState<Array<Schema["PostforWorkout"]["type"]>>([]);
   const [content, setContent] = useState<string>(""); // Stores the post content
   const [file, setFile] = useState<File | undefined>(); // Stores the selected file
-  const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({}); // Stores image URLs for each post
+  //const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({}); // Stores image URLs for each post
 
   const handleContentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setContent(event.target.value); //capture user message input
