@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { uploadData, getUrl } from 'aws-amplify/storage';
-import './App.css'; // Import external CSS file
+//import './App.css'; // Import external CSS file
 //import { useAuthenticator } from '@aws-amplify/ui-react';
 //import { FileUploader } from '@aws-amplify/ui-react-storage';
 //import '@aws-amplify/ui-react/styles.css';
@@ -81,7 +81,7 @@ function App() {
   }
 
   return (
-    <main className="main-container" style={{ paddingTop: '150px' }}>
+    <main className="main-container">
   <div className="header-input-container">
     <div className="header-container">
       <img src="/sweatsync_logo.gif" alt="SweatSync Logo" className="logo" style={{ height: '100px', width: 'auto' }} />
@@ -110,7 +110,7 @@ function App() {
     </div>
   </div>
 
-  <div className="posts-container" style={{ paddingTop: '100px' }}>
+  <div className="posts-container">
     {workoutposts.map((PostforWorkout) => (
       <div
         key={PostforWorkout.id}
