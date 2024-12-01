@@ -1,12 +1,15 @@
 body {
   margin: 0;
   background: linear-gradient(180deg, #f5f5f5, #ffffff);
-  display: flex;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   height: 100vh;
   width: 100vw;
-  justify-content: center;
-  align-items: center;
+  display: block; /* Change from flex to block to allow natural stacking */
+}
+
+.main-container {
+  margin: 0 auto; /* Center the main container horizontally */
+  padding: 20px;  /* Add padding for breathing space */
 }
 
 main {
@@ -154,4 +157,25 @@ a:hover {
 
 .post-date {
   color: #888;
+}
+.header-input-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+}
+
+.input-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }

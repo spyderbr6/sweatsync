@@ -1,6 +1,5 @@
 /* Main container styling */
 .main-container {
-  padding: 20px;
   font-family: Arial, sans-serif;
 }
 
@@ -63,7 +62,10 @@
 .delete-button:hover {
   color: #e60000;
 }
+.posts-container{
+padding-top: 5px
 
+}
 .post-image {
   width: 100%;
   height: auto;
@@ -85,7 +87,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px;
   background-color: #fff;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   position: sticky;
