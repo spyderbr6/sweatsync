@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
-import { uploadData } from 'aws-amplify/storage';
+import { uploadData, getUrl } from 'aws-amplify/storage';
 import './App.css'; // Import external CSS file
 //import { useAuthenticator } from '@aws-amplify/ui-react';
+//import { FileUploader } from '@aws-amplify/ui-react-storage';
+//import '@aws-amplify/ui-react/styles.css';
+//import { StorageImage } from '@aws-amplify/ui-react-storage';
 
 
 const client = generateClient<Schema>();
@@ -12,7 +15,7 @@ function App() {
   const [workoutposts, setworkoutposts] = useState<Array<Schema["PostforWorkout"]["type"]>>([]);
   const [content, setContent] = useState<string>(""); // Stores the post content
   const [file, setFile] = useState<File | undefined>(); // Stores the selected file
-  //const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({}); // Stores image URLs for each post
+  const [imageUrls,setImageUrls] = useState<{ [key: string]: string }>({}); // Stores image URLs for each post
   const [loading, setLoading] = useState<boolean>(false); // Tracks loading state
 
   const handleContentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,7 +29,17 @@ function App() {
 
   useEffect(() => {
     const subscription = client.models.PostforWorkout.observeQuery().subscribe({
-      next: (data) => setworkoutposts([...data.items]),
+      next: async (data) => {
+        setworkoutposts([...data.items]);
+        const urls: { [key: string]: string } = {};
+        for (const item of data.items) {
+          if (item.url) {
+            const linkToStorageFile = await getUrl({ path: item.url });
+            urls[item.id] = linkToStorageFile.url.toString();
+          }
+        }
+        setImageUrls(urls);
+      },
     });
 
     return () => subscription.unsubscribe();
@@ -37,7 +50,8 @@ function App() {
       setLoading(true);
       try {
         // Upload file to storage
-        const path = `picture-submissions/${file.name}`;
+        const uniqueFileName = `${Date.now()}-${file.name}`;
+        const path = `picture-submissions/${uniqueFileName}`;
         await uploadData({ path, data: file });
 
         // Create post
@@ -67,8 +81,11 @@ function App() {
   }
 
   return (
-    <main className="main-container">
-    <h1>My Workouts</h1>
+    <main className="main-container" style={{ paddingTop: '150px' }}>
+  <div className="header-input-container">
+    <div className="header-container">
+      <img src="/sweatsync_logo.gif" alt="SweatSync Logo" className="logo" style={{ height: '100px', width: 'auto' }} />
+    </div>
     <div className="input-container">
       <input 
         type="text" 
@@ -86,40 +103,42 @@ function App() {
       <button
         onClick={createPost}
         className="create-button"
-          disabled={loading}
-        >
-          {loading ? "Creating..." : "Create Post"}      </button>
+        disabled={loading}
+      >
+        {loading ? "Creating..." : "Create Post"}
+      </button>
     </div>
+  </div>
 
-    <div className="posts-container">
-      {workoutposts.map((PostforWorkout) => (
-        <div
-          key={PostforWorkout.id}
-          className="post-card"
+  <div className="posts-container" style={{ paddingTop: '100px' }}>
+    {workoutposts.map((PostforWorkout) => (
+      <div
+        key={PostforWorkout.id}
+        className="post-card"
+      >
+        <button
+          onClick={() => deletePost(PostforWorkout.id)}
+          className="delete-button"
         >
-          <button
-            onClick={() => deletePost(PostforWorkout.id)}
-            className="delete-button"
-          >
-            ✕
-          </button>
-          <img
-              src={PostforWorkout.url || "/picsoritdidnthappen.webp"}
-              alt="Post workout visual"
-              className="post-image"
-            />
-          <div>
-            <p className="post-content">
-              {PostforWorkout.content}
-            </p>
-            <small className="post-date">
-              Created at: {new Date(PostforWorkout.createdAt).toLocaleString()}
-            </small>
-          </div>
+          ✕
+        </button>
+        <img
+          src={imageUrls[PostforWorkout.id] || "/picsoritdidnthappen.webp"}
+          alt="Post workout visual"
+          className="post-image"
+        />
+        <div>
+          <p className="post-content">
+            {PostforWorkout.content}
+          </p>
+          <small className="post-date">
+            Created at: {new Date(PostforWorkout.createdAt).toLocaleString()}
+          </small>
         </div>
-      ))}
-    </div>
-  </main>
+      </div>
+    ))}
+  </div>
+</main>
   );
 }
 
