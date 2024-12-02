@@ -10,7 +10,6 @@ body {
 
 /* Main Container */
 .main-container {
-  padding: 20px;
   font-family: Arial, sans-serif;
 }
 
@@ -41,18 +40,6 @@ body {
 
 .no-shadow {
   box-shadow: none;
-}
-
-.account-icon img {
-  position: absolute;
-  height: 60px;
-  width: 60px;
-  padding-right: 20px;
-  top: 10px;  /* Adjust the top distance as necessary */
-  right: 10px; /* Adjust the right distance as necessary */
-  display: flex;
-  align-items: center;
-
 }
 
 /* Input Container Styles */
@@ -117,7 +104,6 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
-  padding-top: 100px;
 }
 
 /* Individual Post Card Styles */
@@ -223,6 +209,65 @@ li:hover {
   background: #ffe3ec;
 }
 
+.account-icon img {
+  position: relative;
+  height: 60px;
+  width: 60px;
+  top: 10px;  /* Adjust the top distance as necessary */
+  right: 20px; /* Adjust the right distance as necessary */
+  display: flex;
+  align-items: center;
+
+}
+
+/* Dropdown container */
+.dropdown {
+  display: inline-block;
+  color: grey;
+
+}
+
+/* Dropdown toggle (account icon) */
+.dropdown-toggle {
+  cursor: pointer;
+}
+
+/* Dropdown menu styles */
+.dropdown-menu {
+  display: none; /* Hidden by default */
+  position: absolute;
+  top: 100%; /* Position right below the dropdown toggle */
+  right: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-width: 150px;
+  z-index: 1000;
+
+}
+
+/* Dropdown item styles */
+.dropdown-item {
+  padding: 10px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: grey;
+
+}
+
+.dropdown-item:hover {
+  background-color: #af0899;
+}
+
+/* Show dropdown when the 'show' class is added */
+.dropdown-menu.show {
+  display: block;
+}
 /* Responsive Styles */
 @media (max-width: 768px) {
   .header-container {
