@@ -10,7 +10,8 @@ const schema = a.schema({
   PostforWorkout: a
     .model({
       content: a.string(),
-      url: a.string()
+      url: a.string(),
+      username: a.string()
     })
     .authorization((allow) => [allow.publicApiKey()]),
 });
