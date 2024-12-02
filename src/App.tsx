@@ -111,7 +111,8 @@ function App() {
             type="text"
             value={content}
             onChange={handleContentChange}
-            placeholder="How did your workout go?"
+            placeholder={`${user?.signInDetails?.loginId || 'User'}, how did your workout go?`}
+
             className="text-input"
           />
           <label htmlFor="file-upload" className="file-upload-label">
