@@ -44,7 +44,7 @@ body {
 
 /* Input Container Styles */
 .input-container {
-  display: flex;
+  display: contents;
   align-items: center;
   gap: 10px;
 }
