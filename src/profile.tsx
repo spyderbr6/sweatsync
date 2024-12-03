@@ -18,7 +18,7 @@ function ProfilePage() {
     <div className="profile-page">
       <h1>{user?.username}'s Profile</h1>
       <div className="profile-info">
-        {user?.pic ? (
+        {user?.username ? (
           <img src={user?.username} alt="Profile" className="profile-picture" />
         ) : (
           <div className="profile-picture-placeholder">No profile picture</div>
