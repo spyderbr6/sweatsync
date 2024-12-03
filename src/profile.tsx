@@ -7,6 +7,11 @@ function ProfilePage() {
   //const [profilePicture, setProfilePicture] = useState<File | null>(null);
  //const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
 
+
+ //FIGURE OUT HOW TO EXTEND models.d.ts to grab pics/emails/etc
+ //        <p><strong>Username:</strong> {user?.username}</p>
+ //<p><strong>Email:</strong> {user?.email}</p>
+// <p><strong>Preferred Name:</strong> {user?.preferred_username || user?.username}</p>
   
 
   return (
@@ -14,14 +19,14 @@ function ProfilePage() {
       <h1>{user?.username}'s Profile</h1>
       <div className="profile-info">
         {user?.pic ? (
-          <img src={user.pic} alt="Profile" className="profile-picture" />
+          <img src={user?.username} alt="Profile" className="profile-picture" />
         ) : (
           <div className="profile-picture-placeholder">No profile picture</div>
         )}
         <button>Upload Profile Picture</button>
         <p><strong>Username:</strong> {user?.username}</p>
-        <p><strong>Email:</strong> {user?.email}</p>
-        <p><strong>Preferred Name:</strong> {user?.preferred_username || user?.username}</p>
+        <p><strong>Email:</strong> {user?.username}</p>
+        <p><strong>Preferred Name:</strong> {user?.username || user?.username}</p>
       </div>
     </div>
   );
