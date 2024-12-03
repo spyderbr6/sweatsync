@@ -12,7 +12,17 @@ Amplify.configure(outputs);
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Authenticator components={{ Header: () => <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}><img src="sweatsync_logo.gif" alt="Logo" style={{ width: '200px', height: 'auto' }} /></div> }}
-      signUpAttributes={['preferred_username']}>
+      signUpAttributes={['preferred_username']}
+      formFields={{
+        signUp: {
+          preferred_username: {
+            label: 'Preferred Username',
+            isRequired: true,
+            placeholder: 'Enter your preferred username',
+            order: 1
+          },
+        },
+      }}>
       <App />
     </Authenticator>
   </React.StrictMode>
