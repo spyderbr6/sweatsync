@@ -4,8 +4,6 @@ import { generateClient } from "aws-amplify/data";
 import { uploadData, getUrl } from 'aws-amplify/storage';
 //import './App.css'; // Import external CSS file
 import { useAuthenticator } from '@aws-amplify/ui-react';
-//import { FileUploader } from '@aws-amplify/ui-react-storage';
-//import { StorageImage } from '@aws-amplify/ui-react-storage';
 
 
 const client = generateClient<Schema>();
@@ -75,7 +73,7 @@ function App() {
         await uploadData({ path, data: file });
 
         // Create post
-        await client.models.PostforWorkout.create({ content, url: path, username: user.username });
+        await client.models.PostforWorkout.create({ content, url: path, username: user.username, thumbsUp: 0, smiley: 0, trophy: 0 });
 
         // Clear input fields
         setContent("");
@@ -99,7 +97,29 @@ function App() {
       });
     }
   }
+  
+  async function reactToPost(id: string, reaction: "thumbsUp" | "smiley" | "trophy") {
+    try {
+      const response = await client.models.PostforWorkout.get({ id });
+      const post = response?.data;
 
+      if (post) {
+        const updatedValue = (post[reaction] || 0) + 1;
+        await client.models.PostforWorkout.update({ id, [reaction]: updatedValue });
+
+        setworkoutposts((prevPosts) =>
+          prevPosts.map((p) => (p.id === id ? { ...p, [reaction]: updatedValue } : p))
+        );
+      }
+    } catch (error) {
+      console.error("Error reacting to post", error);
+    }
+  }
+
+
+  
+  
+  
   return (
     <main className="main-container">
       <div className="header-input-container">
@@ -166,6 +186,11 @@ function App() {
               <small className="post-date">
                 Created at: {new Date(PostforWorkout.createdAt).toLocaleString()} by: {PostforWorkout.username}
               </small>
+              <div className="reactions-container">
+                <button onClick={() => reactToPost(PostforWorkout.id, "thumbsUp")}>👍 {PostforWorkout.thumbsUp || 0}</button>
+                <button onClick={() => reactToPost(PostforWorkout.id, "smiley")}>😊 {PostforWorkout.smiley || 0}</button>
+                <button onClick={() => reactToPost(PostforWorkout.id, "trophy")}>🏆 {PostforWorkout.trophy || 0}</button>
+              </div>
             </div>
           </div>
         ))}
