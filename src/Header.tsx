@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
-import { uploadData, getUrl } from 'aws-amplify/storage';
+import { uploadData } from 'aws-amplify/storage';
 //import './App.css'; // Import external CSS file
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useNavigate} from 'react-router-dom';
@@ -13,10 +13,8 @@ const client = generateClient<Schema>();
 function App() {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
-  const [workoutposts, setworkoutposts] = useState<Array<Schema["PostforWorkout"]["type"]>>([]);
   const [content, setContent] = useState<string>(""); // Stores the post content
   const [file, setFile] = useState<File | undefined>(); // Stores the selected file
-  const [imageUrls,setImageUrls] = useState<{ [key: string]: string }>({}); // Stores image URLs for each post
   const [loading, setLoading] = useState<boolean>(false); // Tracks loading state
   const { user, signOut } = useAuthenticator();
 
@@ -48,23 +46,7 @@ function App() {
     };
   }, [showDropdown]);
 
-  useEffect(() => {
-    const subscription = client.models.PostforWorkout.observeQuery().subscribe({
-      next: async (data) => {
-        setworkoutposts([...data.items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-        const urls: { [key: string]: string } = {};
-        for (const item of data.items) {
-          if (item.url) {
-            const linkToStorageFile = await getUrl({ path: item.url });
-            urls[item.id] = linkToStorageFile.url.toString();
-          }
-        }
-        setImageUrls(urls);
-      },
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  
 
   async function createPost() {
     if (content && file && user) {
