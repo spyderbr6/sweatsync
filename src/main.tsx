@@ -2,10 +2,14 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { Authenticator } from '@aws-amplify/ui-react';
 import App from "./App.tsx";
+import ProfilePage from "./profile.tsx";
+import Header from "./Header.tsx";
 import "./index.css";
 import { Amplify } from "aws-amplify";
 import outputs from "../amplify_outputs.json";
 import '@aws-amplify/ui-react/styles.css';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+
 
 Amplify.configure(outputs);
 
@@ -23,7 +27,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           },
         },
       }}>
-      <App />
+       <Router>
+        <Header/>
+        <Routes>
+          <Route path="/" element={<App/>} />
+          <Route path="/profile" element={<ProfilePage/>} />
+        </Routes>
+    </Router>
     </Authenticator>
   </React.StrictMode>
 );
