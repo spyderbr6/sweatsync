@@ -104,11 +104,12 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
+  justify-content: center;
 }
 
 /* Individual Post Card Styles */
 .post-card {
-  width: 300px;
+  width: 350px;
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -118,19 +119,20 @@ body {
 }
 
 .delete-button {
+  background-color: transparent;
+  border: none;
+  color: #f00;
+  font-size: 1.2rem;
+  cursor: pointer;
   position: absolute;
   top: 10px;
   right: 10px;
-  border: none;
-  background-color: transparent;
-  cursor: pointer;
-  font-size: 16px;
-  color: #ff007f;
 }
 
 .delete-button:hover {
   color: #e60073;
 }
+
 
 .post-image {
   width: 100%;
@@ -288,4 +290,25 @@ li:hover {
   .text-input {
     width: 100%;
   }
+}
+.reactions-container {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.reactions-container button {
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.reactions-container button:hover {
+  background-color: #e0e0e0;
 }
