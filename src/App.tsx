@@ -71,11 +71,18 @@ function App() {
             >
               ✕
             </button>
-            <img
-              src={imageUrls[PostforWorkout.id] || "/picsoritdidnthappen.webp"}
-              alt="Post workout visual"
-              className="post-image"
-            />
+            <div className="image-container">
+              <img
+                src={imageUrls[PostforWorkout.id] || "/picsoritdidnthappen.webp"}
+                alt="Post workout visual"
+                className="post-image"
+              />
+              <div className="reactions-container">
+                <button onClick={() => reactToPost(PostforWorkout.id, "thumbsUp")}>👍 {PostforWorkout.thumbsUp || 0}</button>
+                <button onClick={() => reactToPost(PostforWorkout.id, "smiley")}>😊 {PostforWorkout.smiley || 0}</button>
+                <button onClick={() => reactToPost(PostforWorkout.id, "trophy")}>🏆 {PostforWorkout.trophy || 0}</button>
+              </div>
+            </div>
             <div>
               <p className="post-content">
                 {PostforWorkout.content}
@@ -83,11 +90,7 @@ function App() {
               <small className="post-date">
                 Created at: {new Date(PostforWorkout.createdAt).toLocaleString()} by: {PostforWorkout.username}
               </small>
-              <div className="reactions-container">
-                <button onClick={() => reactToPost(PostforWorkout.id, "thumbsUp")}>👍 {PostforWorkout.thumbsUp || 0}</button>
-                <button onClick={() => reactToPost(PostforWorkout.id, "smiley")}>😊 {PostforWorkout.smiley || 0}</button>
-                <button onClick={() => reactToPost(PostforWorkout.id, "trophy")}>🏆 {PostforWorkout.trophy || 0}</button>
-              </div>
+
             </div>
           </div>
         ))}
