@@ -44,9 +44,11 @@ body {
 
 /* Input Container Styles */
 .input-container {
-  display: contents;
+  display: flex;
   align-items: center;
   gap: 10px;
+  padding-left:5%;
+  padding-right: 5%;
 }
 
 .text-input {
@@ -56,6 +58,7 @@ body {
   font-size: 16px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  min-width: 50%;
 }
 
 .file-upload-label {
@@ -110,14 +113,38 @@ body {
 /* Individual Post Card Styles */
 .post-card {
   width: 350px;
+  height: 400px; /* Set a consistent height for all cards */
+
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   padding: 20px;
   position: relative;
   background-color: #fff;
+  flex-direction: column; /* Makes the card content and reactions stack vertically */
+
+}
+.reactions-container {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
 }
 
+.reactions-container button {
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.reactions-container button:hover {
+  background-color: #ffcaef;
+}
 .delete-button {
   background-color: transparent;
   border: none;
@@ -137,7 +164,7 @@ body {
 .post-image {
   width: 100%;
   height: auto;
-  max-height: 200px;
+  height: 200px;
   object-fit: cover;
   border-radius: 4px;
   margin-bottom: 10px;
@@ -212,10 +239,10 @@ li:hover {
 }
 
 .account-icon img {
-  position: relative;
+  position: absolute;
   height: 60px;
   width: 60px;
-  top: 10px;  /* Adjust the top distance as necessary */
+  top: 20px;  /* Adjust the top distance as necessary */
   right: 20px; /* Adjust the right distance as necessary */
   display: flex;
   align-items: center;
@@ -282,7 +309,6 @@ li:hover {
   }
 
   .input-container {
-    flex-direction: column;
     width: 100%;
   }
 
@@ -290,25 +316,8 @@ li:hover {
   .text-input {
     width: 100%;
   }
-}
-.reactions-container {
-  margin-top: 10px;
-  display: flex;
-  gap: 10px;
-  justify-content: center;
+  .account-icon img {
+    top: 5px;
+  }
 }
 
-.reactions-container button {
-  background-color: #f0f0f0;
-  border: none;
-  border-radius: 5px;
-  padding: 5px 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.reactions-container button:hover {
-  background-color: #e0e0e0;
-}
