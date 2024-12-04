@@ -5,7 +5,10 @@ import { uploadData } from 'aws-amplify/storage';
 //import './App.css'; // Import external CSS file
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useNavigate} from 'react-router-dom';
-
+import { 
+    FetchUserAttributesOutput, 
+    fetchUserAttributes 
+  } from "aws-amplify/auth";
 
 
 const client = generateClient<Schema>();
@@ -17,15 +20,25 @@ function App() {
   const [file, setFile] = useState<File | undefined>(); // Stores the selected file
   const [loading, setLoading] = useState<boolean>(false); // Tracks loading state
   const { user, signOut } = useAuthenticator();
+  const [userAttributes, setUserAttributes] = useState<FetchUserAttributesOutput | null>(null);
 
   const handleContentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setContent(event.target.value); //capture user message input
   };
+
+  //On click, selects file for upload
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // Set the selected file when a new file is chosen
     const selectedFile = event.target.files?.[0];
-    setFile(selectedFile);
+    if (selectedFile) {
+      setFile(selectedFile);
+    }
   };
+  useEffect(() => {
+    if (file) {
+      createPost();
+    }
+  }, [file]);
+// end file change handling
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -46,7 +59,20 @@ function App() {
     };
   }, [showDropdown]);
 
-  
+  useEffect(() => {
+    const getUserAttributes = async () => {
+      try {
+        setLoading(true);
+        const attributes = await fetchUserAttributes();
+        setUserAttributes(attributes);
+      } catch (error) {
+        console.error('Unexpected error fetching user attributes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    getUserAttributes();
+  }, []);
 
   async function createPost() {
     if (content && file && user) {
@@ -58,7 +84,7 @@ function App() {
         await uploadData({ path, data: file });
 
         // Create post
-        await client.models.PostforWorkout.create({ content, url: path, username: user.username, thumbsUp: 0, smiley: 0, trophy: 0 });
+        await client.models.PostforWorkout.create({ content, url: path, username: userAttributes?.preferred_username, thumbsUp: 0, smiley: 0, trophy: 0 });
 
         // Clear input fields
         setContent("");
@@ -87,7 +113,7 @@ function App() {
             type="text"
             value={content}
             onChange={handleContentChange}
-            placeholder={`${user?.signInDetails?.loginId || 'User'}, how did your workout go?`}
+            placeholder={`${userAttributes?.preferred_username || 'User'}, how did your workout go?`}
 
             className="text-input"
           />
@@ -100,14 +126,9 @@ function App() {
             onChange={handleFileChange}
             accept="image/*"
             className="file-input"
-          />
-          <button
-            onClick={createPost}
-            className="create-button"
             disabled={loading}
-          >
-            {loading ? "Creating..." : "Create Post"}
-          </button>
+          />
+
         </div>
         <div className="account-icon">
           <div className="dropdown">
