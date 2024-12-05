@@ -84,7 +84,7 @@ function App() {
         await uploadData({ path, data: file });
 
         // Create post
-        await client.models.PostforWorkout.create({ content, url: path, username: userAttributes?.preferred_username, thumbsUp: 0, smiley: 0, trophy: 0 });
+        await client.models.PostforWorkout.create({ content, url: path, username: userAttributes?.preferred_username, userID: userAttributes?.sub, thumbsUp: 0, smiley: 0, trophy: 0 });
 
         // Clear input fields
         setContent("");
