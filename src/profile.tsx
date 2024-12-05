@@ -1,17 +1,29 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { 
   FetchUserAttributesOutput, 
   fetchUserAttributes, 
   updateUserAttributes 
 } from "aws-amplify/auth";
-import { uploadData } from 'aws-amplify/storage';
-import { FaEnvelope, FaUser, FaSpinner } from 'react-icons/fa';
+import { uploadData, getUrl } from 'aws-amplify/storage';
+import { 
+  FaEnvelope, 
+  FaSpinner, 
+  FaCamera, 
+  FaEdit, 
+  FaCheck, 
+  FaTimes 
+} from 'react-icons/fa';
+import './ProfilePage.css';
 
 function ProfilePage() {
   const [userAttributes, setUserAttributes] = useState<FetchUserAttributesOutput | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const getUserAttributes = async () => {
@@ -19,6 +31,23 @@ function ProfilePage() {
         setIsLoading(true);
         const attributes = await fetchUserAttributes();
         setUserAttributes(attributes);
+        setEditedName(attributes.preferred_username || attributes.username || "");
+
+        // Updated URL retrieval method
+        if (attributes.picture) {
+          try {
+            const linkToStorageFile = await getUrl({ 
+              path: attributes.picture,
+              options: {
+                expiresIn: 3600 // URL expires in 1 hour
+              }
+            });
+            setProfilePictureUrl(linkToStorageFile.url.toString());
+          } catch (urlError) {
+            console.error('Error retrieving profile picture URL:', urlError);
+            setProfilePictureUrl("/picsoritdidnthappen.webp"); // Fallback image
+          }
+        }
       } catch (error) {
         console.error('Unexpected error fetching user attributes:', error);
         setError('Failed to fetch user attributes. Please try again.');
@@ -43,30 +72,34 @@ function ProfilePage() {
         throw new Error('File is too large. Maximum size is 5MB.');
       }
 
+      const path = `profile-pictures/${userAttributes?.sub}/${Date.now()}-${file.name}`
       // Upload the file to S3
       const upload = await uploadData({
-        key: `profile-pictures/${userAttributes?.sub}/${Date.now()}-${file.name}`,
-        data: file,
-        options: {
-          accessLevel: 'private'
-        }
+        path,
+        data: file
       });
 
       // Wait for the upload to complete
-      const result = await upload.result;
-
-      // Construct the image URL (adjust based on your storage configuration)
-      const imageUrl = result.key; // Or however you want to generate the URL
+      await upload.result;
 
       // Update user attributes with the new profile picture
       await updateUserAttributes({
         userAttributes: {
-          picture: imageUrl
+          picture: path
+        }
+      });
+
+      // Retrieve and set the new profile picture URL
+      const linkToStorageFile = await getUrl({ 
+        path,
+        options: {
+          expiresIn: 3600 // URL expires in 1 hour
         }
       });
 
       // Update local state
-      setUserAttributes(prev => prev ? {...prev, picture: imageUrl} : null);
+      setUserAttributes(prev => prev ? {...prev, picture: path} : null);
+      setProfilePictureUrl(linkToStorageFile.url.toString());
       setError(null);
     } catch (error) {
       console.error('Error uploading profile picture:', error);
@@ -76,88 +109,140 @@ function ProfilePage() {
     }
   };
 
+  const handleUpdateName = async () => {
+    try {
+      await updateUserAttributes({
+        userAttributes: {
+          preferred_username: editedName
+        }
+      });
+
+      setUserAttributes(prev => 
+        prev ? {...prev, preferred_username: editedName} : null
+      );
+
+      setIsEditingName(false);
+    } catch (error) {
+      console.error('Error updating name:', error);
+      setError('Failed to update name. Please try again.');
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <FaSpinner className="animate-spin text-4xl text-blue-500" />
-        <span className="ml-2">Loading profile...</span>
+      <div className="profile-loading-container">
+        <FaSpinner className="profile-loading-spinner" />
+        <span className="profile-loading-text">Loading profile...</span>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white shadow-md rounded-lg">
+    <div className="profile-container">
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+        <div className="profile-error-message">
           {error}
         </div>
       )}
 
-      <div className="profile-banner mb-6">
-        <div className="profile-header flex flex-col items-center">
+      <div className="profile-banner">
+        <div className="profile-header">
           {userAttributes?.picture ? (
-            <img 
-              src={userAttributes.picture} 
-              alt="Profile" 
-              className="w-32 h-32 rounded-full object-cover mb-4"
-              aria-label="Profile Picture"
-            />
+            <div className="profile-picture-wrapper">
+              <img 
+                src={profilePictureUrl || "/picsoritdidnthappen.webp"} 
+                alt="Profile" 
+                className="profile-picture"
+                aria-label="Profile Picture"
+              />
+              <button 
+                className="profile-picture-overlay"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <FaCamera className="profile-picture-camera-icon" />
+              </button>
+            </div>
           ) : (
             <div 
-              className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center mb-4"
+              className="profile-picture-placeholder"
               aria-label="No profile picture"
             >
               No picture
             </div>
           )}
           
-          <div className="relative">
-            <input 
-              type="file" 
-              accept="image/jpeg,image/png,image/gif"
-              onChange={handleProfilePictureUpload}
-              className="hidden" 
-              id="profile-picture-upload"
-              disabled={isUploadingImage}
-            />
-            <label 
-              htmlFor="profile-picture-upload" 
-              className="btn btn-primary flex items-center cursor-pointer"
-              aria-label="Upload profile picture"
-            >
-              {isUploadingImage ? (
-                <>
-                  <FaSpinner className="animate-spin mr-2" />
-                  Uploading...
-                </>
-              ) : (
-                'Upload Profile Picture'
-              )}
-            </label>
+          <input 
+            type="file" 
+            accept="image/jpeg,image/png,image/gif"
+            onChange={handleProfilePictureUpload}
+            className="profile-picture-input" 
+            id="profile-picture-upload"
+            disabled={isUploadingImage}
+            ref={fileInputRef}
+          />
+          <label 
+            htmlFor="profile-picture-upload" 
+            className="profile-picture-upload-button"
+            aria-label="Upload profile picture"
+          >
+            {isUploadingImage ? (
+              <>
+                <FaSpinner className="profile-upload-spinner" />
+                Uploading...
+              </>
+            ) : (
+              'Upload Profile Picture'
+            )}
+          </label>
+
+          <div className="profile-name-section">
+            {isEditingName ? (
+              <div className="profile-name-edit-container">
+                <input 
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  className="profile-name-input"
+                />
+                <button 
+                  onClick={handleUpdateName}
+                  className="profile-name-confirm-button"
+                >
+                  <FaCheck />
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsEditingName(false);
+                    setEditedName(userAttributes?.preferred_username || userAttributes?.username || "");
+                  }}
+                  className="profile-name-cancel-button"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+            ) : (
+              <div className="profile-name-display">
+                <h1 className="profile-name">
+                  {userAttributes?.preferred_username || userAttributes?.username || 'User'}
+                </h1>
+                <button 
+                  onClick={() => setIsEditingName(true)}
+                  className="profile-name-edit-button"
+                >
+                  <FaEdit />
+                </button>
+              </div>
+            )}
           </div>
         </div>
-        
-        <h1 className="text-2xl font-bold text-center mt-4">
-          {userAttributes?.preferred_username || userAttributes?.email || 'User'}'s Profile
-        </h1>
       </div>
 
-      <div className="profile-info space-y-4">
-        <div className="info-item flex items-center">
-          <FaEnvelope className="mr-3 text-gray-500" />
-          <div>
-            <strong className="block text-gray-600">Email:</strong>
-            <span>{userAttributes?.email || 'Not provided'}</span>
-          </div>
-        </div>
-        
-        <div className="info-item flex items-center">
-          <FaUser className="mr-3 text-gray-500" />
-          <div>
-            <strong className="block text-gray-600">Preferred Name:</strong>
-            <span>
-              {userAttributes?.preferred_username || userAttributes?.username || 'Not set'}
-            </span>
+      <div className="profile-info-section">
+        <div className="profile-info-item">
+          <FaEnvelope className="profile-info-icon" />
+          <div className="profile-info-text">
+            <strong className="profile-info-label">Email:</strong>
+            <span className="profile-info-value">{userAttributes?.email || 'Not provided'}</span>
           </div>
         </div>
       </div>
