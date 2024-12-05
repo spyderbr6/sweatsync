@@ -9,6 +9,7 @@ const schema = a.schema({
       content: a.string(),
       url: a.string(),
       username: a.string(), 
+      userID: a.string(),
       thumbsUp: a.integer().default(0),
       smiley: a.integer().default(0),
       trophy: a.integer().default(0)    })
