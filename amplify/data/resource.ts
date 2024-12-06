@@ -16,12 +16,13 @@ const schema = a.schema({
     recipient: a.string(),
     status: a.enum(['PENDING', 'ACCEPTED', 'DECLINED']),
     createdAt: a.datetime()
-  }).authorization((allow) => [
+  }).authorization((allow) => [allow.publicApiKey()]
     // Allow authenticated users to create requests and read them
-    allow.authenticated().to(['create', 'read', 'update']),
+   // allow.authenticated().to(['create', 'read', 'update']),
     // Allow owners (senders) to manage their requests
-    allow.owner().to(['create','read', 'update', 'delete'])
-  ]),
+   // allow.owner().to(['create','read', 'update', 'delete'])
+  //]
+),
 
   Friend: a.model({
     user: a.string(),
