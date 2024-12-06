@@ -7,7 +7,7 @@ import {
   getPendingFriendRequests 
 } from './friendOperations';
 import { getCurrentUser } from 'aws-amplify/auth';
-import './Friends.css';  // Make sure to create this CSS file
+import './friends.css';  // Make sure to create this CSS file
 
 
 type Nullable<T> = T | null;
