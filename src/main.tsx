@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { Authenticator } from '@aws-amplify/ui-react';
 import App from "./App.tsx";
 import ProfilePage from "./profile.tsx";
+import FriendsPage from "./friendManagement.tsx";
 import Header from "./Header.tsx";
 import "./index.css";
 import { Amplify } from "aws-amplify";
@@ -32,6 +33,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Routes>
           <Route path="/" element={<App/>} />
           <Route path="/profile" element={<ProfilePage/>} />
+          <Route path="/friendManagement" element={<FriendsPage/>} />
         </Routes>
     </Router>
     </Authenticator>
