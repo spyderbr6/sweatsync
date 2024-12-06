@@ -9,14 +9,14 @@ const schema = a.schema({
     thumbsUp: a.integer().default(0),
     smiley: a.integer().default(0),
     trophy: a.integer().default(0)
-  }).authorization((allow) => [allow.authenticated()]),
+  }).authorization((allow) => [allow.publicApiKey()]),
 
   FriendRequest: a.model({
     sender: a.string(),
     recipient: a.string(),
     status: a.enum(['PENDING', 'ACCEPTED', 'DECLINED']),
     createdAt: a.datetime()
-  }).authorization((allow) => [allow.authenticated()]
+  }).authorization((allow) => [allow.publicApiKey()]
     // Allow authenticated users to create requests and read them
     // allow.authenticated().to(['create', 'read', 'update']),
     // Allow owners (senders) to manage their requests
@@ -28,7 +28,7 @@ const schema = a.schema({
     user: a.string(),
     friendUser: a.string(),
     friendshipDate: a.datetime()
-  }).authorization((allow) => [allow.authenticated()]
+  }).authorization((allow) => [allow.publicApiKey()]
   )
 });
 
