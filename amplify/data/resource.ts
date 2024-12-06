@@ -1,7 +1,6 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
 const schema = a.schema({
-  // Existing PostforWorkout model
   PostforWorkout: a.model({
     content: a.string(),
     url: a.string(),
@@ -12,23 +11,27 @@ const schema = a.schema({
     trophy: a.integer().default(0)
   }).authorization((allow) => [allow.publicApiKey()]),
 
-  // New Friend Request Model
   FriendRequest: a.model({
-    sender: a.string(), // User ID of sender
-    recipient: a.string(), // User ID of recipient
+    sender: a.string(),
+    recipient: a.string(),
     status: a.enum(['PENDING', 'ACCEPTED', 'DECLINED']),
     createdAt: a.datetime()
   }).authorization((allow) => [
-    allow.authenticated().to(['create', 'read', 'update'])
+    // Allow authenticated users to create requests and read them
+    allow.authenticated().to(['create', 'read', 'update']),
+    // Allow owners (senders) to manage their requests
+    allow.owner().to(['create','read', 'update', 'delete'])
   ]),
 
-  // New Friends Model
   Friend: a.model({
-    user: a.string(), // User ID
-    friendUser: a.string(), // Friend's User ID
+    user: a.string(),
+    friendUser: a.string(),
     friendshipDate: a.datetime()
   }).authorization((allow) => [
-    allow.authenticated().to(['create', 'read'])
+    // Allow authenticated users to create and read friend relationships
+    allow.authenticated().to(['create', 'read']),
+    // Allow owners to manage their friend relationships
+    allow.owner().to(['create','read', 'delete'])
   ])
 });
 
