@@ -10,6 +10,7 @@ import { Amplify } from "aws-amplify";
 import outputs from "../amplify_outputs.json";
 import '@aws-amplify/ui-react/styles.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import ChallengesPage from "./Challenges.tsx";
 
 
 Amplify.configure(outputs);
@@ -34,6 +35,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/" element={<App/>} />
           <Route path="/profile" element={<ProfilePage/>} />
           <Route path="/friendManagement" element={<FriendsPage/>} />
+          <Route path="/Challenges" element={<ChallengesPage/>} />
         </Routes>
     </Router>
     </Authenticator>
