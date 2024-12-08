@@ -201,7 +201,7 @@ const FriendsPage = () => {
             filteredFriends.map(friend => (
               <div key={friend} className="list-item">
                 <img 
-                  src={`/api/placeholder/80/80`} 
+                  src={`/profileDefault.png`} 
                   alt={friend} 
                   className="profile-image"
                 />
