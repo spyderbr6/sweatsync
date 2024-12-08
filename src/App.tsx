@@ -8,8 +8,8 @@ const useSpoofData = true;
 const client = generateClient<Schema>();
 
 type Post = Schema["PostforWorkout"]["type"] & {
-  showReactions?: boolean;
-  activeReactions?: Array<{ id: number; emoji: string }>;
+  showReactions: boolean;
+  activeReactions: Array<{ id: number; emoji: string }>;
 };
 
 type FloatingReactionProps = {
@@ -26,9 +26,27 @@ type WorkoutPostProps = {
   post: Post;
   imageUrl: string;
   onReaction: (id: string, emoji: string | null, reactionId?: number) => void;
-  onLike: (id: string, reaction: "thumbsUp" | "smiley" | "trophy") => void;
   onDelete: (id: string) => void;
   onHover: (id: string, isHovering: boolean) => void;
+};
+
+// Define allowed reaction fields
+type ReactionFields = 
+  | "strong" 
+  | "fire" 
+  | "zap" 
+  | "fist" 
+  | "target" 
+  | "star" 
+  | "rocket" 
+  | "clap" 
+  | "trophy"
+  | "thumbsUp" 
+  | "smiley";
+
+// Define emoji mapping type
+type EmojiMapping = {
+  [key: string]: ReactionFields;
 };
 
 const CHEER_EMOJIS = [
@@ -39,15 +57,15 @@ const CHEER_EMOJIS = [
   { emoji: "🎯", label: "Goal" },
   { emoji: "⭐", label: "Star" },
   { emoji: "🚀", label: "Rocket" },
-  { emoji: "👏", label: "Applause" },
-  { emoji: "🏆", label: "Champion" }
+  { emoji: "👏", label: "Clap" },
+  { emoji: "🏆", label: "Trophy" }
 ];
 
 const FloatingReaction: React.FC<FloatingReactionProps> = ({ emoji, onAnimationEnd }) => {
   const [position] = useState(() => {
     const centerX = 50;
     const centerY = 50;
-    const deadZoneRadius = 20;
+    const deadZoneRadius = 30;
     const margin = 5;
     
     while (true) {
@@ -99,7 +117,7 @@ const ReactionGrid: React.FC<ReactionGridProps> = ({ onReaction, visible }) => (
   </div>
 );
 
-const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, onHover, onLike, onDelete }) => (
+const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, onHover, onDelete }) => (
   <div className="post">
     <div className="post__header">
       <div className="post__user-info">
@@ -131,8 +149,8 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
         />
         
         <ReactionGrid 
-          visible={post.showReactions ?? false}
-          onReaction={(emoji) => onReaction(post.id, emoji)}
+          visible={post.showReactions}
+          onReaction={(emoji) => onReaction(post.id, emoji, undefined)}
         />
         
         {post.activeReactions?.map(reaction => (
@@ -148,7 +166,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
         <div className="post__buttons">
           <div className="post__action-buttons">
             <button 
-              onClick={() => onLike(post.id, "thumbsUp")}
+              onClick={() => onReaction(post.id, "👍")}
               className="post__button"
             >
               <Heart className="w-6 h-6" />
@@ -160,16 +178,15 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
               <Share2 className="w-6 h-6" />
             </button>
             <button 
-              onClick={() => onLike(post.id, "trophy")}
               className="post__challenge-button"
             >
               <Trophy className="post__challenge-icon w-5 h-5" />
               <span className="post__challenge-text">Challenge</span>
-              {(
+              {
                 <span className="post__challenge-count">
                   {post.trophy}
                 </span>
-              )}
+              }
             </button>
           </div>
         </div>
@@ -203,12 +220,39 @@ function App() {
         const sortedPosts = [...data.items].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-
-        const postsWithUIState = sortedPosts.map(post => ({
-          ...post,
-          showReactions: false,
-          activeReactions: []
-        }));
+        const fieldToEmoji: { [key: string]: string } = {
+          strong: "💪",
+          fire: "🔥",
+          zap: "⚡",
+          fist: "👊",
+          target: "🎯",
+          star: "⭐",
+          rocket: "🚀",
+          clap: "👏",
+          trophy: "🏆",
+          thumbsUp: "👍",
+        };
+        const postsWithUIState = sortedPosts.map(post => {
+          // Initialize activeReactions from database fields
+          const activeReactions: Array<{ id: number; emoji: string }> = [];
+          
+          // For each reaction field, add its reactions to the activeReactions array
+          for (const [field, emoji] of Object.entries(fieldToEmoji)) {
+            const count = (post as any)[field] || 0; // Cast to any to access dynamic fields
+            for (let i = 0; i < count; i++) {
+              activeReactions.push({
+                id: Date.now() + Math.floor(Math.random() * 10000), 
+                emoji 
+              });
+            }
+          }
+  
+          return {
+            ...post,
+            showReactions: false,
+            activeReactions
+          };
+        });
 
         setworkoutposts(postsWithUIState);
 
@@ -243,18 +287,65 @@ function App() {
     }
   }
 
-  async function reactToPost(id: string, reaction: "thumbsUp" | "smiley" | "trophy") {
+  async function reactToPost(id: string, emojiType: string | null, reactionId?: number) {
+    // Handle animation cleanup
+    if (!emojiType && reactionId) {
+      setworkoutposts(posts => 
+        posts.map(p => 
+          p.id === id 
+            ? { 
+                ...p, 
+                activeReactions: p.activeReactions.filter(r => r.id !== reactionId)
+              }
+            : p
+        )
+      );
+      return;
+    }
+
     try {
       const response = await client.models.PostforWorkout.get({ id });
       const post = response?.data;
 
-      if (post) {
-        const updatedValue = (post[reaction] || 0) + 1;
-        await client.models.PostforWorkout.update({ id, [reaction]: updatedValue });
+      if (post && emojiType) {
+        const emojiToField: EmojiMapping = {
+          "💪": "strong",
+          "🔥": "fire",
+          "⚡": "zap",
+          "👊": "fist",
+          "🎯": "target",
+          "⭐": "star",
+          "🚀": "rocket",
+          "👏": "clap",
+          "🏆": "trophy",
+          "👍": "thumbsUp"
+        };
 
-        setworkoutposts((prevPosts) =>
-          prevPosts.map((p) => (p.id === id ? { ...p, [reaction]: updatedValue } : p))
-        );
+        const fieldName = emojiToField[emojiType];
+        if (fieldName) {
+          const updatedValue = (post[fieldName] || 0) + 1;
+          
+          await client.models.PostforWorkout.update({ 
+            id, 
+            [fieldName]: updatedValue 
+          });
+
+          // Add floating reaction animation
+          setworkoutposts(posts => 
+            posts.map(p => 
+              p.id === id 
+                ? { 
+                    ...p, 
+                    [fieldName]: updatedValue,
+                    activeReactions: [...p.activeReactions, {
+                      id: Date.now(),
+                      emoji: emojiType
+                    }]
+                  }
+                : p
+            )
+          );
+        }
       }
     } catch (error) {
       console.error("Error reacting to post", error);
@@ -264,7 +355,6 @@ function App() {
   return (
     <div className="feed">
       <div className="feed__header">
-       
         <div className="feed__challenges">
           <div className="challenge-alert challenge-alert--personal">
             <Flame className="w-4 h-4 text-orange-500" />
@@ -279,13 +369,12 @@ function App() {
             <span className="text-sm">Weekly Challenge: 10k steps daily</span>
           </div>
           <button className="feed__header-button">
-              <Trophy className="w-6 h-6" />
-            </button>
-            <button className="feed__header-button">
-              <Camera className="w-6 h-6" />
-            </button>
+            <Trophy className="w-6 h-6" />
+          </button>
+          <button className="feed__header-button">
+            <Camera className="w-6 h-6" />
+          </button>
         </div>
-
       </div>
 
       <div className="feed__content">
@@ -294,8 +383,7 @@ function App() {
             key={post.id}
             post={post}
             imageUrl={imageUrls[post.id] || "/picsoritdidnthappen.webp"}
-            onReaction={(emoji) => reactToPost(post.id, "trophy")}
-            onLike={reactToPost}
+            onReaction={reactToPost}
             onDelete={deletePost}
             onHover={(postId, isHovering) => {
               setworkoutposts(posts => 
