@@ -1,7 +1,6 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
 const schema = a.schema({
-  // Existing PostforWorkout model
   PostforWorkout: a.model({
     content: a.string(),
     url: a.string(),
@@ -12,24 +11,49 @@ const schema = a.schema({
     trophy: a.integer().default(0)
   }).authorization((allow) => [allow.publicApiKey()]),
 
-  // New Friend Request Model
+  Reaction: a.model({
+    postId: a.string(),
+    userId: a.string(),
+    emoji: a.string(),
+    timestamp: a.string()
+  }).authorization((allow) => [allow.publicApiKey()]),
+
   FriendRequest: a.model({
-    sender: a.string(), // User ID of sender
-    recipient: a.string(), // User ID of recipient
+    sender: a.string(),
+    recipient: a.string(),
     status: a.enum(['PENDING', 'ACCEPTED', 'DECLINED']),
     createdAt: a.datetime()
-  }).authorization((allow) => [
-    allow.authenticated().to(['create', 'read', 'update'])
-  ]),
+  }).authorization((allow) => [allow.publicApiKey()]),
 
-  // New Friends Model
   Friend: a.model({
-    user: a.string(), // User ID
-    friendUser: a.string(), // Friend's User ID
+    user: a.string(),
+    friendUser: a.string(),
     friendshipDate: a.datetime()
-  }).authorization((allow) => [
-    allow.authenticated().to(['create', 'read'])
-  ])
+  }).authorization((allow) => [allow.publicApiKey()]),
+
+  Challenge: a.model({
+    title: a.string(),
+    description: a.string(),
+    startAt: a.datetime(),
+    endAt: a.datetime(),
+    reward: a.string(),
+    totalWorkouts: a.integer().default(0),
+    challengeType: a.string(),
+    createdAt: a.datetime(),    // capture when the challenge was created
+    updatedAt: a.datetime(),     // capture when the challenge was last updated
+    createdBy: a.string() // should reference the uID
+  }).authorization((allow) => [allow.publicApiKey()]),
+
+  ChallengeParticipant: a.model({
+    challengeID: a.string(),
+    userID: a.string(),
+    status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED']),
+    points: a.integer().default(0),
+    workoutsCompleted: a.integer().default(0),
+    joinedAt: a.datetime(),
+    completedAt: a.datetime(),
+    updatedAt: a.datetime()
+  }).authorization((allow) => [allow.publicApiKey()])
 });
 
 export type Schema = ClientSchema<typeof schema>;
