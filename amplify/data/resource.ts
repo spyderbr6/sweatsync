@@ -11,6 +11,13 @@ const schema = a.schema({
     trophy: a.integer().default(0)
   }).authorization((allow) => [allow.publicApiKey()]),
 
+  Reaction: a.model({
+    postId: a.string(),
+    userId: a.string(),
+    emoji: a.string(),
+    timestamp: a.string()
+  }).authorization((allow) => [allow.publicApiKey()]),
+
   FriendRequest: a.model({
     sender: a.string(),
     recipient: a.string(),
