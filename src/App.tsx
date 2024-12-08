@@ -4,6 +4,7 @@ import { generateClient } from "aws-amplify/data";
 import { getUrl } from 'aws-amplify/storage';
 //import './App.css'; // Import external CSS file
 
+const useSpoofData = true;
 
 const client = generateClient<Schema>();
 
@@ -14,15 +15,31 @@ function App() {
   useEffect(() => {
     const subscription = client.models.PostforWorkout.observeQuery().subscribe({
       next: async (data) => {
-        setworkoutposts([...data.items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-        const urls: { [key: string]: string } = {};
-        for (const item of data.items) {
-          if (item.url) {
-            const linkToStorageFile = await getUrl({ path: item.url });
-            urls[item.id] = linkToStorageFile.url.toString();
+        // Sort posts by createdAt desc
+        const sortedPosts = [...data.items].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setworkoutposts(sortedPosts);
+
+        if (useSpoofData) {
+          // If we're spoofing data, set all image URLs to a local placeholder without calling S3
+          const spoofedUrls: { [key: string]: string } = {};
+          for (const item of data.items) {
+            // Use a local placeholder image or any static URL
+            spoofedUrls[item.id] = "/picsoritdidnthappen.webp";
           }
+          setImageUrls(spoofedUrls);
+        } else {
+          // Normal behavior: get URLs from S3
+          const urls: { [key: string]: string } = {};
+          for (const item of data.items) {
+            if (item.url) {
+              const linkToStorageFile = await getUrl({ path: item.url });
+              urls[item.id] = linkToStorageFile.url.toString();
+            }
+          }
+          setImageUrls(urls);
         }
-        setImageUrls(urls);
       },
     });
 

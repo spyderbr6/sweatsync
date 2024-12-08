@@ -16,20 +16,37 @@ const schema = a.schema({
     recipient: a.string(),
     status: a.enum(['PENDING', 'ACCEPTED', 'DECLINED']),
     createdAt: a.datetime()
-  }).authorization((allow) => [allow.publicApiKey()]
-    // Allow authenticated users to create requests and read them
-    // allow.authenticated().to(['create', 'read', 'update']),
-    // Allow owners (senders) to manage their requests
-    // allow.owner().to(['create','read', 'update', 'delete'])
-    //]
-  ),
+  }).authorization((allow) => [allow.publicApiKey()]),
 
   Friend: a.model({
     user: a.string(),
     friendUser: a.string(),
     friendshipDate: a.datetime()
-  }).authorization((allow) => [allow.publicApiKey()]
-  )
+  }).authorization((allow) => [allow.publicApiKey()]),
+
+  Challenge: a.model({
+    title: a.string(),
+    description: a.string(),
+    startAt: a.datetime(),
+    endAt: a.datetime(),
+    reward: a.string(),
+    totalWorkouts: a.integer().default(0),
+    challengeType: a.string(),
+    createdAt: a.datetime(),    // capture when the challenge was created
+    updatedAt: a.datetime(),     // capture when the challenge was last updated
+    createdBy: a.string() // should reference the uID
+  }).authorization((allow) => [allow.publicApiKey()]),
+
+  ChallengeParticipant: a.model({
+    challengeID: a.string(),
+    userID: a.string(),
+    status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED']),
+    points: a.integer().default(0),
+    workoutsCompleted: a.integer().default(0),
+    joinedAt: a.datetime(),
+    completedAt: a.datetime(),
+    updatedAt: a.datetime()
+  }).authorization((allow) => [allow.publicApiKey()])
 });
 
 export type Schema = ClientSchema<typeof schema>;
