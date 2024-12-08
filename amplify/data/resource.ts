@@ -8,7 +8,16 @@ const schema = a.schema({
     userID: a.string(),
     thumbsUp: a.integer().default(0),
     smiley: a.integer().default(0),
-    trophy: a.integer().default(0)
+    // Add new emoji counts
+    strong: a.integer().default(0),    // 💪
+    fire: a.integer().default(0),      // 🔥
+    zap: a.integer().default(0),       // ⚡
+    fist: a.integer().default(0),      // 👊
+    target: a.integer().default(0),    // 🎯
+    star: a.integer().default(0),      // ⭐
+    rocket: a.integer().default(0),    // 🚀
+    clap: a.integer().default(0),      // 👏
+    trophy: a.integer().default(0)  //trophy
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Reaction: a.model({
