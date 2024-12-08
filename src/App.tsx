@@ -4,6 +4,7 @@ import { generateClient } from "aws-amplify/data";
 import { getUrl } from 'aws-amplify/storage';
 //import './App.css'; // Import external CSS file
 
+
 const client = generateClient<Schema>();
 
 function App() {

@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fa';
 import './ProfilePage.css';
 
+
 function ProfilePage() {
   const [userAttributes, setUserAttributes] = useState<FetchUserAttributesOutput | null>(null);
   const [isLoading, setIsLoading] = useState(true);
