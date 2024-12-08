@@ -33,7 +33,8 @@ const schema = a.schema({
     totalWorkouts: a.integer().default(0),
     challengeType: a.string(),
     createdAt: a.datetime(),    // capture when the challenge was created
-    updatedAt: a.datetime()     // capture when the challenge was last updated
+    updatedAt: a.datetime(),     // capture when the challenge was last updated
+    createdBy: a.string() // should reference the uID
   }).authorization((allow) => [allow.publicApiKey()]),
 
   ChallengeParticipant: a.model({
