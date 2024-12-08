@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fa';
 import './ProfilePage.css';
 
+const useSpoofData = true;
 
 function ProfilePage() {
   const [userAttributes, setUserAttributes] = useState<FetchUserAttributesOutput | null>(null);
@@ -25,6 +26,7 @@ function ProfilePage() {
   const [editedName, setEditedName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
+
 
   useEffect(() => {
     const getUserAttributes = async () => {
@@ -43,12 +45,15 @@ function ProfilePage() {
                 expiresIn: 3600 // URL expires in 1 hour
               }
             });
-            setProfilePictureUrl(linkToStorageFile.url.toString());
+            if(useSpoofData){setProfilePictureUrl("/profileDefault.png")}
+            else {setProfilePictureUrl(linkToStorageFile.url.toString());}
           } catch (urlError) {
             console.error('Error retrieving profile picture URL:', urlError);
-            setProfilePictureUrl("/picsoritdidnthappen.webp"); // Fallback image
+            setProfilePictureUrl("/profileDefault.png"); // Fallback image
           }
         }
+
+        
       } catch (error) {
         console.error('Unexpected error fetching user attributes:', error);
         setError('Failed to fetch user attributes. Please try again.');
