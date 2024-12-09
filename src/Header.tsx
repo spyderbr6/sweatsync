@@ -137,6 +137,7 @@ function App() {
             <button className="dropdown-item" onClick={() => navigate('/')}>Home</button>
               <button className="dropdown-item" onClick={() => navigate('/profile')}>Profile</button>
               <button className="dropdown-item" onClick={() => navigate('/friendManagement')}>Friends</button>
+              <button className="dropdown-item" onClick={() => navigate('/Challenges')}>Challenges</button>
               <button className="dropdown-item" onClick={signOut}>Logout</button>
             </div>
           </div>

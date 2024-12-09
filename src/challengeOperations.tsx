@@ -13,6 +13,7 @@ export async function createChallenge(params: {
   endAt?: Date;
   reward?: string;
   challengeType?: string;
+  totalWorkouts?: number;
 }): Promise<string> {
   try {
     await client.models.Challenge.create({
@@ -22,7 +23,7 @@ export async function createChallenge(params: {
       endAt: params.endAt?.toISOString(),
       reward: params.reward,
       challengeType: params.challengeType,
-      totalWorkouts: 0,
+      totalWorkouts: params.totalWorkouts,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
