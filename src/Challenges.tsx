@@ -1,5 +1,6 @@
 // ChallengesPage.tsx
 import React, { useEffect, useState } from "react";
+import { getCurrentUser } from 'aws-amplify/auth';
 import {
   createChallenge,
   addParticipantToChallenge,
@@ -7,14 +8,15 @@ import {
   getParticipantsForChallenge,
 } from "./challengeOperations";
 
+
 type Challenge = {
   id: string;
-  title?: string | null;
-  description?: string | null;
-  totalWorkouts?: number | null;
-  startAt?: string | null;
-  endAt?: string | null;
-  reward?: string | null;
+  title: string | null;
+  description: string | null;
+  totalWorkouts: number | null;
+  startAt: string | null;
+  endAt: string | null;
+  reward: string | null;
 };
 
 type ChallengeParticipant = {
@@ -24,9 +26,31 @@ type ChallengeParticipant = {
   status: "ACTIVE" | "COMPLETED" | "DROPPED";
   points: number;
   workoutsCompleted: number;
+  joinedAt: string;
+  completedAt: string | null;
+  updatedAt: string;
 };
 
-const currentUserId = "user-123"; // Replace with actual logged-in user ID
+// Helper function to validate participant data
+function validateParticipant(data: any): ChallengeParticipant | null {
+  if (!data || !data.id || !data.challengeID || !data.userID) {
+    return null;
+  }
+
+  return {
+    id: data.id,
+    challengeID: data.challengeID,
+    userID: data.userID,
+    status: data.status || "ACTIVE",
+    points: data.points || 0,
+    workoutsCompleted: data.workoutsCompleted || 0,
+    joinedAt: data.joinedAt || new Date().toISOString(),
+    completedAt: data.completedAt || null,
+    updatedAt: data.updatedAt || new Date().toISOString()
+  };
+}
+
+
 
 const modalOverlayStyle: React.CSSProperties = {
   position: "fixed",
@@ -55,23 +79,54 @@ export const ChallengesPage: React.FC = () => {
   const [participantsData, setParticipantsData] = useState<{
     [challengeId: string]: ChallengeParticipant[];
   }>({});
+  const [newChallengeReward, setNewChallengeReward] = useState("");
+const [newChallengeStartDate, setNewChallengeStartDate] = useState(new Date().toISOString().split('T')[0]);
+const [newChallengeEndDate, setNewChallengeEndDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+const [newChallengeTotalWorkouts, setNewChallengeTotalWorkouts] = useState(1);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
 
   useEffect(() => {
     loadChallenges();
   }, []);
 
   async function loadChallenges() {
-    // Assuming listChallenges returns the list of Challenge objects
-    const chals = await listChallenges();
-    setChallenges(chals);
-
-    // For each challenge, fetch participants
-    const allParticipants: { [id: string]: ChallengeParticipant[] } = {};
-    for (const c of chals) {
-      const parts = await getParticipantsForChallenge(c.id);
-      allParticipants[c.id] = parts;
+    
+    
+    //this needs to be deprecated at some point. move uID into main app and pull from there
+    if (!currentUserId) {
+      try {
+        const user = await getCurrentUser();
+        setCurrentUserId(user.userId);
+      } catch (error) {
+        console.error("Error getting current user:", error);
+        return;
+      }
     }
-    setParticipantsData(allParticipants);
+    
+    try {
+      const chals = await listChallenges();
+      // Filter out challenges with missing required fields
+      const validChallenges = chals.filter((c): c is Challenge => 
+        Boolean(c && c.id)
+      );
+      setChallenges(validChallenges);
+
+      // For each challenge, fetch and validate participants
+      const allParticipants: { [id: string]: ChallengeParticipant[] } = {};
+      for (const c of validChallenges) {
+        const parts = await getParticipantsForChallenge(c.id);
+        // Filter and validate participant data
+        const validParticipants = parts
+          .map(validateParticipant)
+          .filter((p): p is ChallengeParticipant => p !== null);
+        allParticipants[c.id] = validParticipants;
+      }
+      setParticipantsData(allParticipants);
+    } catch (error) {
+      console.error("Error loading challenges:", error);
+      // Handle error appropriately (e.g., show error message to user)
+    }
   }
 
   async function handleCreateChallenge(e: React.FormEvent) {
@@ -79,11 +134,20 @@ export const ChallengesPage: React.FC = () => {
     const msg = await createChallenge({
       title: newChallengeTitle,
       description: newChallengeDescription,
+      reward: newChallengeReward,
+      startAt: new Date(newChallengeStartDate),
+      endAt: new Date(newChallengeEndDate),
+      totalWorkouts: newChallengeTotalWorkouts, 
+      challengeType: "WORKOUT"
     });
     console.log(msg);
     setShowModal(false);
     setNewChallengeTitle("");
     setNewChallengeDescription("");
+    setNewChallengeReward("");
+    setNewChallengeStartDate(new Date().toISOString().split('T')[0]);
+    setNewChallengeEndDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+    setNewChallengeTotalWorkouts(1);
     loadChallenges();
   }
 
@@ -152,6 +216,7 @@ export const ChallengesPage: React.FC = () => {
             >
               <h2 style={{ marginTop: 0 }}>{c.title}</h2>
               <p>{c.description}</p>
+              <p>{c.reward}{c.startAt}{c.endAt}{c.totalWorkouts}</p>
               {participant ? (
                 <div>
                   <p>Status: {statusText}</p>
@@ -189,44 +254,95 @@ export const ChallengesPage: React.FC = () => {
       </div>
 
       {showModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalStyle}>
-            <h2>Create a New Challenge</h2>
-            <form onSubmit={handleCreateChallenge}>
-              <div style={{ marginBottom: "10px" }}>
-                <label>
-                  Title:
-                  <input
-                    type="text"
-                    value={newChallengeTitle}
-                    onChange={(e) => setNewChallengeTitle(e.target.value)}
-                    style={{ width: "100%", padding: "8px", marginTop: "4px" }}
-                    required
-                  />
-                </label>
-              </div>
-              <div style={{ marginBottom: "10px" }}>
-                <label>
-                  Description:
-                  <textarea
-                    value={newChallengeDescription}
-                    onChange={(e) => setNewChallengeDescription(e.target.value)}
-                    style={{ width: "100%", padding: "8px", marginTop: "4px" }}
-                  ></textarea>
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 12px" }}>
-                  Cancel
-                </button>
-                <button type="submit" style={{ padding: "8px 12px", background: "#007BFF", color: "#fff", border: "none", borderRadius: "4px" }}>
-                  Create
-                </button>
-              </div>
-            </form>
-          </div>
+  <div style={modalOverlayStyle}>
+    <div style={modalStyle}>
+      <h2>Create a New Challenge</h2>
+      <form onSubmit={handleCreateChallenge}>
+        <div style={{ marginBottom: "10px" }}>
+          <label>
+            Title:
+            <input
+              type="text"
+              value={newChallengeTitle}
+              onChange={(e) => setNewChallengeTitle(e.target.value)}
+              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              required
+            />
+          </label>
         </div>
-      )}
+        <div style={{ marginBottom: "10px" }}>
+          <label>
+            Description:
+            <textarea
+              value={newChallengeDescription}
+              onChange={(e) => setNewChallengeDescription(e.target.value)}
+              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+            ></textarea>
+          </label>
+        </div>
+        <div style={{ marginBottom: "10px" }}>
+          <label>
+            Reward:
+            <input
+              type="text"
+              value={newChallengeReward}
+              onChange={(e) => setNewChallengeReward(e.target.value)}
+              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              placeholder="Enter reward details"
+            />
+          </label>
+        </div>
+        <div style={{ marginBottom: "10px" }}>
+          <label>
+            Start Date:
+            <input
+              type="date"
+              value={newChallengeStartDate}
+              onChange={(e) => setNewChallengeStartDate(e.target.value)}
+              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              required
+            />
+          </label>
+        </div>
+        <div style={{ marginBottom: "10px" }}>
+          <label>
+            End Date:
+            <input
+              type="date"
+              value={newChallengeEndDate}
+              onChange={(e) => setNewChallengeEndDate(e.target.value)}
+              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              required
+            />
+          </label>
+        </div>
+        <div style={{ marginBottom: "10px" }}>
+          <label>
+            Total Workouts Goal:
+            <input
+              type="number"
+              value={newChallengeTotalWorkouts}
+              onChange={(e) => setNewChallengeTotalWorkouts(Number(e.target.value))}
+              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
+              min="1"
+              required
+            />
+          </label>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+          <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 12px" }}>
+            Cancel
+          </button>
+          <button type="submit" style={{ padding: "8px 12px", background: "#007BFF", color: "#fff", border: "none", borderRadius: "4px" }}>
+            Create
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
+
     </div>
   );
 };
