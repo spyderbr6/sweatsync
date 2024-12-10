@@ -46,7 +46,7 @@ const schema = a.schema({
     startAt: a.datetime(),
     endAt: a.datetime(),
     reward: a.string(),
-    totalWorkouts: a.integer().default(0),
+    totalWorkouts: a.integer().default(1), //total workouts needing completed in the timeframe
     challengeType: a.string(),
     createdAt: a.datetime(),    // capture when the challenge was created
     updatedAt: a.datetime(),     // capture when the challenge was last updated
