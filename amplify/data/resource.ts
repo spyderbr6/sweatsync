@@ -62,6 +62,15 @@ const schema = a.schema({
     joinedAt: a.datetime(),
     completedAt: a.datetime(),
     updatedAt: a.datetime()
+  }).authorization((allow) => [allow.publicApiKey()]), 
+
+  PostChallenge: a.model({
+    postId: a.string(),
+    challengeId: a.string(),
+    userId: a.string(),
+    timestamp: a.datetime(),
+    validated: a.boolean().default(false),
+    validationComment: a.string()
   }).authorization((allow) => [allow.publicApiKey()])
 });
 
