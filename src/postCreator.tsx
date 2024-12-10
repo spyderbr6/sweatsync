@@ -97,7 +97,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       await uploadData({ path, data: file });
 
       // Create the post
-      const post = await client.models.PostforWorkout.create({
+      await client.models.PostforWorkout.create({
         content,
         url: path,
         username: userAttributes?.preferred_username,
