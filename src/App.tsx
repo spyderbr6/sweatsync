@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { getUrl } from 'aws-amplify/storage';
-import { Heart, MessageCircle, Share2, Camera, Trophy, Flame, Users } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Camera,Trophy, Flame, Users } from 'lucide-react';
+import { CreatePostModal } from './CreatePostModal';
+
 
 const useSpoofData = true;
 const client = generateClient<Schema>();
@@ -234,6 +236,8 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
 function App() {
   const [workoutposts, setworkoutposts] = useState<Array<Post>>([]);
   const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({});
+  const [showPostModal, setShowPostModal] = useState(false);
+
 
   useEffect(() => {
     const subscription = client.models.PostforWorkout.observeQuery().subscribe({
@@ -298,6 +302,7 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
 
   function deletePost(id: string) {
     if (window.confirm("Are you sure you want to delete this post?")) {
@@ -389,16 +394,24 @@ function App() {
             <Trophy className="w-4 h-4 text-green-500" />
             <span className="text-sm">Weekly Challenge: 10k steps daily</span>
           </div>
-          <button className="feed__header-button">
+          <button   className="feed__header-button"      >
             <Trophy className="w-6 h-6" />
           </button>
-          <button className="feed__header-button">
+          <button className="feed__header-button" 
+            onClick={() => setShowPostModal(true)}
+            >
             <Camera className="w-6 h-6" />
           </button>
         </div>
       </div>
 
+      <CreatePostModal 
+        isOpen={showPostModal} 
+        onClose={() => setShowPostModal(false)} 
+      />
+
       <div className="feed__content">
+        {/* Existing post rendering logic */}
         {workoutposts.map(post => (
           <WorkoutPost
             key={post.id}
@@ -421,3 +434,6 @@ function App() {
 }
 
 export default App;
+
+
+
