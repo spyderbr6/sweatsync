@@ -16,6 +16,19 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 
 Amplify.configure(outputs);
 
+// Register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('SW registered:', registration);
+      })
+      .catch(error => {
+        console.log('SW registration failed:', error);
+      });
+  });
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Authenticator components={{ Header: () => <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}><img src="sweatsync_logo.gif" alt="Logo" style={{ width: '200px', height: 'auto' }} /></div> }}
