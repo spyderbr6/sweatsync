@@ -5,7 +5,7 @@ import type { Schema } from "../amplify/data/resource";
 import { uploadData } from 'aws-amplify/storage';
 import { listChallenges } from './challengeOperations';
 import { useUser } from './userContext';
-import './PostCreator.css';
+import './postCreator.css';
 
 const client = generateClient<Schema>();
 
