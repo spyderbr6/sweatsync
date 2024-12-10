@@ -1,0 +1,244 @@
+.post-creator {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin: 0 auto;
+}
+
+.post-creator--initial {
+  max-width: 32rem;
+  padding: 2rem;
+}
+
+.post-creator__upload-area {
+  border: 2px dashed #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.post-creator__upload-area:hover {
+  border-color: #3b82f6;
+  background-color: #f8fafc;
+}
+
+.post-creator__upload-icon {
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+
+.post-creator__upload-text {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.post-creator__upload-hint {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.post-creator--details {
+  max-width: 64rem;
+}
+
+.post-creator__content {
+  display: flex;
+  min-height: 32rem;
+}
+
+.post-creator__media {
+  flex: 1;
+  background-color: #000;
+  position: relative;
+}
+
+.post-creator__preview-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.post-creator__preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.post-creator__remove-image {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 0.5rem;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.post-creator__remove-image:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.post-creator__selected-tags {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.post-creator__selected-tag {
+  position: absolute;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  pointer-events: auto;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  animation: tagFloat 0.3s ease forwards;
+}
+
+.post-creator__selected-tag:hover {
+  transform: scale(1.05);
+}
+
+.post-creator__form {
+  width: 24rem;
+  border-left: 1px solid #e5e7eb;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.post-creator__user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.post-creator__avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+}
+
+.post-creator__username {
+  font-weight: 600;
+}
+
+.post-creator__textarea {
+  width: 100%;
+  resize: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  min-height: 6rem;
+}
+
+.post-creator__textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.post-creator__available-challenges {
+  flex-grow: 1;
+}
+
+.post-creator__section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+}
+
+.post-creator__challenge-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.post-creator__challenge-tag {
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  border: 1px solid var(--tag-color, #e5e7eb);
+  background: transparent;
+  color: var(--tag-color, #374151);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.post-creator__challenge-tag:hover {
+  background-color: var(--tag-color);
+  color: white;
+}
+
+.post-creator__challenge-tag--selected {
+  background-color: var(--tag-color);
+  color: white;
+}
+
+.post-creator__actions {
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.post-creator__post-button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.post-creator__post-button:hover {
+  background-color: #2563eb;
+}
+
+.post-creator__file-input {
+  display: none;
+}
+
+@keyframes tagFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .post-creator__content {
+    flex-direction: column;
+  }
+
+  .post-creator__form {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .post-creator__media {
+    height: 24rem;
+  }
+}
