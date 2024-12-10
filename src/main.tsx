@@ -6,7 +6,6 @@ import App from "./App.tsx";
 import ProfilePage from "./profile.tsx";
 import FriendsPage from "./friendManagement.tsx";
 import ChallengesPage from "./Challenges.tsx";
-import PostCreator from "./postCreator.tsx";
 import Header from "./Header.tsx";
 import "./index.css";
 import { Amplify } from "aws-amplify";
@@ -39,7 +38,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/friendManagement" element={<FriendsPage />} />
             <Route path="/Challenges" element={<ChallengesPage />} />
-            <Route path="/postCreator" element={<PostCreator />} />
           </Routes>
         </Router>
       </UserProvider>
