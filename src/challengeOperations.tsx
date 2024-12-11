@@ -95,25 +95,7 @@ export async function updateParticipant(params: {
   }
 }
 
-// Increment challenge totalWorkouts by 1 (useful when a participant posts a workout linked to the challenge)
-export async function incrementChallengeWorkouts(challengeID: string): Promise<string> {
-  try {
-    const challengeResp = await client.models.Challenge.get({ id: challengeID });
-    if (!challengeResp.data) {
-      return "Challenge not found";
-    }
-    const newTotal = (challengeResp.data.totalWorkouts ?? 0) + 1;
-    await client.models.Challenge.update({
-      id: challengeID,
-      totalWorkouts: newTotal,
-      updatedAt: new Date().toISOString(),
-    });
-    return "Workouts incremented successfully";
-  } catch (error) {
-    console.error("Error incrementing challenge workouts", error);
-    return "Failed to increment workouts";
-  }
-}
+
 export async function listChallenges(): Promise<Schema["Challenge"]["type"][]> {
   try {
     const result = await client.models.Challenge.list({});

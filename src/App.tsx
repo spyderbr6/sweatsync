@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { getUrl } from 'aws-amplify/storage';
-import { Heart, MessageCircle, Share2, Camera,Trophy, Flame, Users } from 'lucide-react';
-import { CreatePostModal } from './CreatePostModal';
-
+import { Heart, MessageCircle, Share2, Trophy } from 'lucide-react';
+import ChallengeFeedHeader from './challengeFeedHeader';
 
 const useSpoofData = true;
 const client = generateClient<Schema>();
@@ -33,17 +32,17 @@ type WorkoutPostProps = {
 };
 
 // Define allowed reaction fields
-type ReactionFields = 
-  | "strong" 
-  | "fire" 
-  | "zap" 
-  | "fist" 
-  | "target" 
-  | "star" 
-  | "rocket" 
-  | "clap" 
+type ReactionFields =
+  | "strong"
+  | "fire"
+  | "zap"
+  | "fist"
+  | "target"
+  | "star"
+  | "rocket"
+  | "clap"
   | "trophy"
-  | "thumbsUp" 
+  | "thumbsUp"
   | "smiley";
 
 // Define emoji mapping type
@@ -69,15 +68,15 @@ const FloatingReaction: React.FC<FloatingReactionProps> = ({ emoji, onAnimationE
     const centerY = 50;
     const deadZoneRadius = 30;
     const margin = 5;
-    
+
     while (true) {
       const x = margin + Math.random() * (100 - 2 * margin);
       const y = margin + Math.random() * (100 - 2 * margin);
-      
+
       const distanceFromCenter = Math.sqrt(
         Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2)
       );
-      
+
       if (distanceFromCenter > deadZoneRadius) {
         return {
           left: `${x}%`,
@@ -86,9 +85,9 @@ const FloatingReaction: React.FC<FloatingReactionProps> = ({ emoji, onAnimationE
       }
     }
   });
-  
+
   return (
-    <div 
+    <div
       className="floating-reaction"
       style={position}
       onAnimationEnd={onAnimationEnd}
@@ -124,25 +123,25 @@ const getTimeAgo = (timestamp: string) => {
   const now = new Date();
   const date = new Date(timestamp);
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
- 
+
   const intervals = {
     year: 31536000,
     month: 2592000,
-    week: 604800, 
+    week: 604800,
     day: 86400,
     hour: 3600,
     minute: 60
   };
- 
+
   for (const [unit, secondsInUnit] of Object.entries(intervals)) {
     const interval = Math.floor(seconds / secondsInUnit);
     if (interval >= 1) {
       return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
     }
   }
-  
+
   return 'Just now';
- };
+};
 
 const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, onHover, onDelete }) => (
   <div className="post">
@@ -164,7 +163,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
     </div>
 
     <div className="post__content">
-      <div 
+      <div
         className="post__image-container"
         onMouseEnter={() => onHover(post.id, true)}
         onMouseLeave={() => onHover(post.id, false)}
@@ -174,12 +173,12 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
           alt="Workout"
           className="post__image"
         />
-        
-        <ReactionGrid 
+
+        <ReactionGrid
           visible={post.showReactions}
           onReaction={(emoji) => onReaction(post.id, emoji, undefined)}
         />
-        
+
         {post.activeReactions?.map(reaction => (
           <FloatingReaction
             key={reaction.id}
@@ -192,19 +191,42 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
       <div className="post__actions">
         <div className="post__buttons">
           <div className="post__action-buttons">
-            <button 
+            <button
               onClick={() => onReaction(post.id, "👍")}
               className="post__button"
             >
               <Heart className="w-6 h-6" />
+              {
+                <span className="post__challenge-count">
+                  {post.thumbsUp}
+                </span>
+              }
             </button>
             <button className="post__button">
               <MessageCircle className="w-6 h-6" />
             </button>
-            <button className="post__button">
+            <button
+              className="post__button"
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'Check out this post!',
+                    text: 'I found this post interesting and thought you might like it too.',
+                    url: window.location.href // or a specific URL for your post
+                  })
+                    .then(() => console.log('Successfully shared!'))
+                    .catch((error) => console.error('Error sharing:', error));
+                } else {
+                  // Fallback: copy link to clipboard or show a message
+                  console.log('Web Share API not supported in this browser.');
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Link copied to clipboard!');
+                }
+              }}
+            >
               <Share2 className="w-6 h-6" />
             </button>
-            <button 
+            <button
               className="post__challenge-button"
             >
               <Trophy className="post__challenge-icon w-5 h-5" />
@@ -219,7 +241,6 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
         </div>
 
         <div className="post__details">
-          <p className="post__likes">{post.thumbsUp || 0} likes</p>
           <p className="post__caption">
             <span className="post__username">{post.username}</span>{' '}
             {post.content}
@@ -236,8 +257,9 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
 function App() {
   const [workoutposts, setworkoutposts] = useState<Array<Post>>([]);
   const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({});
-  const [showPostModal, setShowPostModal] = useState(false);
-
+  const [visibleCount, setVisibleCount] = useState<number>(10); // number of posts to show initially
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const BATCH_SIZE = 10; // number of posts to load each time
 
   useEffect(() => {
     const subscription = client.models.PostforWorkout.observeQuery().subscribe({
@@ -260,18 +282,18 @@ function App() {
         const postsWithUIState = sortedPosts.map(post => {
           // Initialize activeReactions from database fields
           const activeReactions: Array<{ id: number; emoji: string }> = [];
-          
+
           // For each reaction field, add its reactions to the activeReactions array
           for (const [field, emoji] of Object.entries(fieldToEmoji)) {
             const count = (post as any)[field] || 0; // Cast to any to access dynamic fields
             for (let i = 0; i < count; i++) {
               activeReactions.push({
-                id: Date.now() + Math.floor(Math.random() * 10000), 
-                emoji 
+                id: Date.now() + Math.floor(Math.random() * 10000),
+                emoji
               });
             }
           }
-  
+
           return {
             ...post,
             showReactions: false,
@@ -303,6 +325,33 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Intersection Observer to load more posts when near the bottom
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting) {
+          // Load more posts if available
+          if (visibleCount < workoutposts.length) {
+            setVisibleCount((prev) => prev + BATCH_SIZE);
+          }
+        }
+      },
+      {
+        root: null,
+        rootMargin: "100px",
+        threshold: 0.1
+      }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) observer.unobserve(loadMoreRef.current);
+    };
+  }, [workoutposts, visibleCount]);
 
   function deletePost(id: string) {
     if (window.confirm("Are you sure you want to delete this post?")) {
@@ -316,13 +365,13 @@ function App() {
   async function reactToPost(id: string, emojiType: string | null, reactionId?: number) {
     // Handle animation cleanup
     if (!emojiType && reactionId) {
-      setworkoutposts(posts => 
-        posts.map(p => 
-          p.id === id 
-            ? { 
-                ...p, 
-                activeReactions: p.activeReactions.filter(r => r.id !== reactionId)
-              }
+      setworkoutposts(posts =>
+        posts.map(p =>
+          p.id === id
+            ? {
+              ...p,
+              activeReactions: p.activeReactions.filter(r => r.id !== reactionId)
+            }
             : p
         )
       );
@@ -350,24 +399,24 @@ function App() {
         const fieldName = emojiToField[emojiType];
         if (fieldName) {
           const updatedValue = (post[fieldName] || 0) + 1;
-          
-          await client.models.PostforWorkout.update({ 
-            id, 
-            [fieldName]: updatedValue 
+
+          await client.models.PostforWorkout.update({
+            id,
+            [fieldName]: updatedValue
           });
 
           // Add floating reaction animation
-          setworkoutposts(posts => 
-            posts.map(p => 
-              p.id === id 
-                ? { 
-                    ...p, 
-                    [fieldName]: updatedValue,
-                    activeReactions: [...p.activeReactions, {
-                      id: Date.now(),
-                      emoji: emojiType
-                    }]
-                  }
+          setworkoutposts(posts =>
+            posts.map(p =>
+              p.id === id
+                ? {
+                  ...p,
+                  [fieldName]: updatedValue,
+                  activeReactions: [...p.activeReactions, {
+                    id: Date.now(),
+                    emoji: emojiType
+                  }]
+                }
                 : p
             )
           );
@@ -380,39 +429,10 @@ function App() {
 
   return (
     <div className="feed">
-      <div className="feed__header">
-        <div className="feed__challenges">
-          <div className="challenge-alert challenge-alert--personal">
-            <Flame className="w-4 h-4 text-orange-500" />
-            <span className="text-sm">3 friends challenged you!</span>
-          </div>
-          <div className="challenge-alert challenge-alert--group">
-            <Users className="w-4 h-4 text-blue-500" />
-            <span className="text-sm">Group Challenge: 100 pushups</span>
-          </div>
-          <div className="challenge-alert challenge-alert--weekly">
-            <Trophy className="w-4 h-4 text-green-500" />
-            <span className="text-sm">Weekly Challenge: 10k steps daily</span>
-          </div>
-          <button   className="feed__header-button"      >
-            <Trophy className="w-6 h-6" />
-          </button>
-          <button className="feed__header-button" 
-            onClick={() => setShowPostModal(true)}
-            >
-            <Camera className="w-6 h-6" />
-          </button>
-        </div>
-      </div>
-
-      <CreatePostModal 
-        isOpen={showPostModal} 
-        onClose={() => setShowPostModal(false)} 
-      />
+      <ChallengeFeedHeader />
 
       <div className="feed__content">
-        {/* Existing post rendering logic */}
-        {workoutposts.map(post => (
+        {workoutposts.slice(0, visibleCount).map(post => (
           <WorkoutPost
             key={post.id}
             post={post}
@@ -420,20 +440,20 @@ function App() {
             onReaction={reactToPost}
             onDelete={deletePost}
             onHover={(postId, isHovering) => {
-              setworkoutposts(posts => 
-                posts.map(p => 
+              setworkoutposts(posts =>
+                posts.map(p =>
                   p.id === postId ? { ...p, showReactions: isHovering } : p
                 )
               );
             }}
           />
         ))}
+
+        {/* Sentinel element to trigger loading more */}
+        <div ref={loadMoreRef} style={{ height: "50px" }}></div>
       </div>
     </div>
   );
 }
 
 export default App;
-
-
-
