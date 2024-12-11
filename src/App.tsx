@@ -210,8 +210,8 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
               onClick={() => {
                 if (navigator.share) {
                   navigator.share({
-                    title: 'Check out this post!',
-                    text: 'I found this post interesting and thought you might like it too.',
+                    title: 'Check out my workout!',
+                    text: 'Join me on SweatSync',
                     url: window.location.href // or a specific URL for your post
                   })
                     .then(() => console.log('Successfully shared!'))
@@ -267,6 +267,8 @@ function App() {
         const sortedPosts = [...data.items].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
+  
+        // Map incoming posts to UI state
         const fieldToEmoji: { [key: string]: string } = {
           strong: "💪",
           fire: "🔥",
@@ -279,30 +281,39 @@ function App() {
           trophy: "🏆",
           thumbsUp: "👍",
         };
+  
         const postsWithUIState = sortedPosts.map(post => {
-          // Initialize activeReactions from database fields
           const activeReactions: Array<{ id: number; emoji: string }> = [];
-
-          // For each reaction field, add its reactions to the activeReactions array
           for (const [field, emoji] of Object.entries(fieldToEmoji)) {
-            const count = (post as any)[field] || 0; // Cast to any to access dynamic fields
+            const count = (post as any)[field] || 0;
             for (let i = 0; i < count; i++) {
               activeReactions.push({
-                id: Date.now() + Math.floor(Math.random() * 10000),
-                emoji
+                id: Date.now() + Math.floor(Math.random() * 10000), 
+                emoji 
               });
             }
           }
-
           return {
             ...post,
             showReactions: false,
-            activeReactions
+            activeReactions,
           };
         });
-
-        setworkoutposts(postsWithUIState);
-
+  
+        setworkoutposts(prevPosts => {
+          // Map previous posts by ID to easily find old states
+          const prevMap = new Map(prevPosts.map(p => [p.id, p]));
+  
+          return postsWithUIState.map(newPost => {
+            const oldPost = prevMap.get(newPost.id);
+            return {
+              ...newPost,
+              // Preserve showReactions if it was previously set
+              showReactions: oldPost?.showReactions ?? newPost.showReactions,
+            };
+          });
+        });
+  
         if (useSpoofData) {
           const spoofedUrls: { [key: string]: string } = {};
           for (const item of data.items) {
@@ -321,7 +332,7 @@ function App() {
         }
       },
     });
-
+  
     return () => subscription.unsubscribe();
   }, []);
 

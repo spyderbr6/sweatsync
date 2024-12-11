@@ -71,7 +71,19 @@ const schema = a.schema({
     timestamp: a.datetime(),
     validated: a.boolean().default(false),
     validationComment: a.string()
-  }).authorization((allow) => [allow.publicApiKey()])
+  }).authorization((allow) => [allow.publicApiKey()]), 
+
+Comment: a.model({
+  postId: a.string(),
+  userId: a.string(),
+  content: a.string(),
+  timestamp: a.datetime(), 
+  updatedAt: a.datetime(), 
+  createdAt: a.datetime()
+}).authorization((allow) => [allow.publicApiKey()])
+
+
+
 });
 
 export type Schema = ClientSchema<typeof schema>;
