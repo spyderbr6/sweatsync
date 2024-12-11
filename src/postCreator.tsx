@@ -3,7 +3,7 @@ import { Camera, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { uploadData } from 'aws-amplify/storage';
-import { listChallenges} from './challengeOperations';
+import { listChallenges } from './challengeOperations';
 import { useUser } from './userContext';
 import './postCreator.css';
 
@@ -87,15 +87,15 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       onError?.(new Error("Missing required data for post"));
       return;
     }
-
+  
     try {
       setLoading(true);
-
+  
       // Upload image
       const uniqueFileName = `${Date.now()}-${file.name}`;
       const path = `picture-submissions/${uniqueFileName}`;
       await uploadData({ path, data: file });
-
+  
       const result = await client.models.PostforWorkout.create({
         content,
         url: path,
@@ -105,69 +105,88 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         smiley: 0,
         trophy: 0
       });
-
+  
       if (!result.data) {
         throw new Error("Failed to create post");
       }
-
+  
       const newPost = result.data;
-
-
-      await Promise.all(selectedChallenges.map(async (challengeId) => {
+  
+      // Process selected challenges
+      const challengePromises = selectedChallenges.map(async (challengeId) => {
         try {
-          // 1. First, find the participant record for this user in this challenge
+          // Create PostChallenge entry to link post with challenge
+          await client.models.PostChallenge.create({
+            postId: newPost.id,
+            challengeId,
+            userId,
+            timestamp: new Date().toISOString(),
+            validated: false, // Default to false as per schema
+            validationComment: "" // Empty string for initial creation
+          });
+  
+          // Find the participant record
           const participantResult = await client.models.ChallengeParticipant.list({
             filter: {
               challengeID: { eq: challengeId },
               userID: { eq: userId },
-              status: { eq: "ACTIVE" } // Only update active participants
+              status: { eq: "ACTIVE" }
             }
           });
-
+  
           const participant = participantResult.data[0];
-
           if (participant) {
-            // 2. Calculate new workout count and points
+            // Get the challenge to check totalWorkouts
+            const challengeResult = await client.models.Challenge.get({ id: challengeId });
+            if (!challengeResult.data) {
+              throw new Error("Challenge not found");
+            }
+  
             const newWorkoutCount = (participant.workoutsCompleted || 0) + 1;
-            const newPoints = (participant.points || 0) + 10; // Award 10 points per workout
-
-            // 3. Update the participant record
+            const newPoints = (participant.points || 0) + 10;
+            const targetWorkouts = challengeResult.data.totalWorkouts || 30;
+  
             await client.models.ChallengeParticipant.update({
               id: participant.id,
               workoutsCompleted: newWorkoutCount,
               points: newPoints,
               updatedAt: new Date().toISOString(),
-              // If this completes the challenge, update status
-              ...((participant.workoutsCompleted || 0) >= 30 && {
+              ...(newWorkoutCount >= targetWorkouts && {
                 status: "COMPLETED",
                 completedAt: new Date().toISOString()
               })
             });
-
-            // 4. Create a record linking the post to the challenge
-            await client.models.PostChallenge.create({
-              postId: newPost.id,
-              challengeId: challengeId,
-              userId: userId,
-              timestamp: new Date().toISOString()
-            });
           }
         } catch (error) {
-          console.error(`Error updating participant data for challenge ${challengeId}:`, error);
+          console.error(`Error processing challenge ${challengeId}:`, error);
+          throw error;
         }
-      }));
-
+      });
+  
+      // Use Promise.allSettled to handle partial failures
+      const challengeResults = await Promise.allSettled(challengePromises);
+  
+      // Check for any failures
+      const failures = challengeResults.filter(
+        (result): result is PromiseRejectedResult => result.status === 'rejected'
+      );
+  
+      if (failures.length > 0) {
+        console.warn(`${failures.length} challenge updates failed:`, failures);
+        onError?.(new Error(`Post created but ${failures.length} challenge updates failed`));
+      }
+  
       // Reset form
       setContent("");
       setFile(null);
       setPreviewUrl(null);
       setStep('initial');
       setSelectedChallenges([]);
-
+  
       onSuccess();
-
     } catch (error) {
       console.error("Error creating post:", error);
+      onError?.(error instanceof Error ? error : new Error("Failed to create post"));
     } finally {
       setLoading(false);
     }
@@ -268,8 +287,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
                   key={challenge.id}
                   onClick={() => toggleChallenge(challenge.id)}
                   className={`post-creator__challenge-tag ${selectedChallenges.includes(challenge.id)
-                      ? 'post-creator__challenge-tag--selected'
-                      : ''
+                    ? 'post-creator__challenge-tag--selected'
+                    : ''
                     }`}
                   style={{
                     '--tag-color': challengeColors[challenge.challengeType || 'general']

@@ -137,13 +137,17 @@ a:hover {
 
 
 .account-icon img {
-  position: absolute;
+  position: relative;
   height: 60px;
   width: 60px;
-  top: 20px;  /* Adjust the top distance as necessary */
+  top: 8px;  /* Adjust the top distance as necessary */
   right: 20px; /* Adjust the right distance as necessary */
   display: flex;
   align-items: center;
+  border-radius: 50%; /* Makes the image circular */
+  object-fit: cover; /* Ensures the image covers the container */
+  border: 2px solid #ddd; /* Optional: Adds a border around the picture */
+  transition: border-color 0.3s; /* Smooth border color transition */
 
 }
 
@@ -216,6 +220,8 @@ a:hover {
   }
   .account-icon img {
     top: 5px;
+    height: 40px;
+    width: 40px;
   }
 }
 
@@ -564,4 +570,46 @@ a:hover {
   transform: translate(-50%, -50%);
   animation: reaction-appear 1.5s ease-out forwards;
   pointer-events: none;
+}
+
+.fab-button {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  background-color: #3B82F6; /* blue-500 */
+  color: white;
+  border-radius: 9999px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  z-index: 50;
+}
+
+.fab-button:hover {
+  background-color: #2563EB; /* blue-600 */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.fab-button svg {
+  width: 2rem;
+  height: 2rem;
+  transition: transform 0.2s ease;
+}
+
+.fab-button:hover svg {
+  transform: rotate(180deg);
+}
+
+@media (min-width: 1024px) {
+  .fab-button {
+    bottom: 2rem;
+    right: 2rem;
+  }
 }

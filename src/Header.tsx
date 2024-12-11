@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import { useNavigate} from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
+import { CreatePostModal } from './CreatePostModal';
 
-function App() {
+function Header() {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
-  const {signOut } = useAuthenticator();
+  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+  const { signOut } = useAuthenticator();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -26,28 +29,53 @@ function App() {
     };
   }, [showDropdown]);
 
-  
   return (
-    <main className="main-container">
-      <div className="header-input-container">
-        <div className="header-container">
-          <img src="/sweatsync_logo.gif" alt="SweatSync Logo" className="logo" onClick={() => navigate('/')} />
-        </div>
-        <div className="account-icon">
-          <div className="dropdown">
-          <img src="profileDefault.png" alt="Account" className="dropdown-toggle" onClick={() => setShowDropdown(!showDropdown)} />
-          <div className={`dropdown-menu ${showDropdown ? 'show' : ''}`}>
-            <button className="dropdown-item" onClick={() => navigate('/')}>Home</button>
-              <button className="dropdown-item" onClick={() => navigate('/profile')}>Profile</button>
-              <button className="dropdown-item" onClick={() => navigate('/friendManagement')}>Friends</button>
-              <button className="dropdown-item" onClick={() => navigate('/Challenges')}>Challenges</button>
-              <button className="dropdown-item" onClick={signOut}>Logout</button>
+    <>
+      <main className="main-container">
+        <div className="header-input-container">
+          <div className="header-container">
+            <img 
+              src="/sweatsync_logo.gif" 
+              alt="SweatSync Logo" 
+              className="logo" 
+              onClick={() => navigate('/')} 
+            />
+          </div>
+          <div className="account-icon">
+            <div className="dropdown">
+              <img 
+                src="profileDefault.png" 
+                alt="Account" 
+                className="dropdown-toggle" 
+                onClick={() => setShowDropdown(!showDropdown)} 
+              />
+              <div className={`dropdown-menu ${showDropdown ? 'show' : ''}`}>
+                <button className="dropdown-item" onClick={() => navigate('/profile')}>Profile</button>
+                <button className="dropdown-item" onClick={() => navigate('/friendManagement')}>Friends</button>
+                <button className="dropdown-item" onClick={() => navigate('/Challenges')}>Challenges</button>
+                <button className="dropdown-item" onClick={signOut}>Logout</button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+
+      {/* Floating Action Button */}
+      <button 
+        onClick={() => setIsPostModalOpen(true)}
+        className="fab-button"
+        aria-label="Create new post"
+      >
+        <Plus />
+      </button>
+
+      {/* Using existing CreatePostModal component */}
+      <CreatePostModal 
+        isOpen={isPostModalOpen}
+        onClose={() => setIsPostModalOpen(false)}
+      />
+    </>
   );
 }
 
-export default App;
+export default Header;
