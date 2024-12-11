@@ -3,7 +3,7 @@ import { Camera, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { uploadData } from 'aws-amplify/storage';
-import { listChallenges } from './challengeOperations';
+import { listChallenges} from './challengeOperations';
 import { useUser } from './userContext';
 import './postCreator.css';
 
@@ -96,8 +96,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       const path = `picture-submissions/${uniqueFileName}`;
       await uploadData({ path, data: file });
 
-      // Create the post
-      await client.models.PostforWorkout.create({
+      const result = await client.models.PostforWorkout.create({
         content,
         url: path,
         username: userAttributes?.preferred_username,
@@ -107,28 +106,54 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         trophy: 0
       });
 
-      // For each selected challenge, update the participant's workout count
+      if (!result.data) {
+        throw new Error("Failed to create post");
+      }
+
+      const newPost = result.data;
+
+
       await Promise.all(selectedChallenges.map(async (challengeId) => {
         try {
-          // Get participant record
+          // 1. First, find the participant record for this user in this challenge
           const participantResult = await client.models.ChallengeParticipant.list({
             filter: {
               challengeID: { eq: challengeId },
-              userID: { eq: userId }
+              userID: { eq: userId },
+              status: { eq: "ACTIVE" } // Only update active participants
             }
           });
 
-          if (participantResult.data[0]) {
-            const participant = participantResult.data[0];
-            // Update workout count
+          const participant = participantResult.data[0];
+
+          if (participant) {
+            // 2. Calculate new workout count and points
+            const newWorkoutCount = (participant.workoutsCompleted || 0) + 1;
+            const newPoints = (participant.points || 0) + 10; // Award 10 points per workout
+
+            // 3. Update the participant record
             await client.models.ChallengeParticipant.update({
               id: participant.id,
-              workoutsCompleted: (participant.workoutsCompleted || 0) + 1,
-              updatedAt: new Date().toISOString()
+              workoutsCompleted: newWorkoutCount,
+              points: newPoints,
+              updatedAt: new Date().toISOString(),
+              // If this completes the challenge, update status
+              ...((participant.workoutsCompleted || 0) >= 30 && {
+                status: "COMPLETED",
+                completedAt: new Date().toISOString()
+              })
+            });
+
+            // 4. Create a record linking the post to the challenge
+            await client.models.PostChallenge.create({
+              postId: newPost.id,
+              challengeId: challengeId,
+              userId: userId,
+              timestamp: new Date().toISOString()
             });
           }
         } catch (error) {
-          console.error(`Error updating challenge ${challengeId}:`, error);
+          console.error(`Error updating participant data for challenge ${challengeId}:`, error);
         }
       }));
 
@@ -151,7 +176,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   if (step === 'initial') {
     return (
       <div className="post-creator post-creator--initial">
-        <div 
+        <div
           className="post-creator__upload-area"
           onClick={() => fileInputRef.current?.click()}
         >
@@ -176,9 +201,9 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         <div className="post-creator__media">
           {previewUrl && (
             <div className="post-creator__preview-container">
-              <img 
-                src={previewUrl} 
-                alt="Preview" 
+              <img
+                src={previewUrl}
+                alt="Preview"
                 className="post-creator__preview-image"
               />
               <button
@@ -192,11 +217,11 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
                 {selectedChallenges.map((challengeId, index) => {
                   const challenge = availableChallenges.find(c => c.id === challengeId);
                   if (!challenge?.title) return null;
-                  
+
                   const top = 20 + (Math.floor(index / 2) * 40);
                   const left = 20 + ((index % 2) * 50);
                   const color = challengeColors[challenge.challengeType || 'general'];
-                  
+
                   return (
                     <div
                       key={challengeId}
@@ -219,9 +244,9 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
         <div className="post-creator__form">
           <div className="post-creator__user-info">
-            <img 
-              src="/profileDefault.png" 
-              alt="Profile" 
+            <img
+              src="/profileDefault.png"
+              alt="Profile"
               className="post-creator__avatar"
             />
             <span className="post-creator__username">{userAttributes?.preferred_username || 'Loading...'}</span>
@@ -242,11 +267,10 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
                 <button
                   key={challenge.id}
                   onClick={() => toggleChallenge(challenge.id)}
-                  className={`post-creator__challenge-tag ${
-                    selectedChallenges.includes(challenge.id) 
-                      ? 'post-creator__challenge-tag--selected' 
+                  className={`post-creator__challenge-tag ${selectedChallenges.includes(challenge.id)
+                      ? 'post-creator__challenge-tag--selected'
                       : ''
-                  }`}
+                    }`}
                   style={{
                     '--tag-color': challengeColors[challenge.challengeType || 'general']
                   } as React.CSSProperties}
