@@ -4,6 +4,8 @@ import { generateClient } from "aws-amplify/data";
 import { getUrl } from 'aws-amplify/storage';
 import { Heart, MessageCircle, Share2, Trophy } from 'lucide-react';
 import ChallengeFeedHeader from './challengeFeedHeader';
+import { CommentSection } from './CommentSection'; 
+
 
 const useSpoofData = true;
 const client = generateClient<Schema>();
@@ -245,9 +247,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
             <span className="post__username">{post.username}</span>{' '}
             {post.content}
           </p>
-          <p className="post__comments-link">
-                    View all 18 comments
-                  </p>
+                  <CommentSection postId={post.id} />
           <p className="post__timestamp">
             {getTimeAgo(post.createdAt)}
           </p>
