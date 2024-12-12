@@ -1,5 +1,7 @@
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
+import { fetchUserAttributes } from 'aws-amplify/auth';
+
 
 const client = generateClient<Schema>();
 
@@ -173,5 +175,72 @@ export async function checkFriendRequestStatus(userId: string, otherUserId: stri
   } catch (error) {
     console.error('Error checking friend request status:', error);
     throw error;
+  }
+}
+
+interface UserSearchResult {
+  userId: string;
+  username: string | null;
+  email: string | null;
+  mutualFriends?: number;
+}
+
+export async function searchUsers(
+  searchTerm: string, 
+  searchType: 'email' | 'username',
+ // currentUserId: string
+): Promise<UserSearchResult[]> {
+  try {
+    // Get current user's friends list for mutual friends calculation
+    //const currentUserFriends = await getFriendsList(currentUserId);
+    //const friendSet = new Set(currentUserFriends);
+
+    // Get user attributes for all users
+    const allUsersAttrs = await fetchUserAttributes();
+
+    // Search for users based on search type
+    if (searchType === 'email') {
+      // Search by email - this should be replaced with your actual user search implementation
+      // For now, we're simulating a search through user attributes
+      if (allUsersAttrs.email?.includes(searchTerm)) {
+        return [{
+          userId: allUsersAttrs.sub || '',
+          username: allUsersAttrs.preferred_username || null,
+          email: allUsersAttrs.email || null,
+          mutualFriends: 0 // Calculate based on friend lists
+        }];
+      }
+    } else {
+      // Search by username
+      if (allUsersAttrs.preferred_username?.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return [{
+          userId: allUsersAttrs.sub || '',
+          username: allUsersAttrs.preferred_username || null,
+          email: allUsersAttrs.email || null,
+          mutualFriends: 0 // Calculate based on friend lists
+        }];
+      }
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error searching users:', error);
+    throw error;
+  }
+}
+
+// Helper function to calculate mutual friends
+export async function getMutualFriendCount(user1Id: string, user2Id: string): Promise<number> {
+  try {
+    const user1Friends = await getFriendsList(user1Id);
+    const user2Friends = await getFriendsList(user2Id);
+
+    const user1FriendSet = new Set(user1Friends);
+    const mutualFriends = user2Friends.filter(friend => user1FriendSet.has(friend));
+
+    return mutualFriends.length;
+  } catch (error) {
+    console.error('Error calculating mutual friends:', error);
+    return 0;
   }
 }

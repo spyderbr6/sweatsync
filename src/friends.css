@@ -1,233 +1,571 @@
+/* modernFriends.css */
+
+/* Container Layouts */
 .friends-container {
-    max-width: 32rem;
-    margin: 0 auto;
-    background-color: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border-radius: 0.5rem;
-    overflow: hidden;
+  max-width: 64rem; /* 4xl in Tailwind */
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.friends-content-spacing {
+  margin-bottom: 1.5rem;
+}
+
+/* Header Section */
+.friends-header {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+}
+
+.friends-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.friends-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Button Styles */
+.add-friend-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: #2563eb;
+  color: white;
+  border-radius: 9999px;
+  transition: background-color 0.2s;
+}
+
+.add-friend-button:hover {
+  background-color: #1d4ed8;
+}
+
+.add-friend-button-icon {
+  margin-right: 0.5rem;
+}
+
+/* Stats Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
-  
-  .friends-header {
-    background-color: #2563eb;
-    color: white;
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+}
+
+.stat-card {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stat-card--friends {
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+}
+
+.stat-card--challenges {
+  background: linear-gradient(135deg, #dcfce7, #f0fdf4);
+}
+
+.stat-card--active {
+  background: linear-gradient(135deg, #f3e8ff, #faf5ff);
+}
+
+.stat-icon {
+  width: 2rem;
+  height: 2rem;
+}
+
+.stat-icon--friends {
+  color: #2563eb;
+}
+
+.stat-icon--challenges {
+  color: #16a34a;
+}
+
+.stat-icon--active {
+  color: #7c3aed;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Search Bar */
+.search-container {
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Friends List */
+.friends-list {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.friend-item {
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+}
+
+.friend-item:last-child {
+  border-bottom: none;
+}
+
+.friend-item:hover {
+  background-color: #f9fafb;
+}
+
+.friend-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.friend-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+}
+
+.friend-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.friend-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.friend-status {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Action Buttons */
+.friend-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-button {
+  padding: 0.5rem;
+  border-radius: 9999px;
+  transition: all 0.2s;
+  color: #6b7280;
+}
+
+.action-button:hover {
+  background-color: #f3f4f6;
+}
+
+.action-button--message:hover {
+  color: #2563eb;
+  background-color: #dbeafe;
+}
+
+.action-button--remove:hover {
+  color: #dc2626;
+  background-color: #fee2e2;
+}
+
+/* Friend Request Styles */
+.friend-request {
+  background-color: #eff6ff;
+}
+
+.request-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.request-button {
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.request-button--accept {
+  background-color: #2563eb;
+  color: white;
+}
+
+.request-button--accept:hover {
+  background-color: #1d4ed8;
+}
+
+.request-button--decline {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.request-button--decline:hover {
+  background-color: #e5e7eb;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  color: #6b7280;
+}
+
+/* Error Message */
+.error-message {
+  background-color: #fee2e2;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+/* Empty State */
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+  .friends-header-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
   }
-  
-  .friends-title {
-    font-size: 1.25rem;
-    font-weight: bold;
-  }
-  
+
   .add-friend-button {
-    padding: 0.5rem;
-    border-radius: 9999px;
-  }
-  
-  .add-friend-button:hover {
-    background-color: #1d4ed8;
-  }
-  
-  .search-container {
-    padding: 1rem;
-    background-color: #f3f4f6;
-  }
-  
-  .search-wrapper {
-    position: relative;
-  }
-  
-  .search-input {
     width: 100%;
-    padding: 0.5rem 1rem 0.5rem 2.5rem;
-    border: 1px solid #d1d5db;
-    border-radius: 9999px;
+    justify-content: center;
   }
-  
-  .search-icon {
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #9ca3af;
+
+  .friend-actions {
+    flex-direction: column;
   }
-  
-  .tabs {
+}
+
+
+
+/* friendModal.css */
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+  backdrop-filter: blur(4px);
+}
+
+/* Modal Container */
+.modal-container {
+  background-color: white;
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 32rem;
+  position: relative;
+  margin: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+/* Modal Header */
+.modal-header {
+  padding: 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.modal-close {
+  padding: 0.5rem;
+  border-radius: 9999px;
+  color: #6b7280;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.modal-close:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+/* Search Type Tabs */
+.search-type-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+}
+
+.search-type-tab {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.search-type-tab:hover {
+  background-color: #f3f4f6;
+}
+
+.search-type-tab--active {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.search-type-tab--active:hover {
+  background-color: #bfdbfe;
+}
+
+.search-type-icon {
+  margin-right: 0.5rem;
+}
+
+/* Search Input */
+.modal-search {
+  padding: 0 1.25rem 1rem;
+}
+
+.modal-search-container {
+  position: relative;
+}
+
+.modal-search-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.modal-search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.modal-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+/* Results Section */
+.modal-results {
+  padding: 1rem 1.25rem;
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.results-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.result-item:hover {
+  background-color: #f9fafb;
+}
+
+.result-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.result-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+}
+
+.result-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.result-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+.result-meta {
+  font-size: 0.875rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Add Button */
+.result-add-button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  background-color: #2563eb;
+  color: white;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.result-add-button:hover {
+  background-color: #1d4ed8;
+}
+
+.result-add-button:disabled {
+  background-color: #e5e7eb;
+  cursor: not-allowed;
+}
+
+/* Status Messages */
+.modal-status {
+  margin: 0 1.25rem 1rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.modal-status--error {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.modal-status--success {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+/* Loading State */
+.modal-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+/* Empty State */
+.modal-empty {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+  .modal-container {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
     display: flex;
-    border-bottom: 1px solid #e5e7eb;
+    flex-direction: column;
   }
-  
-  .tab {
-    flex: 1;
-    padding: 0.75rem;
-    text-align: center;
-    color: #6b7280;
-  }
-  
-  .tab.active {
-    border-bottom: 2px solid #2563eb;
-    color: #2563eb;
-  }
-  
-  .error-message {
-    background-color: #fee2e2;
-    border: 1px solid #f87171;
-    color: #dc2626;
-    padding: 0.75rem 1rem;
-    border-radius: 0.25rem;
-    position: relative;
-  }
-  
-  .error-close {
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-  }
-  
-  .list-container {
-    border-top: 1px solid #e5e7eb;
-  }
-  
-  .list-item {
-    display: flex;
-    align-items: center;
-    padding: 1rem;
-    border-bottom: 1px solid #e5e7eb;
-  }
-  
-  .list-item:hover {
-    background-color: #f9fafb;
-  }
-  
-  .profile-image {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 9999px;
-    margin-right: 1rem;
-  }
-  
-  .friend-info {
+
+  .modal-results {
     flex-grow: 1;
+    overflow-y: auto;
   }
-  
-  .friend-name {
-    font-weight: 500;
+
+  .search-type-tabs {
+    overflow-x: auto;
+    padding: 1rem;
   }
-  
-  .friend-status {
-    font-size: 0.875rem;
-    color: #6b7280;
+
+  .search-type-tab {
+    white-space: nowrap;
   }
-  
-  .action-buttons {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .icon-button {
-    color: #6b7280;
-  }
-  
-  .icon-button:hover {
-    color: #2563eb;
-  }
-  
-  .remove-button:hover {
-    color: #dc2626;
-  }
-  
-  .accept-button {
-    background-color: #22c55e;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-  }
-  
-  .accept-button:hover {
-    background-color: #16a34a;
-  }
-  
-  .decline-button {
-    background-color: #ef4444;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-  }
-  
-  .decline-button:hover {
-    background-color: #dc2626;
-  }
-  
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 50;
-  }
-  
-  .modal {
-    background-color: white;
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    width: 20rem;
-    position: relative;
-  }
-  
-  .modal-close {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    color: #6b7280;
-  }
-  
-  .modal-close:hover {
-    color: #374151;
-  }
-  
-  .modal-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-  }
-  
-  .modal-input {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    margin-bottom: 1rem;
-  }
-  
-  .modal-button {
-    width: 100%;
-    background-color: #2563eb;
-    color: white;
-    padding: 0.5rem;
-    border-radius: 0.375rem;
-  }
-  
-  .modal-button:hover {
-    background-color: #1d4ed8;
-  }
-  
-  .empty-state {
-    text-align: center;
-    padding: 2rem;
-    color: #6b7280;
-  }
-  
-  .loading-state {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
+}

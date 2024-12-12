@@ -366,6 +366,11 @@ a:hover {
   width: 2rem;
   height: 2rem;
   border-radius: 9999px;
+  align-items: center;
+  border-radius: 50%; /* Makes the image circular */
+  object-fit: cover; /* Ensures the image covers the container */
+  border: 2px solid #ddd; /* Optional: Adds a border around the picture */
+  transition: border-color 0.3s; /* Smooth border color transition */
 }
 
 .post__username {
