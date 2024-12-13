@@ -1,7 +1,5 @@
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
-import { fetchUserAttributes } from 'aws-amplify/auth';
-
 
 const client = generateClient<Schema>();
 
@@ -187,42 +185,36 @@ interface UserSearchResult {
 
 export async function searchUsers(
   searchTerm: string, 
-  searchType: 'email' | 'username',
- // currentUserId: string
+  searchType: 'email' | 'username'
 ): Promise<UserSearchResult[]> {
+  const client = generateClient<Schema>();
+  
   try {
-    // Get current user's friends list for mutual friends calculation
-    //const currentUserFriends = await getFriendsList(currentUserId);
-    //const friendSet = new Set(currentUserFriends);
-
-    // Get user attributes for all users
-    const allUsersAttrs = await fetchUserAttributes();
-
-    // Search for users based on search type
+    let filter = {};
     if (searchType === 'email') {
-      // Search by email - this should be replaced with your actual user search implementation
-      // For now, we're simulating a search through user attributes
-      if (allUsersAttrs.email?.includes(searchTerm)) {
-        return [{
-          userId: allUsersAttrs.sub || '',
-          username: allUsersAttrs.preferred_username || null,
-          email: allUsersAttrs.email || null,
-          mutualFriends: 0 // Calculate based on friend lists
-        }];
-      }
+      filter = {
+        email: { contains: searchTerm.toLowerCase() }
+      };
     } else {
-      // Search by username
-      if (allUsersAttrs.preferred_username?.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return [{
-          userId: allUsersAttrs.sub || '',
-          username: allUsersAttrs.preferred_username || null,
-          email: allUsersAttrs.email || null,
-          mutualFriends: 0 // Calculate based on friend lists
-        }];
-      }
+      filter = {
+        or: [
+          { username: { contains: searchTerm.toLowerCase() } },
+          { preferred_username: { contains: searchTerm.toLowerCase() } }
+        ]
+      };
     }
 
-    return [];
+    const results = await client.models.User.list({
+      filter: filter
+    });
+
+    return results.data.map(user => ({
+      userId: user.id,
+      username: user.preferred_username || user.username,
+      email: user.email || null,
+      mutualFriends: 0  // We can implement this later
+    }));
+
   } catch (error) {
     console.error('Error searching users:', error);
     throw error;
@@ -244,3 +236,4 @@ export async function getMutualFriendCount(user1Id: string, user2Id: string): Pr
     return 0;
   }
 }
+
