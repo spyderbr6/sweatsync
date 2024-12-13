@@ -3,6 +3,8 @@ import { Search, Mail, AtSign, X, UserPlus, Users } from 'lucide-react';
 import { sendFriendRequest, searchUsers } from './friendOperations';
 import { useUser } from './userContext';
 import './friends.css';
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "../amplify/data/resource";
 
 interface FriendModalProps {
     isOpen: boolean;
@@ -16,6 +18,27 @@ interface SearchResult {
     email: string | null;
     mutualFriends: number;  // Make this required, not optional
 }
+
+async function testUserData() {
+    try {
+      const client = generateClient<Schema>();
+      console.log('Client initialized:', client); // Debug log
+      
+      if (!client.models) {
+        console.error('Client models not initialized');
+        return;
+      }
+  
+      const users = await client.models.User.list({});
+      console.log('All users:', users.data);
+    } catch (error) {
+      console.error('Error in testUserData:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+    }
+  }
 
 const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const { userId } = useUser();
@@ -33,6 +56,11 @@ const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess })
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
+    useEffect(() => {
+        if (isOpen) {
+            testUserData();
+        }
+    }, [isOpen]);
     // Perform search when debounced term changes
     useEffect(() => {
         // In FriendModal.tsx
