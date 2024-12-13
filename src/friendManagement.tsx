@@ -1,89 +1,72 @@
 import { useState, useEffect } from 'react';
-import { Search, UserPlus, UserMinus, MessageCircle, X } from 'lucide-react';
-import { 
-  sendFriendRequest, 
-  acceptFriendRequest, 
-  getFriendsList, 
-  getPendingFriendRequests 
+import { Search, UserPlus, MessageCircle, Ban, Trophy, Activity, Users, X } from 'lucide-react';
+import {
+  acceptFriendRequest,
+  getFriendsList,
+  getPendingFriendRequests
 } from './friendOperations';
 import { getCurrentUser } from 'aws-amplify/auth';
-import './friends.css';  // Make sure to create this CSS file
+import { useUser } from './userContext';
+import FriendModal from './friendModal';
+import './friends.css';
 
-
-type Nullable<T> = T | null;
 
 interface FriendRequest {
   id: string;
-  sender: Nullable<string>;
-  recipient: Nullable<string>;
-  status: Nullable<'PENDING' | 'ACCEPTED' | 'DECLINED'>;
-  createdAt: Nullable<string>;
-  updatedAt: string;
+  sender: string | null;
+  recipient: string | null;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | null;
+  createdAt: string | null;
 }
 
-interface User {
-  userId: string;
-  username: string;
-}
-
-const FriendsPage = () => {
-  const [activeTab, setActiveTab] = useState('friends');
-  const [searchTerm, setSearchTerm] = useState('');
-  // Updated type to handle nullable strings, but filter out nulls when setting
+const ModernFriendsPage = () => {
   const [friends, setFriends] = useState<string[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [newFriendEmail, setNewFriendEmail] = useState('');
-  const [isAddFriendModalOpen, setIsAddFriendModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddFriendModalOpen, setIsAddFriendModalOpen] = useState(false);
+  const { userId } = useUser();
 
-  useEffect(() => {
-    const fetchUserAndFriends = async () => {
-      try {
-        setLoading(true);
-        const user = await getCurrentUser();
-        setCurrentUser(user);
-
-        const friendsList = await getFriendsList(user.userId);
-        // Filter out null values before setting the state
-        setFriends(friendsList.filter((friend): friend is string => friend !== null));
-
-        const requests = await getPendingFriendRequests(user.userId);
-        setPendingRequests(requests);
-
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching friends:', err);
-        setError('Failed to load friends');
-        setLoading(false);
-      }
-    };
-
-    fetchUserAndFriends();
-  }, []);
-
-  const handleSendFriendRequest = async () => {
-    if (!newFriendEmail || !currentUser) return;
-
+  const loadFriendsData = async () => {
     try {
-      await sendFriendRequest(currentUser.userId, newFriendEmail);
-      setNewFriendEmail('');
-      setIsAddFriendModalOpen(false);
+      setLoading(true);
+      if (!userId) {
+        const user = await getCurrentUser();
+        const friendsList = await getFriendsList(user.userId);
+        const requests = await getPendingFriendRequests(user.userId);
+        
+        setFriends(friendsList.filter((friend): friend is string => friend !== null));
+        setPendingRequests(requests);
+      } else {
+        const friendsList = await getFriendsList(userId);
+        const requests = await getPendingFriendRequests(userId);
+        
+        setFriends(friendsList.filter((friend): friend is string => friend !== null));
+        setPendingRequests(requests);
+      }
     } catch (err) {
-      console.error('Error sending friend request:', err);
-      setError('Failed to send friend request');
+      console.error('Error loading friends data:', err);
+      setError('Failed to load friends data');
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadFriendsData();
+  }, [userId]);
 
   const handleAcceptRequest = async (requestId: string) => {
     try {
       await acceptFriendRequest(requestId);
-      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
-      if (currentUser) {
-        const updatedFriends = await getFriendsList(currentUser.userId);
-        // Filter out null values before setting the state
-        setFriends(updatedFriends.filter((friend): friend is string => friend !== null));
+      // Refresh friends and requests lists
+      if (userId) {
+        const friendsList = await getFriendsList(userId);
+        const requests = await getPendingFriendRequests(userId);
+
+        setFriends(friendsList.filter((friend): friend is string => friend !== null));
+        setPendingRequests(requests);
       }
     } catch (err) {
       console.error('Error accepting friend request:', err);
@@ -91,173 +74,160 @@ const FriendsPage = () => {
     }
   };
 
-  // Filtering logic (no need to check for null since we filtered them out)
-  const filteredFriends = friends.filter(friend => 
+  const handleAddFriendSuccess = async () => {
+    setIsAddFriendModalOpen(false);
+    await loadFriendsData(); // Refresh the lists after adding a friend
+  };
+  const filteredFriends = friends.filter(friend =>
     friend.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredRequests = pendingRequests.filter(request => 
+  const filteredRequests = pendingRequests.filter(request =>
     request.sender?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
   if (loading) {
     return (
-      <div className="loading-state">
-        <p>Loading friends...</p>
+      <div className="loading-container">
+        <div>Loading friends...</div>
       </div>
     );
   }
 
   return (
     <div className="friends-container">
-      {/* Header */}
+      {/* Header Section */}
       <div className="friends-header">
-        <h1 className="friends-title">Friends</h1>
-        <div>
-          <button 
-            className="add-friend-button"
+        <div className="friends-header-top">
+          <h1 className="friends-title">Friends</h1>
+          <button
             onClick={() => setIsAddFriendModalOpen(true)}
-            title="Add Friend"
+            className="add-friend-button"
           >
-            <UserPlus size={24} />
+            <UserPlus size={18} className="add-friend-button-icon" />
+            Add Friend
           </button>
         </div>
-      </div>
 
-      {/* Add Friend Modal */}
-      {isAddFriendModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <button 
-              onClick={() => setIsAddFriendModalOpen(false)}
-              className="modal-close"
-            >
-              <X size={24} />
-            </button>
-            <h2 className="modal-title">Add Friend</h2>
-            <input 
-              type="email"
-              placeholder="Enter friend's email"
-              className="modal-input"
-              value={newFriendEmail}
-              onChange={(e) => setNewFriendEmail(e.target.value)}
-            />
-            <button 
-              onClick={handleSendFriendRequest}
-              className="modal-button"
-            >
-              Send Friend Request
-            </button>
+        {/* Stats Cards */}
+        <div className="stats-grid">
+          <div className="stat-card stat-card--friends">
+            <Users className="stat-icon stat-icon--friends" />
+            <div className="stat-content">
+              <p className="stat-label">Total Friends</p>
+              <p className="stat-value">{friends.length}</p>
+            </div>
+          </div>
+          <div className="stat-card stat-card--challenges">
+            <Trophy className="stat-icon stat-icon--challenges" />
+            <div className="stat-content">
+              <p className="stat-label">Pending Requests</p>
+              <p className="stat-value">{pendingRequests.length}</p>
+            </div>
+          </div>
+          <div className="stat-card stat-card--active">
+            <Activity className="stat-icon stat-icon--active" />
+            <div className="stat-content">
+              <p className="stat-label">Active Now</p>
+              <p className="stat-value">{Math.floor(friends.length * 0.3)}</p>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Search Bar */}
-      <div className="search-container">
-        <div className="search-wrapper">
-          <input 
-            type="text" 
-            placeholder="Search friends" 
-            className="search-input"
+        {/* Search Bar */}
+        <div className="search-container">
+          <Search className="search-icon" size={20} />
+          <input
+            type="text"
+            placeholder="Search friends..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
           />
-          <Search className="search-icon" size={20} />
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tabs">
-        <button 
-          className={`tab ${activeTab === 'friends' ? 'active' : ''}`}
-          onClick={() => setActiveTab('friends')}
-        >
-          Friends
-        </button>
-        <button 
-          className={`tab ${activeTab === 'requests' ? 'active' : ''}`}
-          onClick={() => setActiveTab('requests')}
-        >
-          Requests
-        </button>
-      </div>
+            {/* Add Friend Modal */}
+            <FriendModal
+        isOpen={isAddFriendModalOpen}
+        onClose={() => setIsAddFriendModalOpen(false)}
+        onSuccess={handleAddFriendSuccess}
+      />
 
-      {/* Error Message */}
-      {error && (
+       {/* Error Message */}
+       {error && (
         <div className="error-message">
           <span>{error}</span>
-          <span 
-            className="error-close"
-            onClick={() => setError(null)}
-          >
+          <button onClick={() => setError(null)}>
             <X size={20} />
-          </span>
+          </button>
         </div>
       )}
 
-      {/* Friends List or Requests List */}
-      <div className="list-container">
-        {activeTab === 'friends' ? (
-          filteredFriends.length > 0 ? (
-            filteredFriends.map(friend => (
-              <div key={friend} className="list-item">
-                <img 
-                  src={`/profileDefault.png`} 
-                  alt={friend} 
-                  className="profile-image"
-                />
-                <div className="friend-info">
-                  <p className="friend-name">{friend}</p>
-                </div>
-                <div className="action-buttons">
-                  <button className="icon-button">
-                    <MessageCircle size={20} />
-                  </button>
-                  <button className="icon-button remove-button">
-                    <UserMinus size={20} />
-                  </button>
-                </div>
+      {/* Friends List */}
+      <div className="friends-list">
+        {/* Pending Requests */}
+        {filteredRequests.map((request) => (
+          <div key={request.id} className="friend-item friend-request">
+            <div className="friend-info">
+              <img
+                src="/profileDefault.png"
+                alt="Friend request avatar"
+                className="friend-avatar"
+              />
+              <div className="friend-details">
+                <h3 className="friend-name">{request.sender}</h3>
+                <p className="friend-status">Wants to connect</p>
               </div>
-            ))
-          ) : (
-            <div className="empty-state">
-              No friends yet. Start adding some!
             </div>
-          )
-        ) : (
-          filteredRequests.length > 0 ? (
-            filteredRequests.map(request => (
-              <div key={request.id} className="list-item">
-                <img 
-                  src={`/api/placeholder/80/80`} 
-                  alt={request.sender || 'Unknown user'} 
-                  className="profile-image"
-                />
-                <div className="friend-info">
-                  <p className="friend-name">{request.sender || 'Unknown user'}</p>
-                  <p className="friend-status">Wants to be your friend</p>
-                </div>
-                <div className="action-buttons">
-                  <button 
-                    className="accept-button"
-                    onClick={() => handleAcceptRequest(request.id)}
-                  >
-                    Accept
-                  </button>
-                  <button className="decline-button">
-                    Decline
-                  </button>
-                </div>
+            <div className="request-actions">
+              <button 
+                onClick={() => handleAcceptRequest(request.id)}
+                className="request-button request-button--accept"
+              >
+                Accept
+              </button>
+              <button className="request-button request-button--decline">
+                Decline
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {/* Friends List */}
+        {filteredFriends.map((friend) => (
+          <div key={friend} className="friend-item">
+            <div className="friend-info">
+              <img
+                src="/profileDefault.png"
+                alt={`${friend}'s avatar`}
+                className="friend-avatar"
+              />
+              <div className="friend-details">
+                <h3 className="friend-name">{friend}</h3>
+                <p className="friend-status">Friend</p>
               </div>
-            ))
-          ) : (
-            <div className="empty-state">
-              No pending friend requests
             </div>
-          )
+            <div className="friend-actions">
+              <button className="action-button action-button--message">
+                <MessageCircle size={20} />
+              </button>
+              <button className="action-button action-button--remove">
+                <Ban size={20} />
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {/* Empty State */}
+        {filteredFriends.length === 0 && filteredRequests.length === 0 && (
+          <div className="empty-state">
+            {searchTerm ? 'No results found' : 'No friends yet. Start adding some!'}
+          </div>
         )}
       </div>
     </div>
   );
 };
 
-export default FriendsPage;
+export default ModernFriendsPage;
