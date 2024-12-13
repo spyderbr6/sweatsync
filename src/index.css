@@ -248,6 +248,8 @@ a:hover {
   margin: 0 auto;
   background-color: rgb(249 250 251);
   min-height: 100vh;
+  justify-content: center;
+  align-content: center;
 }
 
 .feed__header {
@@ -338,7 +340,7 @@ a:hover {
   flex-wrap: wrap;
   gap: 1rem;
   justify-content: center;
-
+max-width: 1620px;
 }
 
 .post {
@@ -349,6 +351,18 @@ a:hover {
   overflow: hidden;
   border: 1px solid rgb(229 231 235);
 }
+
+.post-single{
+  width: 60%;
+  }
+
+  .single-post-container {
+    max-width: 800px;  /* Wider than feed posts for better detail */
+    margin: 2rem auto;
+    padding: 0 1rem;
+    background-color: rgb(249 250 251);
+    min-height: calc(100vh - 4rem);
+  }
 
 .post__header {
   padding: 1rem;
