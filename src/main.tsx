@@ -7,6 +7,7 @@ import ProfilePage from "./profile.tsx";
 import FriendsPage from "./friendManagement.tsx";
 import ChallengesPage from "./Challenges.tsx";
 import Header from "./Header.tsx";
+import SinglePostPage from "./SinglePagePost.tsx";
 import "./index.css";
 import { Amplify } from "aws-amplify";
 import outputs from "../amplify_outputs.json";
@@ -51,6 +52,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/friendManagement" element={<FriendsPage />} />
             <Route path="/Challenges" element={<ChallengesPage />} />
+            <Route path="/post/:postId" element={<SinglePostPage/>} /> {/* Add this line */}
           </Routes>
         </Router>
       </UserProvider>

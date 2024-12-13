@@ -5,6 +5,8 @@ import { getUrl } from 'aws-amplify/storage';
 import { Heart, MessageCircle, Share2, Trophy } from 'lucide-react';
 import ChallengeFeedHeader from './challengeFeedHeader';
 import { CommentSection } from './CommentSection'; 
+import { useNavigate } from 'react-router-dom';
+
 
 
 const useSpoofData = true;
@@ -145,9 +147,18 @@ const getTimeAgo = (timestamp: string) => {
   return 'Just now';
 };
 
-const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, onHover, onDelete }) => (
+const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, onHover, onDelete }) => {
+  // Add this line to get the navigate function
+  const navigate = useNavigate();
+
+  // Add this handler function
+  const handlePostClick = () => {
+    navigate(`/post/${post.id}`);
+  };
+
+  return (  
   <div className="post">
-    <div className="post__header">
+    <div className="post__header" onClick={handlePostClick}>
       <div className="post__user-info">
         <img
           src="profileDefault.png"
@@ -156,11 +167,14 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
         />
         <span className="post__username">{post.username}</span>
         <button
-          onClick={() => onDelete(post.id)}
-          className="post__delete-button"
-        >
-          ✕
-        </button>
+            onClick={(e) => {
+              e.stopPropagation(); // This prevents the navigation when clicking delete
+              onDelete(post.id);
+            }}
+            className="post__delete-button"
+          >
+            ✕
+          </button>
       </div>
     </div>
 
@@ -256,6 +270,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
     </div>
   </div>
 );
+};
 
 function App() {
   const [workoutposts, setworkoutposts] = useState<Array<Post>>([]);
