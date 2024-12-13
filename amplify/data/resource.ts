@@ -80,9 +80,21 @@ Comment: a.model({
   timestamp: a.datetime(), 
   updatedAt: a.datetime(), 
   createdAt: a.datetime()
-}).authorization((allow) => [allow.publicApiKey()])
+}).authorization((allow) => [allow.publicApiKey()]), 
 
-
+//Store user info just for searching/retrieval
+//REMEMBER TO ONLY STORE NON-PII!
+User: a.model({
+  id: a.string().required(),
+  email: a.string(),  // optional by default
+  username: a.string().required(),
+  preferred_username: a.string(),  // optional by default
+  picture: a.string(),  // optional by default
+  pictureUrl: a.string(),  // optional by default
+  pictureUpdatedAt: a.datetime(),  // optional by default
+  createdAt: a.datetime().required(),
+  updatedAt: a.datetime().required(),
+}).authorization((allow) => [allow.publicApiKey()]),
 
 });
 
