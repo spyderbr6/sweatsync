@@ -88,7 +88,7 @@ const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess })
                     }
                 } else {
                     // When handling the results from searchUsers
-                    const results = await searchUsers(debouncedTerm, searchType);
+                    const results = await searchUsers(debouncedTerm, searchType, userId);
                     // Ensure mutualFriends is always defined
                     const formattedResults: SearchResult[] = results.map(user => ({
                         ...user,
@@ -217,7 +217,7 @@ const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess })
                                             {searchType === 'email' ? user.email : user.username}
                                         </span>
                                         {searchType === 'email' && (
-                                            <div className="result-meta">get
+                                            <div className="result-meta">
                                                 Send friend request to this email
                                             </div>
                                         )}

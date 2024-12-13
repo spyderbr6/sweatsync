@@ -185,7 +185,8 @@ interface UserSearchResult {
 
 export async function searchUsers(
   searchTerm: string, 
-  searchType: 'email' | 'username'
+  searchType: 'email' | 'username',
+  currentUserId: string  // Add this parameter
 ): Promise<UserSearchResult[]> {
   const client = generateClient<Schema>();
   
@@ -208,12 +209,19 @@ export async function searchUsers(
       filter: filter
     });
 
-    return results.data.map(user => ({
-      userId: user.id,
-      username: user.preferred_username || user.username,
-      email: user.email || null,
-      mutualFriends: 0  // We can implement this later
-    }));
+    // Get mutual friends count for each user
+    const usersWithMutualFriends = await Promise.all(
+      results.data
+        .filter(user => user.id !== currentUserId) // Exclude current user
+        .map(async user => ({
+          userId: user.id,
+          username: user.preferred_username || user.username,
+          email: user.email || null,
+          mutualFriends: await getMutualFriendCount(currentUserId, user.id)
+        }))
+    );
+
+    return usersWithMutualFriends;
 
   } catch (error) {
     console.error('Error searching users:', error);
