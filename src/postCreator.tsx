@@ -7,6 +7,7 @@ import { listChallenges } from './challengeOperations';
 import { useUser } from './userContext';
 import './postCreator.css';
 
+
 const client = generateClient<Schema>();
 
 // Define proper types based on our schema
