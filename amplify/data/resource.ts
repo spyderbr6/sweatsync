@@ -35,9 +35,9 @@ const schema = a.schema({
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Friend: a.model({
-    user: a.string(),
-    friendUser: a.string(),
-    friendshipDate: a.datetime()
+    user: a.string().required(),
+    friendUser: a.string().required(),
+    friendshipDate: a.datetime().required()
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Challenge: a.model({
