@@ -37,10 +37,10 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
   // Define challenge colors mapping
   const challengeColors: { [key: string]: string } = {
-    'strength': '#EF4444',
-    'cardio': '#3B82F6',
-    'flexibility': '#10B981',
-    'endurance': '#8B5CF6',
+    'group': '#10B981',
+    'personal': '#8B5CF6',
+    'public': '#EF4444',
+    'friends': '#3B82F6',
     'general': '#F59E0B'
   };
 
