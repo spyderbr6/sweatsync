@@ -23,7 +23,9 @@ const UrlCacheContext = createContext<UrlCacheContextType | undefined>(undefined
 const CACHE_STORAGE_KEY = 'urlCache';
 
 // URL expiration time (7 days in seconds)
-const URL_EXPIRATION = 604800;
+//const URL_EXPIRATION = 604800;
+const URL_EXPIRATION = 800;
+
 
 export function UrlCacheProvider({ children }: { children: React.ReactNode }) {
   const [cache, setCache] = useState<UrlCache>(() => {
