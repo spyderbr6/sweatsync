@@ -8,11 +8,11 @@ const client = generateClient<Schema>();
 // Create a new challenge
 export async function createChallenge(params: {
   title: string;
-  description?: string;
+  description: string;
   startAt?: Date;
   endAt?: Date;
   reward?: string;
-  challengeType?: string;
+  challengeType: string;
   totalWorkouts?: number;
 }): Promise<string> {
   try {
@@ -96,22 +96,120 @@ export async function updateParticipant(params: {
 }
 
 
-export async function listChallenges(): Promise<Schema["Challenge"]["type"][]> {
+export async function listChallenges(userId?: string): Promise<Schema["Challenge"]["type"][]> {
   try {
-    const result = await client.models.Challenge.list({});
-    return result.data; // Return the array of challenge objects
+    if (!userId) {
+      // List all challenges if no userId is provided
+      const result = await client.models.Challenge.list({});
+      return result.data;
+    }
+
+    // Fetch active participations for the given user
+    const participations = await client.models.ChallengeParticipant.list({
+      filter: {
+        userID: { eq: userId },
+        status: { eq: "ACTIVE" },
+      },
+    });
+
+    const activeChallengeIds = participations.data.map((p) => p.challengeID);
+
+    if (activeChallengeIds.length === 0) return [];
+
+    // Fetch challenges and explicitly assert non-null return types
+    const challenges = await Promise.all(
+      activeChallengeIds.map(async (id) => {
+        const result = await client.models.Challenge.get({ id });
+        return result.data;
+      })
+    );
+
+    // Filter out any `null` values and assert non-nullable type
+    return challenges.filter((challenge): challenge is NonNullable<typeof challenge> => challenge !== null);
   } catch (error) {
-    console.error("Error listing challenges", error);
+    console.error("Error listing challenges:", error);
     return [];
   }
 }
-// Optionally, if you need to fetch participants for a challenge (used in the UI example)
-export async function getParticipantsForChallenge(challengeID: string): Promise<Schema["ChallengeParticipant"]["type"][]> {
+
+export async function getPendingChallenges(userId: string) {
   try {
-    const result = await client.models.ChallengeParticipant.list({});
-    return result.data.filter((p) => p.challengeID === challengeID);
+    const client = generateClient<Schema>();
+    
+    // Get pending challenge participations
+    const pendingParticipations = await client.models.ChallengeParticipant.list({
+      filter: {
+        userID: { eq: userId },
+        status: { eq: 'PENDING' }
+      }
+    });
+
+    // Get full challenge details for each pending participation
+    const pendingChallenges = await Promise.all(
+      pendingParticipations.data.map(async (participation) => {
+        if (!participation.challengeID) return null;
+
+        const challengeResult = await client.models.Challenge.get({
+          id: participation.challengeID
+        });
+
+        if (!challengeResult.data) return null;
+
+        // Get the creator's username
+        const creatorResult = await client.models.User.get({
+          id: challengeResult.data.createdBy || ''
+        });
+
+        return {
+          ...challengeResult.data,
+          participationId: participation.id,
+          creatorName: creatorResult.data?.preferred_username || 'Unknown User'
+        };
+      })
+    );
+
+    return pendingChallenges.filter((challenge): challenge is NonNullable<typeof challenge> => 
+      challenge !== null
+    );
   } catch (error) {
-    console.error("Error fetching participants for challenge", error);
-    return [];
+    console.error('Error fetching pending challenges:', error);
+    throw error;
+  }
+}
+
+export async function respondToChallenge(
+  participationId: string,
+  status: 'ACTIVE' | 'DROPPED'
+) {
+  try {
+    const client = generateClient<Schema>();
+    
+    await client.models.ChallengeParticipant.update({
+      id: participationId,
+      status,
+      updatedAt: new Date().toISOString()
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error responding to challenge:', error);
+    throw error;
+  }
+}
+
+export async function checkChallengeParticipation(challengeId: string, userId: string) {
+  try {
+    const client = generateClient<Schema>();
+    const result = await client.models.ChallengeParticipant.list({
+      filter: {
+        challengeID: { eq: challengeId },
+        userID: { eq: userId }
+      }
+    });
+    
+    return result.data[0] || null;
+  } catch (error) {
+    console.error('Error checking challenge participation:', error);
+    throw error;
   }
 }

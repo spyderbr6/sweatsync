@@ -1,350 +1,312 @@
-// ChallengesPage.tsx
-import React, { useEffect, useState } from "react";
-import { getCurrentUser } from 'aws-amplify/auth';
-import {
-  createChallenge,
-  addParticipantToChallenge,
-  listChallenges,
-  getParticipantsForChallenge,
-} from "./challengeOperations";
+import { useState, useEffect } from 'react';
+import { Users, UserPlus, Target, Globe, Plus } from 'lucide-react';
+import { CreateChallengeModal } from './CreateChallengeModal';
+import { listChallenges, checkChallengeParticipation, addParticipantToChallenge } from './challengeOperations';
+import type { Schema } from "../amplify/data/resource";
+import './challenges.css';
+import { getPendingChallenges, respondToChallenge } from './challengeOperations';
+import { useUser } from './userContext';
 
+type ChallengeCategory = 'all' | 'public' | 'group' | 'friends' | 'personal';
+type Challenge = Schema["Challenge"]["type"];
 
-type Challenge = {
-  id: string;
-  title: string | null;
-  description: string | null;
-  totalWorkouts: number | null;
-  startAt: string | null;
-  endAt: string | null;
-  reward: string | null;
-};
-
-type ChallengeParticipant = {
-  id: string;
-  challengeID: string;
-  userID: string;
-  status: "ACTIVE" | "COMPLETED" | "DROPPED";
-  points: number;
-  workoutsCompleted: number;
-  joinedAt: string;
-  completedAt: string | null;
-  updatedAt: string;
-};
-
-// Helper function to validate participant data
-function validateParticipant(data: any): ChallengeParticipant | null {
-  if (!data || !data.id || !data.challengeID || !data.userID) {
-    return null;
-  }
-
-  return {
-    id: data.id,
-    challengeID: data.challengeID,
-    userID: data.userID,
-    status: data.status || "ACTIVE",
-    points: data.points || 0,
-    workoutsCompleted: data.workoutsCompleted || 0,
-    joinedAt: data.joinedAt || new Date().toISOString(),
-    completedAt: data.completedAt || null,
-    updatedAt: data.updatedAt || new Date().toISOString()
-  };
-}
-
-
-
-const modalOverlayStyle: React.CSSProperties = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100vw",
-  height: "100vh",
-  background: "rgba(0,0,0,0.5)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center"
-};
-
-const modalStyle: React.CSSProperties = {
-  background: "#fff",
-  padding: "20px",
-  borderRadius: "8px",
-  width: "300px"
-};
-
-export const ChallengesPage: React.FC = () => {
+function ChallengesPage() {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<ChallengeCategory>('all');
   const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [newChallengeTitle, setNewChallengeTitle] = useState("");
-  const [newChallengeDescription, setNewChallengeDescription] = useState("");
-  const [participantsData, setParticipantsData] = useState<{
-    [challengeId: string]: ChallengeParticipant[];
-  }>({});
-  const [newChallengeReward, setNewChallengeReward] = useState("");
-const [newChallengeStartDate, setNewChallengeStartDate] = useState(new Date().toISOString().split('T')[0]);
-const [newChallengeEndDate, setNewChallengeEndDate] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-const [newChallengeTotalWorkouts, setNewChallengeTotalWorkouts] = useState(1);
-  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { userId } = useUser();
+  const [pendingChallenges, setPendingChallenges] = useState<(Challenge & {
+    participationId: string;
+    creatorName: string;
+  })[]>([]);
+  const [participations, setParticipations] = useState<Record<string, boolean>>({});
+  const [joiningChallenge, setJoiningChallenge] = useState<string | null>(null);
 
 
   useEffect(() => {
     loadChallenges();
   }, []);
 
-  async function loadChallenges() {
-    
-    
-    //this needs to be deprecated at some point. move uID into main app and pull from there
-    if (!currentUserId) {
-      try {
-        const user = await getCurrentUser();
-        setCurrentUserId(user.userId);
-      } catch (error) {
-        console.error("Error getting current user:", error);
-        return;
-      }
+  useEffect(() => {
+    if (userId && challenges.length > 0) {
+      checkParticipations();
     }
-    
+  }, [userId, challenges]);
+
+  const checkParticipations = async () => {
     try {
-      const chals = await listChallenges();
-      // Filter out challenges with missing required fields
-      const validChallenges = chals.filter((c): c is Challenge => 
-        Boolean(c && c.id)
+      const participationStatus: Record<string, boolean> = {};
+      await Promise.all(
+        challenges.map(async (challenge) => {
+          const participation = await checkChallengeParticipation(challenge.id, userId!);
+          participationStatus[challenge.id] = !!participation;
+        })
       );
-      setChallenges(validChallenges);
-
-      // For each challenge, fetch and validate participants
-      const allParticipants: { [id: string]: ChallengeParticipant[] } = {};
-      for (const c of validChallenges) {
-        const parts = await getParticipantsForChallenge(c.id);
-        // Filter and validate participant data
-        const validParticipants = parts
-          .map(validateParticipant)
-          .filter((p): p is ChallengeParticipant => p !== null);
-        allParticipants[c.id] = validParticipants;
-      }
-      setParticipantsData(allParticipants);
+      setParticipations(participationStatus);
     } catch (error) {
-      console.error("Error loading challenges:", error);
-      // Handle error appropriately (e.g., show error message to user)
+      console.error('Error checking participations:', error);
     }
-  }
+  };
 
-  async function handleCreateChallenge(e: React.FormEvent) {
-    e.preventDefault();
-    const msg = await createChallenge({
-      title: newChallengeTitle,
-      description: newChallengeDescription,
-      reward: newChallengeReward,
-      startAt: new Date(newChallengeStartDate),
-      endAt: new Date(newChallengeEndDate),
-      totalWorkouts: newChallengeTotalWorkouts, 
-      challengeType: "WORKOUT"
-    });
-    console.log(msg);
-    setShowModal(false);
-    setNewChallengeTitle("");
-    setNewChallengeDescription("");
-    setNewChallengeReward("");
-    setNewChallengeStartDate(new Date().toISOString().split('T')[0]);
-    setNewChallengeEndDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-    setNewChallengeTotalWorkouts(1);
-    loadChallenges();
-  }
+  const handleJoinChallenge = async (challengeId: string) => {
+    try {
+      setJoiningChallenge(challengeId);
+      await addParticipantToChallenge({
+        challengeID: challengeId,
+        userID: userId!
+      });
 
-  async function handleJoinChallenge(challengeId: string) {
-    const msg = await addParticipantToChallenge({ challengeID: challengeId, userID: currentUserId });
-    console.log(msg);
-    await loadChallenges();
-  }
+      // Update local state
+      setParticipations(prev => ({
+        ...prev,
+        [challengeId]: true
+      }));
 
-  // Determine user's status for a given challenge
-  function getUserStatusForChallenge(challengeId: string): ChallengeParticipant | null {
-    const participants = participantsData[challengeId];
-    if (!participants) return null;
-    return participants.find((p) => p.userID === currentUserId) || null;
+      // Refresh challenges to get updated data
+      await loadChallenges();
+    } catch (error) {
+      console.error('Error joining challenge:', error);
+    } finally {
+      setJoiningChallenge(null);
+    }
+  };
+
+  const loadChallenges = async () => {
+    try {
+      setIsLoading(true);
+      const fetchedChallenges = await listChallenges();
+      setChallenges(fetchedChallenges);
+    } catch (err) {
+      console.error('Error loading challenges:', err);
+      setError('Failed to load challenges');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadPendingChallenges = async () => {
+    try {
+      const pending = await getPendingChallenges(userId!);
+      setPendingChallenges(pending);
+    } catch (err) {
+      console.error('Error loading pending challenges:', err);
+    } finally {
+    }
+  };
+
+  const handleChallengeResponse = async (participationId: string, accept: boolean) => {
+    try {
+      await respondToChallenge(participationId, accept ? 'ACTIVE' : 'DROPPED');
+      // Refresh both pending challenges and main challenges list
+      loadPendingChallenges();
+      loadChallenges();
+    } catch (err) {
+      console.error('Error responding to challenge:', err);
+    }
+  };
+
+  const stats = [
+    {
+      category: 'public' as ChallengeCategory,
+      label: 'Public Challenges',
+      icon: Globe,
+      count: challenges.filter(c => c.challengeType === 'public').length,
+      iconClass: 'stat-icon--public'
+    },
+    {
+      category: 'friends' as ChallengeCategory,
+      label: 'Friend Challenges',
+      icon: UserPlus,
+      count: challenges.filter(c => c.challengeType === 'friends').length,
+      iconClass: 'stat-icon--friend'
+    },
+    {
+      category: 'group' as ChallengeCategory,
+      label: 'Group Challenges',
+      icon: Users,
+      count: challenges.filter(c => c.challengeType === 'group').length,
+      iconClass: 'stat-icon--group'
+    },
+    {
+      category: 'personal' as ChallengeCategory,
+      label: 'Personal Goals',
+      icon: Target,
+      count: challenges.filter(c => c.challengeType === 'personal').length,
+      iconClass: 'stat-icon--personal'
+    },
+  ];
+
+  const filteredChallenges = challenges.filter(challenge =>
+    activeFilter === 'all' || challenge.challengeType === activeFilter
+  );
+
+  const handleCategoryClick = (category: ChallengeCategory) => {
+    setActiveFilter(category === activeFilter ? 'all' : category);
+  };
+  if (error) {
+    return <div className="error-message">{error}</div>;
   }
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
-      <h1 style={{ textAlign: "center" }}>Challenges</h1>
-      
-      <div style={{ textAlign: "center", marginBottom: "20px" }}>
-        <button
-          style={{
-            padding: "10px 20px",
-            borderRadius: "4px",
-            background: "#007BFF",
-            color: "#fff",
-            border: "none",
-            cursor: "pointer"
-          }}
-          onClick={() => setShowModal(true)}
-        >
-          Add New Challenge
-        </button>
-      </div>
+    <div className="challenges-container">
+      <div className="challenges-header">
+        <div className="header-title-container">
+          <h1 className="header-title">Challenges</h1>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn btn-primary"
+          >
+            <Plus size={20} />
+            Create Challenge
+          </button>
+        </div>
 
-      <div style={{
-        display: "grid",
-        gap: "20px",
-        gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))"
-      }}>
-        {challenges.map((c) => {
-          const participant = getUserStatusForChallenge(c.id);
-          let statusText = "Not Joined";
-          let progressValue = 0;
-          if (participant) {
-            statusText = participant.status;
-            if (participant.status === "ACTIVE") {
-              // Show some progress out of a hypothetical goal
-              // For example, if a challenge runs 30 days and user completed 10 workouts, show progress
-              progressValue = participant.workoutsCompleted;
-            } else if (participant.status === "COMPLETED") {
-              progressValue = 100; // full progress
-            }
-          }
 
-          return (
+        {pendingChallenges.length > 0 && (
+          <div className="friend-challenges">
+            <div className="friend-challenges-header">
+              <h2 className="friend-challenges-title">Friend Challenges</h2>
+            </div>
+            <div className="friend-challenges-scroll">
+              {pendingChallenges.map((challenge) => (
+                <div key={challenge.id} className="friend-challenge-card">
+                  <div className="friend-card-header">
+                    <img
+                      src="/profileDefault.png"
+                      alt={challenge.creatorName}
+                      className="friend-avatar"
+                    />
+                    <div className="friend-info">
+                      <div className="friend-name">{challenge.creatorName} challenged you!</div>
+                      <div className="challenge-type">{challenge.title}</div>
+                    </div>
+                  </div>
+                  <p className="challenge-description">{challenge.description}</p>
+                  <div className="challenge-actions">
+                    <button
+                      onClick={() => handleChallengeResponse(challenge.participationId, true)}
+                      className="challenge-button challenge-button--accept"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleChallengeResponse(challenge.participationId, false)}
+                      className="challenge-button challenge-button--decline"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stats Row */}
+        <div className="stats-row">
+          {stats.map(({ category, label, icon: Icon, count, iconClass }) => (
             <div
-              key={c.id}
-              style={{
-                border: "1px solid #ccc",
-                borderRadius: "8px",
-                padding: "20px",
-                background: "#f9f9f9"
+              key={category}
+              className={`stat-card ${activeFilter === category ? 'stat-card--active' : ''}`}
+              onClick={() => handleCategoryClick(category)}
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleCategoryClick(category);
+                }
               }}
             >
-              <h2 style={{ marginTop: 0 }}>{c.title}</h2>
-              <p>{c.description}</p>
-              <p>{c.reward}{c.startAt}{c.endAt}{c.totalWorkouts}</p>
-              {participant ? (
-                <div>
-                  <p>Status: {statusText}</p>
-                  {participant.status === "ACTIVE" && (
-                    <div style={{ margin: "10px 0" }}>
-                      <progress value={progressValue} max={30}></progress>
-                      <div>{participant.workoutsCompleted}/30 workouts</div>
-                    </div>
-                  )}
-                  {participant.status === "COMPLETED" && (
-                    <div style={{ color: "green" }}>Challenge Completed!</div>
-                  )}
-                  {participant.status === "DROPPED" && (
-                    <div style={{ color: "red" }}>You dropped this challenge</div>
-                  )}
+              <div className="stat-card-content">
+                <div className={`stat-icon ${iconClass}`}>
+                  <Icon size={24} />
                 </div>
-              ) : (
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "4px",
-                    background: "#28a745",
-                    color: "#fff",
-                    border: "none",
-                    cursor: "pointer"
-                  }}
-                  onClick={() => handleJoinChallenge(c.id)}
-                >
-                  Join Challenge
-                </button>
-              )}
+                <div className="stat-text">
+                  <span className="stat-label">{label}</span>
+                  <span className="stat-value">{count}</span>
+                </div>
+              </div>
             </div>
-          );
-        })}
+          ))}
+        </div>
+
+
+
+
       </div>
 
-      {showModal && (
-  <div style={modalOverlayStyle}>
-    <div style={modalStyle}>
-      <h2>Create a New Challenge</h2>
-      <form onSubmit={handleCreateChallenge}>
-        <div style={{ marginBottom: "10px" }}>
-          <label>
-            Title:
-            <input
-              type="text"
-              value={newChallengeTitle}
-              onChange={(e) => setNewChallengeTitle(e.target.value)}
-              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
-              required
-            />
-          </label>
-        </div>
-        <div style={{ marginBottom: "10px" }}>
-          <label>
-            Description:
-            <textarea
-              value={newChallengeDescription}
-              onChange={(e) => setNewChallengeDescription(e.target.value)}
-              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
-            ></textarea>
-          </label>
-        </div>
-        <div style={{ marginBottom: "10px" }}>
-          <label>
-            Reward:
-            <input
-              type="text"
-              value={newChallengeReward}
-              onChange={(e) => setNewChallengeReward(e.target.value)}
-              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
-              placeholder="Enter reward details"
-            />
-          </label>
-        </div>
-        <div style={{ marginBottom: "10px" }}>
-          <label>
-            Start Date:
-            <input
-              type="date"
-              value={newChallengeStartDate}
-              onChange={(e) => setNewChallengeStartDate(e.target.value)}
-              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
-              required
-            />
-          </label>
-        </div>
-        <div style={{ marginBottom: "10px" }}>
-          <label>
-            End Date:
-            <input
-              type="date"
-              value={newChallengeEndDate}
-              onChange={(e) => setNewChallengeEndDate(e.target.value)}
-              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
-              required
-            />
-          </label>
-        </div>
-        <div style={{ marginBottom: "10px" }}>
-          <label>
-            Total Workouts Goal:
-            <input
-              type="number"
-              value={newChallengeTotalWorkouts}
-              onChange={(e) => setNewChallengeTotalWorkouts(Number(e.target.value))}
-              style={{ width: "100%", padding: "8px", marginTop: "4px" }}
-              min="1"
-              required
-            />
-          </label>
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-          <button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 12px" }}>
-            Cancel
-          </button>
-          <button type="submit" style={{ padding: "8px 12px", background: "#007BFF", color: "#fff", border: "none", borderRadius: "4px" }}>
-            Create
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
+      {/* Main Challenges Grid */}
+      <div className="challenges-grid">
+        {isLoading ? (
+          <div>Loading challenges...</div>
+        ) : (
+          filteredChallenges.map(challenge => {
+            // Calculate progress based on workouts completed
+            const isParticipant = participations[challenge.id];
+            const progress = challenge.totalWorkouts ? 0 : 0; // This needs to be calculated from actual data
+
+            return (
+              <div
+                key={challenge.id}
+                className="challenge-card"
+              >
+                <div className="challenge-card-header">
+                  <div className={`challenge-icon-wrapper challenge-icon-wrapper--${challenge.challengeType}`}>
+                    <Globe size={20} />
+                  </div>
+                  <div className="challenge-info">
+                    <h3 className="challenge-title">{challenge.title}</h3>
+                    <p className="challenge-meta">
+                      {challenge.description}
+                    </p>
+                  </div>
+                </div>
+
+                {isParticipant && (
+                  <div className="challenge-progress">
+                    <div className="progress-header">
+                      <span>Progress</span>
+                      <span>{progress}/{challenge.totalWorkouts} workouts</span>
+                    </div>
+                    <div className="progress-bar">
+                      <div
+                        className={`progress-bar-fill progress-bar-fill--${challenge.challengeType}`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
 
+                {!isParticipant && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent card click
+                      handleJoinChallenge(challenge.id);
+                    }}
+                    disabled={joiningChallenge === challenge.id}
+                    className="btn btn-primary"
+                  >
+                    {joiningChallenge === challenge.id ? 'Joining...' : 'Join Challenge'}
+                  </button>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <CreateChallengeModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          loadChallenges(); // Refresh challenges after creation
+        }}
+      />
     </div>
   );
-};
+}
 
 export default ChallengesPage;
