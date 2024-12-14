@@ -249,7 +249,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
               <span className="post__challenge-text">Challenge</span>
               {
                 <span className="post__challenge-count">
-                  {post.trophy}
+                  {post.smiley}
                 </span>
               }
             </button>

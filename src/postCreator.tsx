@@ -100,13 +100,16 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       const path = `picture-submissions/${uniqueFileName}`;
       await uploadData({ path, data: file });
   
+      //count challenges for storage
+      const taggedChallengesCount = selectedChallenges.length;
+
       const result = await client.models.PostforWorkout.create({
         content,
         url: path,
         username: userAttributes?.preferred_username,
         userID: userId,
         thumbsUp: 0,
-        smiley: 0,
+        smiley: taggedChallengesCount,
         trophy: 0
       });
   
