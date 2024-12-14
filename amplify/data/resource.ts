@@ -41,21 +41,21 @@ const schema = a.schema({
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Challenge: a.model({
-    title: a.string(),
-    description: a.string(),
+    title: a.string().required(),
+    description: a.string().required(),
     startAt: a.datetime(),
     endAt: a.datetime(),
     reward: a.string(),
     totalWorkouts: a.integer().default(1), //total workouts needing completed in the timeframe
-    challengeType: a.string(),
+    challengeType: a.string().required(),
     createdAt: a.datetime(),    // capture when the challenge was created
     updatedAt: a.datetime(),     // capture when the challenge was last updated
     createdBy: a.string() // should reference the uID
   }).authorization((allow) => [allow.publicApiKey()]),
 
   ChallengeParticipant: a.model({
-    challengeID: a.string(),
-    userID: a.string(),
+    challengeID: a.string().required(),
+    userID: a.string().required(),
     status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED']),
     points: a.integer().default(0),
     workoutsCompleted: a.integer().default(0),
