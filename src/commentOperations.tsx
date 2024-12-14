@@ -118,15 +118,27 @@ export async function createComment(
 }
 
 // Delete a comment
-export async function deleteComment(commentId: string) {
+export async function deleteComment(commentId: string): Promise<boolean> {
+  if (!commentId) {
+    throw new Error('Comment ID is required');
+  }
+
   try {
+    // First verify the comment exists
+    const commentResult = await client.models.Comment.get({ id: commentId });
+    if (!commentResult.data) {
+      throw new Error('Comment not found');
+    }
+
+    // Delete the comment
     await client.models.Comment.delete({
       id: commentId
     });
+
     return true;
   } catch (error) {
     console.error('Error deleting comment:', error);
-    throw error;
+    throw new Error(error instanceof Error ? error.message : 'Failed to delete comment');
   }
 }
 

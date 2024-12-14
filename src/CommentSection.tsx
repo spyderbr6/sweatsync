@@ -87,15 +87,47 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!window.confirm('Are you sure you want to delete this comment?')) return;
-
+    if (!commentId || !userId) return;
+  
+    // Find the comment to verify ownership
+    const commentToDelete = comments.find(comment => comment.id === commentId);
+    
+    if (!commentToDelete) {
+      setError('Comment not found');
+      return;
+    }
+  
+    // Verify the user owns the comment
+    if (commentToDelete.userId !== userId) {
+      setError('You can only delete your own comments');
+      return;
+    }
+  
     try {
-      await deleteComment(commentId);
+      // Show confirmation dialog
+      if (!window.confirm('Are you sure you want to delete this comment?')) {
+        return;
+      }
+  
+      // Optimistically update UI
       setComments(prevComments => 
         prevComments.filter(comment => comment.id !== commentId)
       );
+  
+      // Attempt to delete from backend
+      const success = await deleteComment(commentId);
+      
+      if (!success) {
+        // Rollback if deletion failed
+        const oldComments = await getPostComments(postId, commentsLimit);
+        setComments(oldComments);
+        setError('Failed to delete comment');
+      }
     } catch (err) {
-      setError('Failed to delete comment');
+      // Rollback on error
+      const oldComments = await getPostComments(postId, commentsLimit);
+      setComments(oldComments);
+      setError(err instanceof Error ? err.message : 'Failed to delete comment');
       console.error('Error deleting comment:', err);
     }
   };
@@ -207,12 +239,14 @@ const handleEditComment = async (commentId: string) => {
                 <button
                   onClick={() => startEditing(comment)}
                   className="comment-section__action-button"
+                  aria-label="Edit comment"
                 >
                   <Pencil size={16} />
                 </button>
                 <button
                   onClick={() => handleDeleteComment(comment.id)}
                   className="comment-section__action-button comment-section__action-button--delete"
+                  aria-label="Delete comment"
                 >
                   <Trash2 size={16} />
                 </button>
