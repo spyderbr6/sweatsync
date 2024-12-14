@@ -103,8 +103,7 @@ const ChallengeFeedHeader = () => {
     fetchChallenges();
   }, [userId]);
 
-  // Rest of the component remains the same...
-  if (loading) {
+    if (loading) {
     return (
       <div className="feed__header">
         <div className="feed__challenges">

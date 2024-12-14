@@ -48,15 +48,18 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   useEffect(() => {
     const fetchChallenges = async () => {
       try {
-        const challenges = await listChallenges();
-        setAvailableChallenges(challenges);
+        if (!userId) return; // Ensure userId is available
+  
+        // Fetch only active challenges the user is participating in
+        const activeChallenges = await listChallenges(userId);
+        setAvailableChallenges(activeChallenges);
       } catch (error) {
-        console.error("Error fetching challenges:", error);
+        console.error("Error fetching active challenges:", error);
       }
     };
-
+  
     fetchChallenges();
-  }, []);
+  }, [userId]);
 
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,7 +125,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             challengeId,
             userId,
             timestamp: new Date().toISOString(),
-            validated: false, // Default to false as per schema
+            validated: true, // Default to true for now @future me, gpt should validate on publish
             validationComment: "" // Empty string for initial creation
           });
   
