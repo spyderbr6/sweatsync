@@ -1,6 +1,7 @@
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 
+
 const client = generateClient<Schema>();
 
 // Send a friend request
@@ -60,14 +61,19 @@ export async function acceptFriendRequest(friendRequestId: string) {
   try {
     // Get the friend request
     const friendRequestResult = await client.models.FriendRequest.get({ id: friendRequestId });
-    
+
     if (!friendRequestResult.data) {
       console.error('Friend request not found:', friendRequestId);
       throw new Error('Friend request not found');
     }
 
     const friendRequest = friendRequestResult.data;
-    console.log('Found friend request:', friendRequest);
+
+    // Ensure sender and recipient are non-null
+    if (!friendRequest.sender || !friendRequest.recipient) {
+      console.error('Invalid friend request: sender or recipient is null');
+      throw new Error('Invalid friend request: sender or recipient is null');
+    }
 
     // Update friend request status first
     const updateResult = await client.models.FriendRequest.update({
@@ -89,7 +95,7 @@ export async function acceptFriendRequest(friendRequestId: string) {
         friendshipDate: new Date().toISOString()
       })
     ]);
-    
+
     console.log('Created friend entries:', friendEntries);
     return true;
   } catch (error) {
@@ -125,27 +131,55 @@ export async function getPendingFriendRequests(userId: string) {
   }
 }
 
-// Get friends list
-export async function getFriendsList(userId: string) {
+// friendOperations.tsx
+
+export async function getFriendsList(userId: string, getStorageUrl: (path: string) => Promise<string>) {
   console.log('Fetching friends list for user:', userId);
+
   try {
     const friendsResult = await client.models.Friend.list({
-      filter: {
-        user: { eq: userId }
-      }
+      filter: { user: { eq: userId } }
     });
 
-    console.log('Fetched friends list:', friendsResult);
-    return friendsResult.data.map(friend => friend.friendUser);
+    const friendDetails = await Promise.all(
+      friendsResult.data.map(async (friend) => {
+        if (!friend.friendUser) {
+          console.warn(`Invalid friend entry with null friendUser: ${friend.id}`);
+          return null;
+        }
+
+        try {
+          const userResult = await client.models.User.get({ id: friend.friendUser });
+
+          let profilePictureUrl = '/profileDefault.png';
+          if (userResult.data?.picture) {
+            profilePictureUrl = await getStorageUrl(userResult.data.picture);
+          }
+
+          return {
+            userId: friend.friendUser,
+            username: userResult.data?.preferred_username || userResult.data?.username || 'Unknown User',
+            picture: profilePictureUrl,
+          };
+        } catch (error) {
+          console.error(`Error fetching user details for friend ${friend.friendUser}:`, error);
+          return {
+            userId: friend.friendUser,
+            username: 'Unknown User',
+            picture: '/profileDefault.png',
+          };
+        }
+      })
+    );
+
+    return friendDetails.filter((friend) => friend !== null);
   } catch (error) {
     console.error('Error in getFriendsList:', error);
-    const typedError = error as Error;
-    if (typedError.message.includes('not authorized')) {
-      throw new Error('You must be logged in to view your friends list.');
-    }
     throw error;
   }
 }
+
+
 
 // New function to check friend request status
 export async function checkFriendRequestStatus(userId: string, otherUserId: string) {
@@ -184,12 +218,11 @@ interface UserSearchResult {
 }
 
 export async function searchUsers(
-  searchTerm: string, 
+  searchTerm: string,
   searchType: 'email' | 'username',
-  currentUserId: string  // Add this parameter
+  currentUserId: string,
+  getStorageUrl: (path: string) => Promise<string> // Pass getStorageUrl as a parameter
 ): Promise<UserSearchResult[]> {
-  const client = generateClient<Schema>();
-  
   try {
     let filter = {};
     if (searchType === 'email') {
@@ -205,9 +238,7 @@ export async function searchUsers(
       };
     }
 
-    const results = await client.models.User.list({
-      filter: filter
-    });
+    const results = await client.models.User.list({ filter });
 
     // Get mutual friends count for each user
     const usersWithMutualFriends = await Promise.all(
@@ -217,26 +248,30 @@ export async function searchUsers(
           userId: user.id,
           username: user.preferred_username || user.username,
           email: user.email || null,
-          mutualFriends: await getMutualFriendCount(currentUserId, user.id)
+          mutualFriends: await getMutualFriendCount(currentUserId, user.id, getStorageUrl) // Pass getStorageUrl here
         }))
     );
 
     return usersWithMutualFriends;
-
   } catch (error) {
     console.error('Error searching users:', error);
     throw error;
   }
 }
 
-// Helper function to calculate mutual friends
-export async function getMutualFriendCount(user1Id: string, user2Id: string): Promise<number> {
-  try {
-    const user1Friends = await getFriendsList(user1Id);
-    const user2Friends = await getFriendsList(user2Id);
 
-    const user1FriendSet = new Set(user1Friends);
-    const mutualFriends = user2Friends.filter(friend => user1FriendSet.has(friend));
+// Helper function to calculate mutual friends
+export async function getMutualFriendCount(
+  user1Id: string,
+  user2Id: string,
+  getStorageUrl: (path: string) => Promise<string>
+): Promise<number> {
+  try {
+    const user1Friends = await getFriendsList(user1Id, getStorageUrl);
+    const user2Friends = await getFriendsList(user2Id, getStorageUrl);
+
+    const user1FriendIds = new Set(user1Friends.map(friend => friend.userId));
+    const mutualFriends = user2Friends.filter(friend => user1FriendIds.has(friend.userId));
 
     return mutualFriends.length;
   } catch (error) {

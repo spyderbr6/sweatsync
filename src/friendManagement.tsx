@@ -9,6 +9,7 @@ import { getCurrentUser } from 'aws-amplify/auth';
 import { useUser } from './userContext';
 import FriendModal from './friendModal';
 import './friends.css';
+import { useUrlCache } from './urlCacheContext';
 
 
 interface FriendRequest {
@@ -19,32 +20,33 @@ interface FriendRequest {
   createdAt: string | null;
 }
 
+interface Friend {
+  userId: string;
+  username: string;
+  picture: string;
+}
+
 const ModernFriendsPage = () => {
-  const [friends, setFriends] = useState<string[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddFriendModalOpen, setIsAddFriendModalOpen] = useState(false);
   const { userId } = useUser();
+  const { getStorageUrl } = useUrlCache(); // Use the hook inside the component body
+
 
   const loadFriendsData = async () => {
     try {
       setLoading(true);
-      if (!userId) {
-        const user = await getCurrentUser();
-        const friendsList = await getFriendsList(user.userId);
-        const requests = await getPendingFriendRequests(user.userId);
-        
-        setFriends(friendsList.filter((friend): friend is string => friend !== null));
-        setPendingRequests(requests);
-      } else {
-        const friendsList = await getFriendsList(userId);
-        const requests = await getPendingFriendRequests(userId);
-        
-        setFriends(friendsList.filter((friend): friend is string => friend !== null));
-        setPendingRequests(requests);
-      }
+      const currentUser = userId || (await getCurrentUser()).userId;
+
+      const friendsList = await getFriendsList(currentUser, getStorageUrl); // Pass getStorageUrl here
+      const requests = await getPendingFriendRequests(currentUser);
+
+      setFriends(friendsList);
+      setPendingRequests(requests);
     } catch (err) {
       console.error('Error loading friends data:', err);
       setError('Failed to load friends data');
@@ -60,14 +62,7 @@ const ModernFriendsPage = () => {
   const handleAcceptRequest = async (requestId: string) => {
     try {
       await acceptFriendRequest(requestId);
-      // Refresh friends and requests lists
-      if (userId) {
-        const friendsList = await getFriendsList(userId);
-        const requests = await getPendingFriendRequests(userId);
-
-        setFriends(friendsList.filter((friend): friend is string => friend !== null));
-        setPendingRequests(requests);
-      }
+      await loadFriendsData(); // Refresh the lists after accepting a request
     } catch (err) {
       console.error('Error accepting friend request:', err);
       setError('Failed to accept friend request');
@@ -78,8 +73,9 @@ const ModernFriendsPage = () => {
     setIsAddFriendModalOpen(false);
     await loadFriendsData(); // Refresh the lists after adding a friend
   };
+
   const filteredFriends = friends.filter(friend =>
-    friend.toLowerCase().includes(searchTerm.toLowerCase())
+    friend.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredRequests = pendingRequests.filter(request =>
@@ -147,15 +143,15 @@ const ModernFriendsPage = () => {
         </div>
       </div>
 
-            {/* Add Friend Modal */}
-            <FriendModal
+      {/* Add Friend Modal */}
+      <FriendModal
         isOpen={isAddFriendModalOpen}
         onClose={() => setIsAddFriendModalOpen(false)}
         onSuccess={handleAddFriendSuccess}
       />
 
-       {/* Error Message */}
-       {error && (
+      {/* Error Message */}
+      {error && (
         <div className="error-message">
           <span>{error}</span>
           <button onClick={() => setError(null)}>
@@ -196,15 +192,15 @@ const ModernFriendsPage = () => {
 
         {/* Friends List */}
         {filteredFriends.map((friend) => (
-          <div key={friend} className="friend-item">
+          <div key={friend.userId} className="friend-item">
             <div className="friend-info">
               <img
-                src="/profileDefault.png"
-                alt={`${friend}'s avatar`}
+                src={friend.picture}
+                alt={`${friend.username}'s avatar`}
                 className="friend-avatar"
               />
               <div className="friend-details">
-                <h3 className="friend-name">{friend}</h3>
+                <h3 className="friend-name">{friend.username}</h3>
                 <p className="friend-status">Friend</p>
               </div>
             </div>
