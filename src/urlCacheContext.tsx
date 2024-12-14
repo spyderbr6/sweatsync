@@ -1,0 +1,129 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { getUrl } from 'aws-amplify/storage';
+
+// Define our types
+interface CachedUrl {
+  url: string;
+  expiresAt: number; // timestamp in milliseconds
+}
+
+interface UrlCache {
+  [key: string]: CachedUrl;
+}
+
+interface UrlCacheContextType {
+  getStorageUrl: (path: string) => Promise<string>;
+  clearCache: () => void;
+}
+
+// Create the context
+const UrlCacheContext = createContext<UrlCacheContextType | undefined>(undefined);
+
+// Local storage key
+const CACHE_STORAGE_KEY = 'urlCache';
+
+// URL expiration time (7 days in seconds)
+const URL_EXPIRATION = 604800;
+
+export function UrlCacheProvider({ children }: { children: React.ReactNode }) {
+  const [cache, setCache] = useState<UrlCache>(() => {
+    // Initialize cache from localStorage
+    try {
+      const stored = localStorage.getItem(CACHE_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.error('Error loading cache from localStorage:', error);
+      return {};
+    }
+  });
+
+  // Save cache to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cache));
+    } catch (error) {
+      console.error('Error saving cache to localStorage:', error);
+    }
+  }, [cache]);
+
+  // Clean expired entries whenever cache is loaded or updated
+  useEffect(() => {
+    const now = Date.now();
+    const newCache = { ...cache };
+    let hasChanges = false;
+
+    Object.entries(cache).forEach(([path, entry]) => {
+      if (entry.expiresAt < now) {
+        delete newCache[path];
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      setCache(newCache);
+    }
+  }, [cache]);
+
+  const getStorageUrl = async (path: string): Promise<string> => {
+    if (!path) {
+      return '/picsoritdidnthappen.webp'; // Default image
+    }
+
+    const now = Date.now();
+
+    // Check if we have a valid cached URL
+    if (cache[path] && cache[path].expiresAt > now) {
+      return cache[path].url;
+    }
+
+    try {
+      // Get new URL from S3
+      const linkToStorageFile = await getUrl({
+        path,
+        options: {
+          expiresIn: URL_EXPIRATION
+        }
+      });
+
+      const url = linkToStorageFile.url.toString();
+      
+      // Update cache
+      setCache(prevCache => ({
+        ...prevCache,
+        [path]: {
+          url,
+          expiresAt: now + (URL_EXPIRATION * 1000) // Convert seconds to milliseconds
+        }
+      }));
+
+      return url;
+    } catch (error) {
+      console.error('Error getting storage URL:', error);
+      return '/picsoritdidnthappen.webp'; // Fallback image
+    }
+  };
+
+  const clearCache = () => {
+    setCache({});
+  };
+
+  const value = {
+    getStorageUrl,
+    clearCache
+  };
+
+  return (
+    <UrlCacheContext.Provider value={value}>
+      {children}
+    </UrlCacheContext.Provider>
+  );
+}
+
+// Custom hook to use the cache
+export function useUrlCache() {
+  const context = useContext(UrlCacheContext);
+  if (context === undefined) {
+    throw new Error('useUrlCache must be used within a UrlCacheProvider');
+  }
+  return context;
+}

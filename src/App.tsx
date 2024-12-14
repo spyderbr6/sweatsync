@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
-import { getUrl } from 'aws-amplify/storage';
 import { Heart, MessageCircle, Share2, Trophy } from 'lucide-react';
 import ChallengeFeedHeader from './challengeFeedHeader';
 import { CommentSection } from './CommentSection'; 
 import { useNavigate } from 'react-router-dom';
+import { useUrlCache } from './urlCacheContext';
 
 
 
@@ -278,6 +278,7 @@ function App() {
   const [visibleCount, setVisibleCount] = useState<number>(10); // number of posts to show initially
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const BATCH_SIZE = 10; // number of posts to load each time
+  const { getStorageUrl } = useUrlCache();
 
   useEffect(() => {
     const subscription = client.models.PostforWorkout.observeQuery().subscribe({
@@ -339,11 +340,17 @@ function App() {
           }
           setImageUrls(spoofedUrls);
         } else {
+          // New cached URL fetching
           const urls: { [key: string]: string } = {};
           for (const item of data.items) {
             if (item.url) {
-              const linkToStorageFile = await getUrl({ path: item.url });
-              urls[item.id] = linkToStorageFile.url.toString();
+              try {
+                const url = await getStorageUrl(item.url);
+                urls[item.id] = url;
+              } catch (error) {
+                console.error('Error fetching image URL:', error);
+                urls[item.id] = "/picsoritdidnthappen.webp";
+              }
             }
           }
           setImageUrls(urls);

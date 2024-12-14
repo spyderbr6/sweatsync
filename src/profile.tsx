@@ -13,9 +13,8 @@ import {
   FaCheck, 
   FaTimes 
 } from 'react-icons/fa';
+import { useUrlCache } from './urlCacheContext';
 import './ProfilePage.css';
-
-const useSpoofData = true;
 
 function ProfilePage() {
   const [userAttributes, setUserAttributes] = useState<FetchUserAttributesOutput | null>(null);
@@ -26,6 +25,7 @@ function ProfilePage() {
   const [editedName, setEditedName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
+  const { getStorageUrl } = useUrlCache();
 
 
   useEffect(() => {
@@ -36,24 +36,16 @@ function ProfilePage() {
         setUserAttributes(attributes);
         setEditedName(attributes.preferred_username || attributes.username || "");
 
-        // Updated URL retrieval method
+        // Updated URL retrieval using cache
         if (attributes.picture) {
           try {
-            const linkToStorageFile = await getUrl({ 
-              path: attributes.picture,
-              options: {
-                expiresIn: 3600 // URL expires in 1 hour
-              }
-            });
-            if(useSpoofData){setProfilePictureUrl("/profileDefault.png")}
-            else {setProfilePictureUrl(linkToStorageFile.url.toString());}
+            const url = await getStorageUrl(attributes.picture);
+            setProfilePictureUrl(url);
           } catch (urlError) {
             console.error('Error retrieving profile picture URL:', urlError);
-            setProfilePictureUrl("/profileDefault.png"); // Fallback image
+            setProfilePictureUrl("/picsoritdidnthappen.webp"); // Fallback image
           }
         }
-
-        
       } catch (error) {
         console.error('Unexpected error fetching user attributes:', error);
         setError('Failed to fetch user attributes. Please try again.');
