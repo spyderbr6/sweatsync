@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getUrl } from 'aws-amplify/storage';
 
+
 // Define our types
 interface CachedUrl {
   url: string;
@@ -13,7 +14,7 @@ interface UrlCache {
 
 interface UrlCacheContextType {
   getStorageUrl: (path: string) => Promise<string>;
-  clearCache: () => void;
+  clearCache: () => void;  // Added type definition
 }
 
 // Create the context
@@ -23,8 +24,8 @@ const UrlCacheContext = createContext<UrlCacheContextType | undefined>(undefined
 const CACHE_STORAGE_KEY = 'urlCache';
 
 // URL expiration time (7 days in seconds)
-//const URL_EXPIRATION = 604800;
-const URL_EXPIRATION = 604800;
+const URL_EXPIRATION = 604800;  // 7 days
+const MINIMUM_REMAINING_TIME = 7200; // 2 hours - minimum time before we refresh
 
 
 export function UrlCacheProvider({ children }: { children: React.ReactNode }) {
@@ -73,9 +74,15 @@ export function UrlCacheProvider({ children }: { children: React.ReactNode }) {
 
     const now = Date.now();
 
-    // Check if we have a valid cached URL
-    if (cache[path] && cache[path].expiresAt > now) {
-      return cache[path].url;
+    // Check if we have a cached URL
+    if (cache[path]) {
+      const timeUntilExpiration = cache[path].expiresAt - now;
+      
+      // If URL is still valid and not approaching expiration
+      if (timeUntilExpiration > MINIMUM_REMAINING_TIME * 1000) {
+        return cache[path].url;
+      }
+      // If URL is approaching expiration or expired, we'll get a new one
     }
 
     try {
@@ -89,12 +96,12 @@ export function UrlCacheProvider({ children }: { children: React.ReactNode }) {
 
       const url = linkToStorageFile.url.toString();
       
-      // Update cache
+      // Update cache with new URL
       setCache(prevCache => ({
         ...prevCache,
         [path]: {
           url,
-          expiresAt: now + (URL_EXPIRATION * 1000) // Convert seconds to milliseconds
+          expiresAt: now + (URL_EXPIRATION * 1000)
         }
       }));
 
@@ -107,6 +114,11 @@ export function UrlCacheProvider({ children }: { children: React.ReactNode }) {
 
   const clearCache = () => {
     setCache({});
+    try {
+      localStorage.removeItem(CACHE_STORAGE_KEY);
+    } catch (error) {
+      console.error('Error clearing cache from localStorage:', error);
+    }
   };
 
   const value = {
