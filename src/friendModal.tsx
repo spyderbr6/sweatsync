@@ -5,6 +5,8 @@ import { useUser } from './userContext';
 import './friends.css';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
+import { useUrlCache } from './urlCacheContext';
+
 
 interface FriendModalProps {
     isOpen: boolean;
@@ -49,6 +51,7 @@ const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess })
     const [success, setSuccess] = useState<string | null>(null);
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [debouncedTerm, setDebouncedTerm] = useState(searchTerm);
+    const { getStorageUrl } = useUrlCache();
 
     // Debounce search term
     useEffect(() => {
@@ -88,7 +91,7 @@ const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess })
                     }
                 } else {
                     // When handling the results from searchUsers
-                    const results = await searchUsers(debouncedTerm, searchType, userId);
+                    const results = await searchUsers(debouncedTerm, searchType, userId, getStorageUrl);
                     // Ensure mutualFriends is always defined
                     const formattedResults: SearchResult[] = results.map(user => ({
                         ...user,
