@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
-import { uploadData } from 'aws-amplify/storage';
 import { listChallenges } from './challengeOperations';
 import { useUser } from './userContext';
 import './postCreator.css';
+import { uploadImageWithThumbnails } from './utils/imageUploadUtils';
+
 
 
 const client = generateClient<Schema>();
@@ -96,16 +97,15 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       setLoading(true);
   
       // Upload image
-      const uniqueFileName = `${Date.now()}-${file.name}`;
-      const path = `picture-submissions/${uniqueFileName}`;
-      await uploadData({ path, data: file });
+      const { originalPath} = await uploadImageWithThumbnails(file, 'workout-pictures', 1200);
+
   
       //count challenges for storage
       const taggedChallengesCount = selectedChallenges.length;
 
       const result = await client.models.PostforWorkout.create({
         content,
-        url: path,
+        url: originalPath,
         username: userAttributes?.preferred_username,
         userID: userId,
         thumbsUp: 0,
