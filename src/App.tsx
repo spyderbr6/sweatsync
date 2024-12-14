@@ -3,7 +3,7 @@ import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { Heart, MessageCircle, Share2, Trophy } from 'lucide-react';
 import ChallengeFeedHeader from './challengeFeedHeader';
-import { CommentSection } from './CommentSection'; 
+import { CommentSection } from './CommentSection';
 import { useNavigate } from 'react-router-dom';
 import { useUrlCache } from './urlCacheContext';
 import { useUser } from './userContext';
@@ -31,6 +31,7 @@ type ReactionGridProps = {
 type WorkoutPostProps = {
   post: Post;
   imageUrl: string;
+  profileImageUrl: string;
   onReaction: (id: string, emoji: string | null, reactionId?: string) => void;  // Changed to string
   onDelete: (id: string) => void;
   onHover: (id: string, isHovering: boolean) => void;
@@ -148,28 +149,27 @@ const getTimeAgo = (timestamp: string) => {
   return 'Just now';
 };
 
-const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, onHover, onDelete }) => {
+const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageUrl, onReaction, onHover, onDelete }) => {
   // Add this line to get the navigate function
   const navigate = useNavigate();
   const { userId } = useUser(); // Add this line to get current user's ID
-
 
   // Add this handler function
   const handlePostClick = () => {
     navigate(`/post/${post.id}`);
   };
 
-  return (  
-  <div className="post">
-    <div className="post__header" onClick={handlePostClick}>
-      <div className="post__user-info">
-        <img
-          src="profileDefault.png"
-          alt={post.username ?? "none"}
-          className="post__avatar"
-        />
-        <span className="post__username">{post.username}</span>
-        {userId === post.userID && (
+  return (
+    <div className="post">
+      <div className="post__header" onClick={handlePostClick}>
+        <div className="post__user-info">
+          <img
+            src={profileImageUrl ?? "profileDefault.png"}
+            alt={post.username ?? "none"}
+            className="post__avatar"
+          />
+          <span className="post__username">{post.username}</span>
+          {userId === post.userID && (
             <button
               onClick={(e) => {
                 e.stopPropagation(); // This prevents the navigation when clicking delete
@@ -180,109 +180,110 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
               ✕
             </button>
           )}
+        </div>
       </div>
-    </div>
 
-    <div className="post__content">
-      <div
-        className="post__image-container"
-        onMouseEnter={() => onHover(post.id, true)}
-        onMouseLeave={() => onHover(post.id, false)}
-      >
-        <img
-          src={imageUrl}
-          alt="Workout"
-          className="post__image"
-        />
-
-        <ReactionGrid
-          visible={post.showReactions}
-          onReaction={(emoji) => onReaction(post.id, emoji, undefined)}
-        />
-
-        {post.activeReactions?.map(reaction => (
-          <FloatingReaction
-            key={reaction.id}
-            emoji={reaction.emoji}
-            onAnimationEnd={() => onReaction(post.id, null, reaction.id)}
+      <div className="post__content">
+        <div
+          className="post__image-container"
+          onMouseEnter={() => onHover(post.id, true)}
+          onMouseLeave={() => onHover(post.id, false)}
+        >
+          <img
+            src={imageUrl}
+            alt="Workout"
+            className="post__image"
           />
-        ))}
-      </div>
 
-      <div className="post__actions">
-        <div className="post__buttons">
-          <div className="post__action-buttons">
-            <button
-              onClick={() => onReaction(post.id, "👍")}
-              className="post__heart-button"
-            >
-              <Heart className="w-6 h-6" />
-              {
-                <span className="post__heart-count">
-                  {post.thumbsUp}
-                </span>
-              }
-            </button>
-            <button className="post__button">
-              <MessageCircle className="w-6 h-6" />
-            </button>
-            <button
-              className="post__button"
-              onClick={() => {
-                if (navigator.share) {
-                  navigator.share({
-                    title: 'Check out my workout!',
-                    text: 'Join me on SweatSync',
-                    url: window.location.href // or a specific URL for your post
-                  })
-                    .then(() => console.log('Successfully shared!'))
-                    .catch((error) => console.error('Error sharing:', error));
-                } else {
-                  // Fallback: copy link to clipboard or show a message
-                  console.log('Web Share API not supported in this browser.');
-                  navigator.clipboard.writeText(window.location.href);
-                  alert('Link copied to clipboard!');
+          <ReactionGrid
+            visible={post.showReactions}
+            onReaction={(emoji) => onReaction(post.id, emoji, undefined)}
+          />
+
+          {post.activeReactions?.map(reaction => (
+            <FloatingReaction
+              key={reaction.id}
+              emoji={reaction.emoji}
+              onAnimationEnd={() => onReaction(post.id, null, reaction.id)}
+            />
+          ))}
+        </div>
+
+        <div className="post__actions">
+          <div className="post__buttons">
+            <div className="post__action-buttons">
+              <button
+                onClick={() => onReaction(post.id, "👍")}
+                className="post__heart-button"
+              >
+                <Heart className="w-6 h-6" />
+                {
+                  <span className="post__heart-count">
+                    {post.thumbsUp}
+                  </span>
                 }
-              }}
-            >
-              <Share2 className="w-6 h-6" />
-            </button>
-            <button
-              className="post__challenge-button"
-            >
-              <Trophy className="post__challenge-icon w-5 h-5" />
-              <span className="post__challenge-text">Challenge</span>
-              {
-                <span className="post__challenge-count">
-                  {post.smiley}
-                </span>
-              }
-            </button>
+              </button>
+              <button className="post__button">
+                <MessageCircle className="w-6 h-6" />
+              </button>
+              <button
+                className="post__button"
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: 'Check out my workout!',
+                      text: 'Join me on SweatSync',
+                      url: window.location.href // or a specific URL for your post
+                    })
+                      .then(() => console.log('Successfully shared!'))
+                      .catch((error) => console.error('Error sharing:', error));
+                  } else {
+                    // Fallback: copy link to clipboard or show a message
+                    console.log('Web Share API not supported in this browser.');
+                    navigator.clipboard.writeText(window.location.href);
+                    alert('Link copied to clipboard!');
+                  }
+                }}
+              >
+                <Share2 className="w-6 h-6" />
+              </button>
+              <button
+                className="post__challenge-button"
+              >
+                <Trophy className="post__challenge-icon w-5 h-5" />
+                <span className="post__challenge-text">Challenge</span>
+                {
+                  <span className="post__challenge-count">
+                    {post.smiley}
+                  </span>
+                }
+              </button>
+            </div>
+          </div>
+
+          <div className="post__details">
+            <p className="post__caption">
+              <span className="post__username">{post.username}</span>{' '}
+              {post.content}
+            </p>
+            <CommentSection postId={post.id} />
+            <p className="post__timestamp">
+              {getTimeAgo(post.createdAt)}
+            </p>
           </div>
         </div>
-
-        <div className="post__details">
-          <p className="post__caption">
-            <span className="post__username">{post.username}</span>{' '}
-            {post.content}
-          </p>
-                  <CommentSection postId={post.id} />
-          <p className="post__timestamp">
-            {getTimeAgo(post.createdAt)}
-          </p>
-        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 function App() {
   const [workoutposts, setworkoutposts] = useState<Array<Post>>([]);
   const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({});
+  const [profilePictureUrls, setProfilePictureUrls] = useState<{ [key: string]: string }>({});
   const [visibleCount, setVisibleCount] = useState<number>(10); // number of posts to show initially
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const BATCH_SIZE = 10; // number of posts to load each time
+  const BATCH_SIZE = 5; // number of posts to load each time
   const { getStorageUrl } = useUrlCache();
 
   useEffect(() => {
@@ -291,7 +292,28 @@ function App() {
         const sortedPosts = [...data.items].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-  
+
+      // Fetch profile pictures for each post owner
+      const profileUrls: { [userId: string]: string } = {};
+      for (const post of sortedPosts) {
+        if (post.userID) {
+          try {
+            const userResult = await client.models.User.get({ id: post.userID });
+            if (userResult.data?.picture) {
+              const url = await getStorageUrl(userResult.data.picture);
+              profileUrls[post.userID] = url;
+            } else {
+              profileUrls[post.userID] = "/profileDefault.png"; // Fallback URL
+            }
+          } catch (error) {
+            console.error('Error fetching user profile:', error);
+            profileUrls[post.userID] = "/profileDefault.png"; // Fallback URL
+          }
+        }
+      }
+
+      setProfilePictureUrls(profileUrls); // Store profile picture URLs in state
+
         // Map incoming posts to UI state
         const fieldToEmoji: { [key: string]: string } = {
           strong: "💪",
@@ -305,7 +327,7 @@ function App() {
           trophy: "🏆",
           thumbsUp: "👍",
         };
-  
+
         const postsWithUIState = sortedPosts.map(post => {
           const activeReactions: Array<{ id: string; emoji: string }> = [];
           for (const [field, emoji] of Object.entries(fieldToEmoji)) {
@@ -313,7 +335,7 @@ function App() {
             for (let i = 0; i < count; i++) {
               activeReactions.push({
                 id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                emoji 
+                emoji
               });
             }
           }
@@ -323,11 +345,11 @@ function App() {
             activeReactions,
           };
         });
-  
+
         setworkoutposts(prevPosts => {
           // Map previous posts by ID to easily find old states
           const prevMap = new Map(prevPosts.map(p => [p.id, p]));
-  
+
           return postsWithUIState.map(newPost => {
             const oldPost = prevMap.get(newPost.id);
             return {
@@ -337,7 +359,7 @@ function App() {
             };
           });
         });
-  
+
         if (useSpoofData) {
           const spoofedUrls: { [key: string]: string } = {};
           for (const item of data.items) {
@@ -362,7 +384,7 @@ function App() {
         }
       },
     });
-  
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -396,21 +418,21 @@ function App() {
 
   function deletePost(id: string) {
     const { userId } = useUser(); // Get current user's ID
-  
+
     // First find the post to verify ownership
     const post = workoutposts.find(p => p.id === id);
-    
+
     if (!post) {
       alert("Post not found");
       return;
     }
-  
+
     // Check if current user is the author
     if (post.userID !== userId) {
       alert("You can only delete your own posts");
       return;
     }
-  
+
     if (window.confirm("Are you sure you want to delete this post?")) {
       client.models.PostforWorkout.delete({ id })
         .catch((error) => {
@@ -497,6 +519,7 @@ function App() {
             key={post.id}
             post={post}
             imageUrl={imageUrls[post.id] || "/picsoritdidnthappen.webp"}
+            profileImageUrl={post.userID ? profilePictureUrls[post.userID] || "/profileDefault.png" : "/profileDefault.png"}
             onReaction={reactToPost}
             onDelete={deletePost}
             onHover={(postId, isHovering) => {
