@@ -6,6 +6,7 @@ import ChallengeFeedHeader from './challengeFeedHeader';
 import { CommentSection } from './CommentSection'; 
 import { useNavigate } from 'react-router-dom';
 import { useUrlCache } from './urlCacheContext';
+import { useUser } from './userContext';
 
 
 
@@ -14,7 +15,7 @@ const client = generateClient<Schema>();
 
 type Post = Schema["PostforWorkout"]["type"] & {
   showReactions: boolean;
-  activeReactions: Array<{ id: number; emoji: string }>;
+  activeReactions: Array<{ id: string; emoji: string }>;
 };
 
 type FloatingReactionProps = {
@@ -30,7 +31,7 @@ type ReactionGridProps = {
 type WorkoutPostProps = {
   post: Post;
   imageUrl: string;
-  onReaction: (id: string, emoji: string | null, reactionId?: number) => void;
+  onReaction: (id: string, emoji: string | null, reactionId?: string) => void;  // Changed to string
   onDelete: (id: string) => void;
   onHover: (id: string, isHovering: boolean) => void;
 };
@@ -150,6 +151,8 @@ const getTimeAgo = (timestamp: string) => {
 const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, onHover, onDelete }) => {
   // Add this line to get the navigate function
   const navigate = useNavigate();
+  const { userId } = useUser(); // Add this line to get current user's ID
+
 
   // Add this handler function
   const handlePostClick = () => {
@@ -166,15 +169,17 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
           className="post__avatar"
         />
         <span className="post__username">{post.username}</span>
-        <button
-            onClick={(e) => {
-              e.stopPropagation(); // This prevents the navigation when clicking delete
-              onDelete(post.id);
-            }}
-            className="post__delete-button"
-          >
-            ✕
-          </button>
+        {userId === post.userID && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // This prevents the navigation when clicking delete
+                onDelete(post.id);
+              }}
+              className="post__delete-button"
+            >
+              ✕
+            </button>
+          )}
       </div>
     </div>
 
@@ -249,7 +254,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, onReaction, o
               <span className="post__challenge-text">Challenge</span>
               {
                 <span className="post__challenge-count">
-                  {post.trophy}
+                  {post.smiley}
                 </span>
               }
             </button>
@@ -302,12 +307,12 @@ function App() {
         };
   
         const postsWithUIState = sortedPosts.map(post => {
-          const activeReactions: Array<{ id: number; emoji: string }> = [];
+          const activeReactions: Array<{ id: string; emoji: string }> = [];
           for (const [field, emoji] of Object.entries(fieldToEmoji)) {
             const count = (post as any)[field] || 0;
             for (let i = 0; i < count; i++) {
               activeReactions.push({
-                id: Date.now() + Math.floor(Math.random() * 10000), 
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 emoji 
               });
             }
@@ -390,15 +395,32 @@ function App() {
   }, [workoutposts, visibleCount]);
 
   function deletePost(id: string) {
+    const { userId } = useUser(); // Get current user's ID
+  
+    // First find the post to verify ownership
+    const post = workoutposts.find(p => p.id === id);
+    
+    if (!post) {
+      alert("Post not found");
+      return;
+    }
+  
+    // Check if current user is the author
+    if (post.userID !== userId) {
+      alert("You can only delete your own posts");
+      return;
+    }
+  
     if (window.confirm("Are you sure you want to delete this post?")) {
-      client.models.PostforWorkout.delete({ id }).catch((error) => {
-        console.error("Error Deleting Post", error);
-        alert("Failed to delete the post. Please try again.");
-      });
+      client.models.PostforWorkout.delete({ id })
+        .catch((error) => {
+          console.error("Error Deleting Post", error);
+          alert("Failed to delete the post. Please try again.");
+        });
     }
   }
 
-  async function reactToPost(id: string, emojiType: string | null, reactionId?: number) {
+  async function reactToPost(id: string, emojiType: string | null, reactionId?: string) {
     // Handle animation cleanup
     if (!emojiType && reactionId) {
       setworkoutposts(posts =>
@@ -441,6 +463,8 @@ function App() {
             [fieldName]: updatedValue
           });
 
+          const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
           // Add floating reaction animation
           setworkoutposts(posts =>
             posts.map(p =>
@@ -449,7 +473,7 @@ function App() {
                   ...p,
                   [fieldName]: updatedValue,
                   activeReactions: [...p.activeReactions, {
-                    id: Date.now(),
+                    id: uniqueId,
                     emoji: emojiType
                   }]
                 }

@@ -37,10 +37,10 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
   // Define challenge colors mapping
   const challengeColors: { [key: string]: string } = {
-    'strength': '#EF4444',
-    'cardio': '#3B82F6',
-    'flexibility': '#10B981',
-    'endurance': '#8B5CF6',
+    'group': '#10B981',
+    'personal': '#8B5CF6',
+    'public': '#EF4444',
+    'friends': '#3B82F6',
     'general': '#F59E0B'
   };
 
@@ -48,15 +48,18 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   useEffect(() => {
     const fetchChallenges = async () => {
       try {
-        const challenges = await listChallenges();
-        setAvailableChallenges(challenges);
+        if (!userId) return; // Ensure userId is available
+  
+        // Fetch only active challenges the user is participating in
+        const activeChallenges = await listChallenges(userId);
+        setAvailableChallenges(activeChallenges);
       } catch (error) {
-        console.error("Error fetching challenges:", error);
+        console.error("Error fetching active challenges:", error);
       }
     };
-
+  
     fetchChallenges();
-  }, []);
+  }, [userId]);
 
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,13 +100,16 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       const path = `picture-submissions/${uniqueFileName}`;
       await uploadData({ path, data: file });
   
+      //count challenges for storage
+      const taggedChallengesCount = selectedChallenges.length;
+
       const result = await client.models.PostforWorkout.create({
         content,
         url: path,
         username: userAttributes?.preferred_username,
         userID: userId,
         thumbsUp: 0,
-        smiley: 0,
+        smiley: taggedChallengesCount,
         trophy: 0
       });
   
@@ -122,7 +128,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             challengeId,
             userId,
             timestamp: new Date().toISOString(),
-            validated: false, // Default to false as per schema
+            validated: true, // Default to true for now @future me, gpt should validate on publish
             validationComment: "" // Empty string for initial creation
           });
   

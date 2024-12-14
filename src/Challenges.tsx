@@ -138,6 +138,20 @@ function ChallengesPage() {
     },
   ];
 
+  const getChallengeIcon = (type: string | null) => {
+    switch (type?.toLowerCase()) {
+      case 'public':
+        return <Globe size={20} />;
+      case 'friends':
+        return <UserPlus size={20} />;
+      case 'group':
+        return <Users size={20} />;
+      case 'personal':
+        return <Target size={20} />;
+      default:
+        return <Globe size={20} />; // Fallback to Globe
+    }
+  };
   const filteredChallenges = challenges.filter(challenge =>
     activeFilter === 'all' || challenge.challengeType === activeFilter
   );
@@ -243,6 +257,8 @@ function ChallengesPage() {
           <div>Loading challenges...</div>
         ) : (
           filteredChallenges.map(challenge => {
+            if (!challenge) return null; // Defensive check to skip any null values
+
             // Calculate progress based on workouts completed
             const isParticipant = participations[challenge.id];
             const progress = challenge.totalWorkouts ? 0 : 0; // This needs to be calculated from actual data
@@ -254,7 +270,7 @@ function ChallengesPage() {
               >
                 <div className="challenge-card-header">
                   <div className={`challenge-icon-wrapper challenge-icon-wrapper--${challenge.challengeType}`}>
-                    <Globe size={20} />
+                    {getChallengeIcon(challenge.challengeType)}
                   </div>
                   <div className="challenge-info">
                     <h3 className="challenge-title">{challenge.title}</h3>
