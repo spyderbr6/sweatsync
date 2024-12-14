@@ -51,17 +51,26 @@ export async function getPostComments(postId: string, limit: number = 3): Promis
     const comments = await client.models.Comment.list({
       filter: {
         postId: { eq: postId }
-      },
-      limit
+      }
     });
+
+    // Sort the comments by timestamp in memory
+    const sortedComments = comments.data.sort((a, b) => {
+      const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return dateB - dateA; // Sort in descending order (newest first)
+    });
+
+    // Apply limit after sorting
+    const limitedComments = sortedComments.slice(0, limit);
 
     // Map to properly typed comments
     return await Promise.all(
-      comments.data.map(async (comment): Promise<EnrichedComment> => {
+      limitedComments.map(async (comment): Promise<EnrichedComment> => {
         if (!comment.userId) {
           return {
             ...comment,
-            friendlyUsername: 'Anonymous User',  // string
+            friendlyUsername: 'Anonymous User',
             profilePicture: null
           };
         }
@@ -69,7 +78,7 @@ export async function getPostComments(postId: string, limit: number = 3): Promis
         const userInfo = await getUserInfo(comment.userId);
         return {
           ...comment,
-          friendlyUsername: userInfo.username,  // string
+          friendlyUsername: userInfo.username,
           profilePicture: userInfo.picture
         };
       })
@@ -79,6 +88,7 @@ export async function getPostComments(postId: string, limit: number = 3): Promis
     throw error;
   }
 }
+
 
 // Create a new comment
 export async function createComment(
