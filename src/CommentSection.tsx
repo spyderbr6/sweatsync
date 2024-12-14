@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from './userContext';
-import { getPostComments, createComment, deleteComment, editComment } from './commentOperations';
+import { getPostComments, createComment, deleteComment, editComment,EnrichedComment } from './commentOperations';
 import { Pencil, Trash2, X, Check } from 'lucide-react';
 import type { Schema } from "../amplify/data/resource";
+import { useUrlCache } from './urlCacheContext';
+
 
 type Comment = Schema['Comment']['type'] & {
-  friendlyUsername?: string;
+  friendlyUsername: string; 
+  profilePicture?: string | null;
 };
 
 interface CommentSectionProps {
@@ -20,35 +23,53 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 }) => {
   const navigate = useNavigate();
   const { userId } = useUser();
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<EnrichedComment[]>([]);  // Use EnrichedComment type
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getStorageUrl } = useUrlCache();
+  const [commentProfileUrls, setCommentProfileUrls] = useState<{[key: string]: string}>({});
+
 
   useEffect(() => {
-    loadComments();
-  }, [postId]);
+    const loadComments = async () => {
+      try {
+        setIsLoading(true);
+        const fetchedComments = await getPostComments(postId, commentsLimit);
+        setComments(fetchedComments);  // Should be properly typed now
 
-  const loadComments = async () => {
-    try {
-      setIsLoading(true);
-      const fetchedComments = await getPostComments(postId, commentsLimit);
-      setComments(fetchedComments);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load comments');
-      console.error('Error loading comments:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        // Load profile pictures for comments
+        const profileUrls: {[key: string]: string} = {};
+        for (const comment of fetchedComments) {
+          if (comment.userId && comment.profilePicture) {
+            try {
+              const profileUrl = await getStorageUrl(comment.profilePicture);
+              profileUrls[comment.userId] = profileUrl;
+            } catch (error) {
+              profileUrls[comment.userId] = "/profileDefault.png";
+            }
+          }
+        }
+        setCommentProfileUrls(profileUrls);
+        setError(null);
+      } catch (err) {
+        setError('Failed to load comments');
+        console.error('Error loading comments:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadComments();
+  }, [postId, commentsLimit]);
+
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId || !newComment.trim()) return;
-
+  
     try {
       const comment = await createComment(
         postId,
@@ -56,10 +77,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         newComment.trim()
       );
       
-      if (comment) {
-        setComments(prevComments => [comment, ...prevComments]);
-        setNewComment('');
-      }
+      // comment is already properly typed as EnrichedComment
+      setComments(prevComments => [comment, ...prevComments]);
+      setNewComment('');
     } catch (err) {
       setError('Failed to post comment');
       console.error('Error posting comment:', err);
@@ -90,25 +110,25 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     setEditContent('');
   };
 
-  const handleEditComment = async (commentId: string) => {
-    if (!editContent.trim()) return;
+const handleEditComment = async (commentId: string) => {
+  if (!editContent.trim()) return;
 
-    try {
-      const updatedComment = await editComment(commentId, editContent);
-      if (updatedComment) {
-        setComments(prevComments =>
-          prevComments.map(comment =>
-            comment.id === commentId ? updatedComment : comment
-          )
-        );
-        setEditingCommentId(null);
-        setEditContent('');
-      }
-    } catch (err) {
-      setError('Failed to edit comment');
-      console.error('Error editing comment:', err);
+  try {
+    const updatedComment = await editComment(commentId, editContent);
+    if (updatedComment) {
+      setComments(prevComments =>
+        prevComments.map(comment =>
+          comment.id === commentId ? updatedComment : comment
+        )
+      );
+      setEditingCommentId(null);
+      setEditContent('');
     }
-  };
+  } catch (err) {
+    setError('Failed to edit comment');
+    console.error('Error editing comment:', err);
+  }
+};
 
   if (isLoading) {
     return <div className="comment-section__loading">Loading comments...</div>;
@@ -146,7 +166,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           <div key={comment.id} className="comment-section__comment">
             <div className="comment-section__user">
               <img
-                src="/profileDefault.png"
+                src={commentProfileUrls[comment.userId || ''] || "/profileDefault.png"}
                 alt="User Avatar"
                 className="comment-section__avatar"
               />

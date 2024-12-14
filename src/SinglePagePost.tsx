@@ -2,10 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
-import { getUrl } from 'aws-amplify/storage';
 import { Heart, MessageCircle, Share2, Trophy } from 'lucide-react';
 import { CommentSection } from './CommentSection';
-//import './singlePage.css';
+import { useUrlCache } from './urlCacheContext';
 
 const client = generateClient<Schema>();
 
@@ -94,6 +93,7 @@ const ReactionGrid: React.FC<ReactionGridProps> = ({ onReaction, visible }) => (
 );
 
 const SinglePostPage: React.FC = () => {
+    const { getStorageUrl } = useUrlCache();
     const { postId } = useParams<{ postId: string }>();
     const navigate = useNavigate();
     const [post, setPost] = useState<Post | null>(null);
@@ -153,11 +153,11 @@ const SinglePostPage: React.FC = () => {
                 setPost(postWithUIState);
 
 
-                // Fetch image URL
+                // Updated image URL fetching using cache
                 if (response.data.url) {
                     try {
-                        const linkToStorageFile = await getUrl({ path: response.data.url });
-                        setImageUrl(linkToStorageFile.url.toString());
+                        const url = await getStorageUrl(response.data.url);
+                        setImageUrl(url);
                     } catch (urlError) {
                         console.error('Error retrieving post image:', urlError);
                         setImageUrl("/picsoritdidnthappen.webp");

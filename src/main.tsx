@@ -13,6 +13,7 @@ import { Amplify } from "aws-amplify";
 import outputs from "../amplify_outputs.json";
 import '@aws-amplify/ui-react/styles.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { UrlCacheProvider } from './urlCacheContext';
 
 
 Amplify.configure(outputs);
@@ -44,18 +45,20 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           },
         },
       }}>
-      <UserProvider>
-        <Router>
-          <Header />
-          <Routes>
-            <Route path="/" element={<App />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/friendManagement" element={<FriendsPage />} />
-            <Route path="/Challenges" element={<ChallengesPage />} />
-            <Route path="/post/:postId" element={<SinglePostPage/>} /> {/* Add this line */}
-          </Routes>
-        </Router>
-      </UserProvider>
+      <UrlCacheProvider>
+        <UserProvider>
+          <Router>
+            <Header />
+            <Routes>
+              <Route path="/" element={<App />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/friendManagement" element={<FriendsPage />} />
+              <Route path="/Challenges" element={<ChallengesPage />} />
+              <Route path="/post/:postId" element={<SinglePostPage />} /> {/* Add this line */}
+            </Routes>
+          </Router>
+        </UserProvider>
+      </UrlCacheProvider>
     </Authenticator>
   </React.StrictMode>
 );
