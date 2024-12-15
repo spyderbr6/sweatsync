@@ -14,6 +14,8 @@ function Header() {
   const { userAttributes } = useUser();
   const { getStorageUrl } = useUrlCache();
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("/profileDefault.png");
+  const { pictureUrl } = useUser();  // Add this
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -58,7 +60,7 @@ function Header() {
           <div className="account-icon">
             <div className="dropdown">
               <img
-                src={profilePictureUrl}
+             src={pictureUrl || "profileDefault.png"} 
                 alt={userAttributes?.preferred_username || "Account"}
                 className="dropdown-toggle"
                 onClick={() => setShowDropdown(!showDropdown)}

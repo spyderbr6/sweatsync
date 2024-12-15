@@ -97,7 +97,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       setLoading(true);
   
       // Upload image
-      const { originalPath} = await uploadImageWithThumbnails(file, 'workout-pictures', 1200);
+      const { originalPath} = await uploadImageWithThumbnails(file, 'picture-submissions', 1200);
 
   
       //count challenges for storage
