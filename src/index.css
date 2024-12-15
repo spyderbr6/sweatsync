@@ -223,6 +223,9 @@ a:hover {
     height: 40px;
     width: 40px;
   }
+  .feed__content{
+    padding: .5rem
+  }
 }
 
 @keyframes reaction-appear {
@@ -364,7 +367,7 @@ max-width: 1620px;
   }
 
 .post__header {
-  padding: 1rem;
+  padding: .75rem;
   border-bottom: 1px solid rgb(229 231 235);
 }
 
@@ -376,8 +379,8 @@ max-width: 1620px;
 }
 
 .post__avatar {
-  width: 2rem;
-  height: 2rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 9999px;
   align-items: center;
   border-radius: 50%; /* Makes the image circular */
