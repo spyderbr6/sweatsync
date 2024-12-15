@@ -283,7 +283,7 @@ function App() {
   const [profilePictureUrls, setProfilePictureUrls] = useState<{ [key: string]: string }>({});
   const [visibleCount, setVisibleCount] = useState<number>(10); // number of posts to show initially
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const BATCH_SIZE = 10; // number of posts to load each time
+  const BATCH_SIZE = 5; // number of posts to load each time
   const { getStorageUrl } = useUrlCache();
 
   useEffect(() => {
