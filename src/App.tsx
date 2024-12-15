@@ -283,7 +283,7 @@ function App() {
   const [profilePictureUrls, setProfilePictureUrls] = useState<{ [key: string]: string }>({});
   const [visibleCount, setVisibleCount] = useState<number>(10); // number of posts to show initially
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const BATCH_SIZE = 5; // number of posts to load each time
+  const BATCH_SIZE = 10; // number of posts to load each time
   const { getStorageUrl } = useUrlCache();
 
   useEffect(() => {
@@ -519,7 +519,7 @@ function App() {
             key={post.id}
             post={post}
             imageUrl={imageUrls[post.id] || "/picsoritdidnthappen.webp"}
-            profileImageUrl={post.userID ? profilePictureUrls[post.userID] || "/profileDefault.png" : "/profileDefault.png"}
+profileImageUrl={post.userID ? profilePictureUrls[post.userID] || "/profileDefault.png" : "/profileDefault.png"}
             onReaction={reactToPost}
             onDelete={deletePost}
             onHover={(postId, isHovering) => {
