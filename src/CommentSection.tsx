@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from './userContext';
 import { getPostComments, createComment, deleteComment, editComment,EnrichedComment } from './commentOperations';
-import { Pencil, Trash2, X, Check } from 'lucide-react';
+import { Pencil, Trash2, X, Check, SendHorizonal } from 'lucide-react';
 import type { Schema } from "../amplify/data/resource";
 import { useUrlCache } from './urlCacheContext';
 
@@ -188,7 +188,7 @@ const handleEditComment = async (commentId: string) => {
             disabled={!newComment.trim()}
             className="comment-section__submit"
           >
-            Post
+            <SendHorizonal size={16}/>
           </button>
         </form>
       )}

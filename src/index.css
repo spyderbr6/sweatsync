@@ -297,6 +297,9 @@ a:hover {
   gap: 0.5rem;
   overflow-x: auto;
 }
+.feed__challenges::-webkit-scrollbar {
+ display: none;
+}
 
 .challenge-alert {
   flex-shrink: 0;
