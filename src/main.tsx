@@ -54,7 +54,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Routes>
                 <Route path="/" element={<App />} />
                 <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/friendManagement" element={<FriendsPage />} />
+                <Route path="/friends" element={<FriendsPage />} />
                 <Route path="/Challenges" element={<ChallengesPage />} />
                 <Route path="/post/:postId" element={<SinglePostPage />} />
               </Routes>

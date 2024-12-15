@@ -289,7 +289,7 @@ const SinglePostPage: React.FC = () => {
 
     return (
         <div className="single-post-container">
-            <div className="post-single">
+            <div className="single-post-single">
                 <div className="post__header">
                     <div className="post__user-info">
                         <img
