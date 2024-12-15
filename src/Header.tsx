@@ -66,9 +66,9 @@ function Header() {
                 onClick={() => setShowDropdown(!showDropdown)}
               />
               <div className={`dropdown-menu ${showDropdown ? 'show' : ''}`}>
-                <button className="dropdown-item" onClick={() => navigate('/profile')}>Profile</button>
-                <button className="dropdown-item" onClick={() => navigate('/friendManagement')}>Friends</button>
-                <button className="dropdown-item" onClick={() => navigate('/Challenges')}>Challenges</button>
+                <button className="dropdown-item" onClick={() => {navigate('/profile'); setShowDropdown(false);}}>Profile</button>
+                <button className="dropdown-item" onClick={() => {navigate('/friendManagement');setShowDropdown(false);}}>Friends</button>
+                <button className="dropdown-item" onClick={() => {navigate('/Challenges'); setShowDropdown(false);}}>Challenges</button>
                 <button className="dropdown-item" onClick={signOut}>Logout</button>
               </div>
             </div>
