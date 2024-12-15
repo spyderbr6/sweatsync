@@ -294,27 +294,53 @@ function App() {
         const sortedPosts = [...data.items].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-
-      // Fetch profile pictures for each post owner
-      const profileUrls: { [userId: string]: string } = {};
-      for (const post of sortedPosts) {
-        if (post.userID) {
-          try {
-            const userResult = await client.models.User.get({ id: post.userID });
-            if (userResult.data?.pictureUrl) {
-              const url = await getStorageUrl(userResult.data.pictureUrl);
-              profileUrls[post.userID] = url;
-            } else {
-              profileUrls[post.userID] = "/profileDefault.png"; // Fallback URL
+  
+        // Get unique user IDs and ensure they're not null
+        const uniqueUserIds = Array.from(
+          new Set(
+            sortedPosts
+              .map(post => post.userID)
+              .filter((id): id is string => id !== null && id !== undefined)
+          )
+        );
+        
+        const profileUrls: { [userId: string]: string } = {};
+        
+        try {
+          // Fetch users with multiple queries in parallel
+          const userPromises = uniqueUserIds.map(userId => 
+            client.models.User.get({ id: userId })
+          );
+  
+          const userResults = await Promise.all(userPromises);
+  
+          // Process all profile pictures in parallel
+          const userProfilePromises = userResults.map(async (result) => {
+            const user = result.data;
+            if (user && user.id) {  // Ensure user and user.id exist
+              if (user.pictureUrl) {
+                try {
+                  const url = await getStorageUrl(user.pictureUrl);
+                  profileUrls[user.id] = url;
+                } catch (error) {
+                  console.error(`Error fetching profile URL for user ${user.id}:`, error);
+                  profileUrls[user.id] = "/profileDefault.png";
+                }
+              } else {
+                profileUrls[user.id] = "/profileDefault.png";
+              }
             }
-          } catch (error) {
-            console.error('Error fetching user profile:', error);
-            profileUrls[post.userID] = "/profileDefault.png"; // Fallback URL
-          }
+          });
+  
+          await Promise.all(userProfilePromises);
+        } catch (error) {
+          console.error('Error fetching user profiles:', error);
+          uniqueUserIds.forEach(userId => {
+            profileUrls[userId] = "/profileDefault.png";
+          });
         }
-      }
-
-      setProfilePictureUrls(profileUrls); // Store profile picture URLs in state
+  
+        setProfilePictureUrls(profileUrls); // Store profile picture URLs in state
 
         // Map incoming posts to UI state
         const fieldToEmoji: { [key: string]: string } = {
