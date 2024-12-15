@@ -215,6 +215,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
               <button
                 onClick={() => onReaction(post.id, "👍")}
                 className="post__heart-button"
+                aria-label = "Like Button"
               >
                 <Heart className="w-6 h-6" />
                 {
@@ -223,11 +224,13 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
                   </span>
                 }
               </button>
-              <button className="post__button">
+              <button className="post__button"
+              aria-label="Comment">
                 <MessageCircle className="w-6 h-6" />
               </button>
               <button
                 className="post__button"
+                aria-label="Share Button"
                 onClick={() => {
                   if (navigator.share) {
                     navigator.share({
