@@ -16,7 +16,21 @@ type ChallengeWithProgress = {
   progress: number;
 };
 
-const ChallengeFeedHeader = () => {
+type CacheData = {
+  version: number;
+  challenges: ChallengeWithProgress[];
+  timestamp: number;
+};
+
+interface ChallengeFeedHeaderProps {
+  // This prop should change whenever a new challenge or a new post is added,
+  // causing the cache to invalidate.
+  dataVersion: number;
+}
+
+const CACHE_KEY = 'activeChallengesCache';
+
+const ChallengeFeedHeader = ({ dataVersion }: ChallengeFeedHeaderProps) => {
   const { userId } = useUser();
   const navigate = useNavigate();
   const [activeChallenges, setActiveChallenges] = useState<ChallengeWithProgress[]>([]);
@@ -24,8 +38,28 @@ const ChallengeFeedHeader = () => {
 
   useEffect(() => {
     const fetchChallenges = async () => {
-      if (!userId) return;
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
 
+      // Try to read from cache first
+      const cachedString = localStorage.getItem(CACHE_KEY);
+      if (cachedString) {
+        try {
+          const cachedData: CacheData = JSON.parse(cachedString);
+          // Use cached data if the version matches
+          if (cachedData.version === dataVersion) {
+            setActiveChallenges(cachedData.challenges);
+            setLoading(false);
+            return; // Stop here since we have fresh data from cache
+          }
+        } catch (error) {
+          console.error('Error parsing cache:', error);
+        }
+      }
+
+      // If we reach here, we need to fetch fresh data
       try {
         // 1. Fetch active challenge participations
         const participations = await client.models.ChallengeParticipant.list({
@@ -69,8 +103,8 @@ const ChallengeFeedHeader = () => {
                 // Get total posts for this challenge by this user
                 const userPostCount = postCountsByChallenge[challenge.id] || 0;
                 // Use totalWorkouts as the target goal
-                const targetWorkouts = Math.max(challenge.totalWorkouts || 30, 1); // Fallback to 30 or minimum 1
-                
+                const targetWorkouts = Math.max(challenge.totalWorkouts || 30, 1); // fallback to 30 or at least 1
+
                 return {
                   id: challenge.id,
                   title: challenge.title,
@@ -88,11 +122,20 @@ const ChallengeFeedHeader = () => {
           });
 
         const challenges = (await Promise.all(challengePromises))
-          .filter((challenge): challenge is ChallengeWithProgress => 
+          .filter((challenge): challenge is ChallengeWithProgress =>
             challenge !== null
           );
-        
+
         setActiveChallenges(challenges);
+
+        // Cache the fetched data
+        const cachePayload: CacheData = {
+          version: dataVersion,
+          challenges,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
+
       } catch (error) {
         console.error('Error fetching challenges:', error);
       } finally {
@@ -101,9 +144,9 @@ const ChallengeFeedHeader = () => {
     };
 
     fetchChallenges();
-  }, [userId]);
+  }, [userId, dataVersion]);
 
-    if (loading) {
+  if (loading) {
     return (
       <div className="feed__header">
         <div className="feed__challenges">

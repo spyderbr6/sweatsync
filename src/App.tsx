@@ -215,6 +215,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
               <button
                 onClick={() => onReaction(post.id, "👍")}
                 className="post__heart-button"
+                aria-label = "Like Button"
               >
                 <Heart className="w-6 h-6" />
                 {
@@ -223,11 +224,13 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
                   </span>
                 }
               </button>
-              <button className="post__button">
+              <button className="post__button"
+              aria-label="Comment">
                 <MessageCircle className="w-6 h-6" />
               </button>
               <button
                 className="post__button"
+                aria-label="Share Button"
                 onClick={() => {
                   if (navigator.share) {
                     navigator.share({
@@ -286,6 +289,7 @@ function App() {
   const BATCH_SIZE = 5; // number of posts to load each time
   const { getStorageUrl } = useUrlCache();
   const { userId } = useUser();  // Move this to component level
+  const [dataVersion] = useState(0);
 
 
   useEffect(() => {
@@ -537,7 +541,7 @@ function App() {
 
   return (
     <div className="feed">
-      <ChallengeFeedHeader />
+      <ChallengeFeedHeader dataVersion={dataVersion} />
 
       <div className="feed__content">
         {workoutposts.slice(0, visibleCount).map(post => (
