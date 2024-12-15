@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { Authenticator } from '@aws-amplify/ui-react';
 import { UserProvider } from './userContext';
+import { DataVersionProvider } from './dataVersionContext';
 import App from "./App.tsx";
 import ProfilePage from "./profile.tsx";
 import FriendsPage from "./friendManagement.tsx";
@@ -45,18 +46,20 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           },
         },
       }}>
-      <UrlCacheProvider>
+       <UrlCacheProvider>
         <UserProvider>
-          <Router>
-            <Header />
-            <Routes>
-              <Route path="/" element={<App />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/friendManagement" element={<FriendsPage />} />
-              <Route path="/Challenges" element={<ChallengesPage />} />
-              <Route path="/post/:postId" element={<SinglePostPage />} /> {/* Add this line */}
-            </Routes>
-          </Router>
+          <DataVersionProvider>  {/* Add the new provider here */}
+            <Router>
+              <Header />
+              <Routes>
+                <Route path="/" element={<App />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/friendManagement" element={<FriendsPage />} />
+                <Route path="/Challenges" element={<ChallengesPage />} />
+                <Route path="/post/:postId" element={<SinglePostPage />} />
+              </Routes>
+            </Router>
+          </DataVersionProvider>
         </UserProvider>
       </UrlCacheProvider>
     </Authenticator>

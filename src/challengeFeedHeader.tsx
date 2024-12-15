@@ -4,6 +4,7 @@ import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { useUser } from './userContext';
 import { useNavigate } from 'react-router-dom';
+import { useDataVersion } from './dataVersionContext'; 
 
 const client = generateClient<Schema>();
 
@@ -22,16 +23,11 @@ type CacheData = {
   timestamp: number;
 };
 
-interface ChallengeFeedHeaderProps {
-  // This prop should change whenever a new challenge or a new post is added,
-  // causing the cache to invalidate.
-  dataVersion: number;
-}
-
 const CACHE_KEY = 'activeChallengesCache';
 
-const ChallengeFeedHeader = ({ dataVersion }: ChallengeFeedHeaderProps) => {
+const ChallengeFeedHeader = () => {
   const { userId } = useUser();
+  const { dataVersion } = useDataVersion(); // Use the context here
   const navigate = useNavigate();
   const [activeChallenges, setActiveChallenges] = useState<ChallengeWithProgress[]>([]);
   const [loading, setLoading] = useState(true);

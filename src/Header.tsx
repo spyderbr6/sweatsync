@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { CreatePostModal } from './CreatePostModal';
 import { useUser } from './userContext';
 import { useUrlCache } from './urlCacheContext';
+import ChallengeFeedHeader from './challengeFeedHeader';
 
 function Header() {
   const navigate = useNavigate();
@@ -15,7 +16,6 @@ function Header() {
   const { getStorageUrl } = useUrlCache();
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("/profileDefault.png");
   const { pictureUrl } = useUser();  // Add this
-
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,6 +75,7 @@ function Header() {
           </div>
         </div>
       </main>
+      <ChallengeFeedHeader />
 
       {/* Floating Action Button */}
       <button
