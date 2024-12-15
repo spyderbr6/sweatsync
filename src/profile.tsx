@@ -8,6 +8,7 @@ import { FaEnvelope, FaSpinner, FaEdit, FaCheck, FaTimes } from 'react-icons/fa'
 import { useUrlCache } from './urlCacheContext';
 import ProfilePictureUploader from './utils/profilePictureUploader'; // Import the new component
 import './ProfilePage.css';
+
 import { useUser } from "./userContext";
 
 
