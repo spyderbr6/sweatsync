@@ -6,6 +6,7 @@ import { listChallenges } from './challengeOperations';
 import { useUser } from './userContext';
 import './postCreator.css';
 import { uploadImageWithThumbnails } from './utils/imageUploadUtils';
+import { useDataVersion } from './dataVersionContext'; // Add this import
 
 
 
@@ -27,6 +28,7 @@ interface PostCreatorProps {
 
 const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const { userId, userAttributes } = useUser();
+  const { incrementVersion } = useDataVersion();
   const [step, setStep] = useState<'initial' | 'details'>('initial');
   const [content, setContent] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -50,7 +52,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     const fetchChallenges = async () => {
       try {
         if (!userId) return; // Ensure userId is available
-  
+
         // Fetch only active challenges the user is participating in
         const activeChallenges = await listChallenges(userId);
         setAvailableChallenges(activeChallenges);
@@ -58,7 +60,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         console.error("Error fetching active challenges:", error);
       }
     };
-  
+
     fetchChallenges();
   }, [userId]);
 
@@ -92,14 +94,14 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       onError?.(new Error("Missing required data for post"));
       return;
     }
-  
+
     try {
       setLoading(true);
-  
-      // Upload image
-      const { originalPath} = await uploadImageWithThumbnails(file, 'picture-submissions', 1200);
 
-  
+      // Upload image
+      const { originalPath } = await uploadImageWithThumbnails(file, 'picture-submissions', 1200);
+
+
       //count challenges for storage
       const taggedChallengesCount = selectedChallenges.length;
 
@@ -112,13 +114,13 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         smiley: taggedChallengesCount,
         trophy: 0
       });
-  
+
       if (!result.data) {
         throw new Error("Failed to create post");
       }
-  
+
       const newPost = result.data;
-  
+
       // Process selected challenges
       const challengePromises = selectedChallenges.map(async (challengeId) => {
         try {
@@ -131,7 +133,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             validated: true, // Default to true for now @future me, gpt should validate on publish
             validationComment: "" // Empty string for initial creation
           });
-  
+
           // Find the participant record
           const participantResult = await client.models.ChallengeParticipant.list({
             filter: {
@@ -140,7 +142,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
               status: { eq: "ACTIVE" }
             }
           });
-  
+
           const participant = participantResult.data[0];
           if (participant) {
             // Get the challenge to check totalWorkouts
@@ -148,11 +150,11 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             if (!challengeResult.data) {
               throw new Error("Challenge not found");
             }
-  
+
             const newWorkoutCount = (participant.workoutsCompleted || 0) + 1;
             const newPoints = (participant.points || 0) + 10;
             const targetWorkouts = challengeResult.data.totalWorkouts || 30;
-  
+
             await client.models.ChallengeParticipant.update({
               id: participant.id,
               workoutsCompleted: newWorkoutCount,
@@ -169,27 +171,30 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
           throw error;
         }
       });
-  
+
       // Use Promise.allSettled to handle partial failures
       const challengeResults = await Promise.allSettled(challengePromises);
-  
+
       // Check for any failures
       const failures = challengeResults.filter(
         (result): result is PromiseRejectedResult => result.status === 'rejected'
       );
-  
+
       if (failures.length > 0) {
         console.warn(`${failures.length} challenge updates failed:`, failures);
         onError?.(new Error(`Post created but ${failures.length} challenge updates failed`));
       }
-  
+
       // Reset form
       setContent("");
       setFile(null);
       setPreviewUrl(null);
       setStep('initial');
       setSelectedChallenges([]);
-  
+
+      // Increment version after successful post creation. This is a performance improvement need.
+      incrementVersion();
+
       onSuccess();
     } catch (error) {
       console.error("Error creating post:", error);

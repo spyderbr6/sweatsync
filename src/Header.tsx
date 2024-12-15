@@ -16,8 +16,6 @@ function Header() {
   const { getStorageUrl } = useUrlCache();
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("/profileDefault.png");
   const { pictureUrl } = useUser();  // Add this
-  const [dataVersion] = useState(0);
-
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -77,7 +75,7 @@ function Header() {
           </div>
         </div>
       </main>
-      <ChallengeFeedHeader dataVersion={dataVersion} />
+      <ChallengeFeedHeader />
 
       {/* Floating Action Button */}
       <button

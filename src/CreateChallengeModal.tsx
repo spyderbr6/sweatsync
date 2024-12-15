@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { createChallenge } from './challengeOperations';
+import { useDataVersion } from './dataVersionContext';
 
 interface CreateChallengeModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { incrementVersion } = useDataVersion();
 
   if (!isOpen) return null;
 
@@ -54,6 +56,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
         endAt: new Date(formData.endDate),
       });
 
+      incrementVersion(); //this tells certain functions to rerender and pull data as a result of this change.
       onSuccess();
       onClose();
     } catch (error) {
