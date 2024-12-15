@@ -6,6 +6,8 @@ import type { Schema } from "../amplify/data/resource";
 import './challenges.css';
 import { getPendingChallenges, respondToChallenge } from './challengeOperations';
 import { useUser } from './userContext';
+import { useDataVersion } from './dataVersionContext';
+
 
 type ChallengeCategory = 'all' | 'public' | 'group' | 'friends' | 'personal';
 type Challenge = Schema["Challenge"]["type"];
@@ -23,6 +25,7 @@ function ChallengesPage() {
   })[]>([]);
   const [participations, setParticipations] = useState<Record<string, boolean>>({});
   const [joiningChallenge, setJoiningChallenge] = useState<string | null>(null);
+  const { incrementVersion } = useDataVersion();
 
 
   useEffect(() => {
@@ -63,6 +66,8 @@ function ChallengesPage() {
         ...prev,
         [challengeId]: true
       }));
+
+      incrementVersion(); //this tells certain functions to rerender and pull data as a result of this change.
 
       // Refresh challenges to get updated data
       await loadChallenges();
