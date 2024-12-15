@@ -3,8 +3,6 @@ import { Search, Mail, AtSign, X, UserPlus, Users } from 'lucide-react';
 import { sendFriendRequest, searchUsers } from './friendOperations';
 import { useUser } from './userContext';
 import './friends.css';
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "../amplify/data/resource";
 import { useUrlCache } from './urlCacheContext';
 
 
@@ -19,33 +17,13 @@ interface SearchResult {
     username: string | null;
     email: string | null;
     mutualFriends: number;  // Make this required, not optional
+    picture?: string | null;
 }
-
-async function testUserData() {
-    try {
-      const client = generateClient<Schema>();
-      console.log('Client initialized:', client); // Debug log
-      
-      if (!client.models) {
-        console.error('Client models not initialized');
-        return;
-      }
-  
-      const users = await client.models.User.list({});
-      console.log('All users:', users.data);
-    } catch (error) {
-      console.error('Error in testUserData:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', error.message);
-        console.error('Error stack:', error.stack);
-      }
-    }
-  }
 
 const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const { userId } = useUser();
     const [searchTerm, setSearchTerm] = useState('');
-    const [searchType, setSearchType] = useState<'email' | 'username'>('email');
+    const [searchType, setSearchType] = useState<'email' | 'username'>('username');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -59,11 +37,7 @@ const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess })
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    useEffect(() => {
-        if (isOpen) {
-            testUserData();
-        }
-    }, [isOpen]);
+
     // Perform search when debounced term changes
     useEffect(() => {
         // In FriendModal.tsx
@@ -154,19 +128,20 @@ const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess })
                 {/* Search type tabs */}
                 <div className="search-type-tabs">
                     <button
-                        className={`search-type-tab ${searchType === 'email' ? 'search-type-tab--active' : ''}`}
-                        onClick={() => setSearchType('email')}
-                    >
-                        <Mail size={16} className="search-type-icon" />
-                        Email
-                    </button>
-                    <button
                         className={`search-type-tab ${searchType === 'username' ? 'search-type-tab--active' : ''}`}
                         onClick={() => setSearchType('username')}
                     >
                         <AtSign size={16} className="search-type-icon" />
                         Username
                     </button>
+                    <button
+                        className={`search-type-tab ${searchType === 'email' ? 'search-type-tab--active' : ''}`}
+                        onClick={() => setSearchType('email')}
+                    >
+                        <Mail size={16} className="search-type-icon" />
+                        Email
+                    </button>
+
                 </div>
 
                 {/* Search input */}
@@ -181,6 +156,15 @@ const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess })
                             onChange={(e) => setSearchTerm(e.target.value)}
                             minLength={2}
                         />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="modal-search-clear"
+                                aria-label="Clear search"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -211,25 +195,27 @@ const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess })
                             <div key={user.userId} className="result-item">
                                 <div className="result-user">
                                     <img
-                                        src="/api/placeholder/40/40"
+                                        src={user.picture || "/profileDefault.png"}
                                         alt={user.username || 'User'}
                                         className="result-avatar"
                                     />
                                     <div className="result-info">
+                                        {/* Always show username, never show email */}
                                         <span className="result-name">
-                                            {searchType === 'email' ? user.email : user.username}
+                                            {user.username || 'Anonymous User'}
                                         </span>
-                                        {searchType === 'email' && (
-                                            <div className="result-meta">
-                                                Send friend request to this email
-                                            </div>
-                                        )}
-                                        {searchType !== 'email' && (
-                                            <div className="result-meta">
-                                                <Users size={14} />
-                                                <span>{user.mutualFriends} mutual friends</span>
-                                            </div>
-                                        )}
+
+                                        {/* Conditional meta information */}
+                                        <div className="result-meta">
+                                            {searchType === 'email' ? (
+                                                <span>Found via email search</span>
+                                            ) : (
+                                                <div className="result-meta">
+                                                    <Users size={14} />
+                                                    <span>{user.mutualFriends} mutual friends</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <button

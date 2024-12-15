@@ -223,6 +223,9 @@ a:hover {
     height: 40px;
     width: 40px;
   }
+  .feed__content{
+    padding: .5rem
+  }
 }
 
 @keyframes reaction-appear {
@@ -257,7 +260,7 @@ a:hover {
   top: 0;
   background-color: white;
   border-bottom: 1px solid rgb(229 231 235);
-  padding: 1rem;
+  padding: .5rem;
   z-index: 10;
 }
 
@@ -293,14 +296,13 @@ a:hover {
   align-items: center;
   gap: 0.5rem;
   overflow-x: auto;
-  padding: 0.5rem 0;
 }
 
 .challenge-alert {
   flex-shrink: 0;
   cursor: pointer;
   transition: background-color 0.2s;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 1rem;
   border-radius: 0.5rem;
   display: flex;
   align-items: center;
@@ -365,7 +367,7 @@ max-width: 1620px;
   }
 
 .post__header {
-  padding: 1rem;
+  padding: .75rem;
   border-bottom: 1px solid rgb(229 231 235);
 }
 
@@ -377,8 +379,8 @@ max-width: 1620px;
 }
 
 .post__avatar {
-  width: 2rem;
-  height: 2rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 9999px;
   align-items: center;
   border-radius: 50%; /* Makes the image circular */
@@ -674,7 +676,7 @@ max-width: 1620px;
 
 
 .comment-section {
-  padding: 1rem;
+  padding: 1rem 0 1rem 0;
   border-top: 1px solid #e5e7eb;
 }
 

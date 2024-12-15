@@ -6,7 +6,6 @@ const client = generateClient<Schema>();
 
 // Send a friend request
 export async function sendFriendRequest(senderId: string, recipientId: string) {
-  console.log('Attempting to send friend request:', { senderId, recipientId });
   try {
     // Check for existing requests in either direction
     const existingRequests = await client.models.FriendRequest.list({
@@ -43,7 +42,6 @@ export async function sendFriendRequest(senderId: string, recipientId: string) {
       createdAt: new Date().toISOString()
     });
 
-    console.log('Friend request created successfully:', result);
     return result;
   } catch (error) {
     console.error('Error in sendFriendRequest:', error);
@@ -57,7 +55,6 @@ export async function sendFriendRequest(senderId: string, recipientId: string) {
 
 // Accept a friend request
 export async function acceptFriendRequest(friendRequestId: string) {
-  console.log('Attempting to accept friend request:', friendRequestId);
   try {
     // Get the friend request
     const friendRequestResult = await client.models.FriendRequest.get({ id: friendRequestId });
@@ -76,14 +73,13 @@ export async function acceptFriendRequest(friendRequestId: string) {
     }
 
     // Update friend request status first
-    const updateResult = await client.models.FriendRequest.update({
+    await client.models.FriendRequest.update({
       id: friendRequestId,
       status: 'ACCEPTED'
     });
-    console.log('Updated friend request status:', updateResult);
 
     // Create mutual friend entries
-    const friendEntries = await Promise.all([
+    await Promise.all([
       client.models.Friend.create({
         user: friendRequest.sender,
         friendUser: friendRequest.recipient,
@@ -96,7 +92,6 @@ export async function acceptFriendRequest(friendRequestId: string) {
       })
     ]);
 
-    console.log('Created friend entries:', friendEntries);
     return true;
   } catch (error) {
     console.error('Error in acceptFriendRequest:', error);
@@ -110,7 +105,6 @@ export async function acceptFriendRequest(friendRequestId: string) {
 
 // Get pending friend requests
 export async function getPendingFriendRequests(userId: string) {
-  console.log('Fetching pending friend requests for user:', userId);
   try {
     const requestsResult = await client.models.FriendRequest.list({
       filter: {
@@ -119,7 +113,6 @@ export async function getPendingFriendRequests(userId: string) {
       }
     });
 
-    console.log('Fetched pending requests:', requestsResult);
     return requestsResult.data;
   } catch (error) {
     console.error('Error in getPendingFriendRequests:', error);
@@ -134,7 +127,6 @@ export async function getPendingFriendRequests(userId: string) {
 // friendOperations.tsx
 
 export async function getFriendsList(userId: string, getStorageUrl: (path: string) => Promise<string>) {
-  console.log('Fetching friends list for user:', userId);
 
   try {
     const friendsResult = await client.models.Friend.list({
@@ -215,13 +207,14 @@ interface UserSearchResult {
   username: string | null;
   email: string | null;
   mutualFriends?: number;
+  picture?: string;
 }
 
 export async function searchUsers(
   searchTerm: string,
   searchType: 'email' | 'username',
   currentUserId: string,
-  getStorageUrl: (path: string) => Promise<string> // Pass getStorageUrl as a parameter
+  getStorageUrl: (path: string) => Promise<string>
 ): Promise<UserSearchResult[]> {
   try {
     let filter = {};
@@ -240,19 +233,33 @@ export async function searchUsers(
 
     const results = await client.models.User.list({ filter });
 
-    // Get mutual friends count for each user
-    const usersWithMutualFriends = await Promise.all(
+    // Get mutual friends count and profile pictures for each user
+    const usersWithDetails = await Promise.all(
       results.data
         .filter(user => user.id !== currentUserId) // Exclude current user
-        .map(async user => ({
-          userId: user.id,
-          username: user.preferred_username || user.username,
-          email: user.email || null,
-          mutualFriends: await getMutualFriendCount(currentUserId, user.id, getStorageUrl) // Pass getStorageUrl here
-        }))
+        .map(async user => {
+          // Get profile picture URL if it exists
+          let pictureUrl = '/profileDefault.png';
+          if (user.pictureUrl) {
+            try {
+              pictureUrl = await getStorageUrl(user.pictureUrl);
+            } catch (error) {
+              console.error('Error fetching profile picture:', error);
+              // Keep default picture if fetch fails
+            }
+          }
+
+          return {
+            userId: user.id,
+            username: user.preferred_username || user.username,
+            email: user.email || null,
+            picture: pictureUrl,
+            mutualFriends: await getMutualFriendCount(currentUserId, user.id, getStorageUrl)
+          };
+        })
     );
 
-    return usersWithMutualFriends;
+    return usersWithDetails;
   } catch (error) {
     console.error('Error searching users:', error);
     throw error;

@@ -160,14 +160,14 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
 
   return (
     <div className="post">
-      <div className="post__header" onClick={handlePostClick}>
+      <div className="post__header" >
         <div className="post__user-info">
           <img
             src={profileImageUrl ?? "profileDefault.png"}
             alt={post.username ?? "none"}
             className="post__avatar"
           />
-          <span className="post__username">{post.username}</span>
+          <span className="post__username"onClick={handlePostClick}>{post.username}</span>
           {userId === post.userID && (
             <button
               onClick={(e) => {
@@ -214,7 +214,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
               <button
                 onClick={() => onReaction(post.id, "👍")}
                 className="post__heart-button"
-                aria-label = "Like Button"
+                aria-label="Like Button"
               >
                 <Heart className="w-6 h-6" />
                 {
@@ -224,7 +224,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
                 }
               </button>
               <button className="post__button"
-              aria-label="Comment">
+                aria-label="Comment">
                 <MessageCircle className="w-6 h-6" />
               </button>
               <button
@@ -296,7 +296,7 @@ function App() {
         const sortedPosts = [...data.items].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-  
+
         // Get unique user IDs and ensure they're not null
         const uniqueUserIds = Array.from(
           new Set(
@@ -305,17 +305,17 @@ function App() {
               .filter((id): id is string => id !== null && id !== undefined)
           )
         );
-        
+
         const profileUrls: { [userId: string]: string } = {};
-        
+
         try {
           // Fetch users with multiple queries in parallel
-          const userPromises = uniqueUserIds.map(userId => 
+          const userPromises = uniqueUserIds.map(userId =>
             client.models.User.get({ id: userId })
           );
-  
+
           const userResults = await Promise.all(userPromises);
-  
+
           // Process all profile pictures in parallel
           const userProfilePromises = userResults.map(async (result) => {
             const user = result.data;
@@ -333,7 +333,7 @@ function App() {
               }
             }
           });
-  
+
           await Promise.all(userProfilePromises);
         } catch (error) {
           console.error('Error fetching user profiles:', error);
@@ -341,7 +341,7 @@ function App() {
             profileUrls[userId] = "/profileDefault.png";
           });
         }
-  
+
         setProfilePictureUrls(profileUrls); // Store profile picture URLs in state
 
         // Map incoming posts to UI state
@@ -546,7 +546,7 @@ function App() {
             key={post.id}
             post={post}
             imageUrl={imageUrls[post.id] || "/picsoritdidnthappen.webp"}
-profileImageUrl={post.userID ? profilePictureUrls[post.userID] || "/profileDefault.png" : "/profileDefault.png"}
+            profileImageUrl={post.userID ? profilePictureUrls[post.userID] || "/profileDefault.png" : "/profileDefault.png"}
             onReaction={reactToPost}
             onDelete={deletePost}
             onHover={(postId, isHovering) => {
