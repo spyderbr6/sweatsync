@@ -19,28 +19,29 @@ interface SearchResult {
     username: string | null;
     email: string | null;
     mutualFriends: number;  // Make this required, not optional
+    picture?: string | null;
 }
 
 async function testUserData() {
     try {
-      const client = generateClient<Schema>();
-      console.log('Client initialized:', client); // Debug log
-      
-      if (!client.models) {
-        console.error('Client models not initialized');
-        return;
-      }
-  
-      const users = await client.models.User.list({});
-      console.log('All users:', users.data);
+        const client = generateClient<Schema>();
+        console.log('Client initialized:', client); // Debug log
+
+        if (!client.models) {
+            console.error('Client models not initialized');
+            return;
+        }
+
+        const users = await client.models.User.list({});
+        console.log('All users:', users.data);
     } catch (error) {
-      console.error('Error in testUserData:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', error.message);
-        console.error('Error stack:', error.stack);
-      }
+        console.error('Error in testUserData:', error);
+        if (error instanceof Error) {
+            console.error('Error details:', error.message);
+            console.error('Error stack:', error.stack);
+        }
     }
-  }
+}
 
 const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const { userId } = useUser();
@@ -211,25 +212,27 @@ const FriendModal: React.FC<FriendModalProps> = ({ isOpen, onClose, onSuccess })
                             <div key={user.userId} className="result-item">
                                 <div className="result-user">
                                     <img
-                                        src="/api/placeholder/40/40"
+                                        src={user.picture || "/profileDefault.png"}
                                         alt={user.username || 'User'}
                                         className="result-avatar"
                                     />
                                     <div className="result-info">
+                                        {/* Always show username, never show email */}
                                         <span className="result-name">
-                                            {searchType === 'email' ? user.email : user.username}
+                                            {user.username || 'Anonymous User'}
                                         </span>
-                                        {searchType === 'email' && (
-                                            <div className="result-meta">
-                                                Send friend request to this email
-                                            </div>
-                                        )}
-                                        {searchType !== 'email' && (
-                                            <div className="result-meta">
-                                                <Users size={14} />
-                                                <span>{user.mutualFriends} mutual friends</span>
-                                            </div>
-                                        )}
+
+                                        {/* Conditional meta information */}
+                                        <div className="result-meta">
+                                            {searchType === 'email' ? (
+                                                <span>Found via email search</span>
+                                            ) : (
+                                                <div className="result-meta">
+                                                    <Users size={14} />
+                                                    <span>{user.mutualFriends} mutual friends</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <button

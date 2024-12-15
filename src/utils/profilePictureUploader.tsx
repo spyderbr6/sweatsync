@@ -25,22 +25,43 @@ const ProfilePictureUploader: React.FC = () => {
       return;
     }
 
-
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
 
-      // Upload the image and generate thumbnails with a max resolution of 500px
-      const { originalPath, thumbnailPaths } = await uploadImageWithThumbnails(file, 'profile-pictures', 500, [200, 100]);
+      // Generate the path with the userId
+      const folder = `profile-pictures/${userId}`;
 
-      // Update the user's profile with the new image paths
-      await client.models.User.update({
-        id: userId,
-        picture: originalPath,
-        pictureUrl: thumbnailPaths[0], // Use the first thumbnail (200x200) as the default
-        updatedAt: new Date().toISOString(),
-      });
+      // Upload the image and generate thumbnails
+      const { originalPath, thumbnailPaths } = await uploadImageWithThumbnails(file, folder, 500, [200, 100]);
+
+      // Debugging: Check the paths before updating the user
+      if (!originalPath || thumbnailPaths.length === 0) {
+        setError('Invalid upload paths. Please try again.');
+        return;
+      }
+
+      // Update the user entry in the Amplify backend schema
+      try {
+
+        const updateResult = await client.models.User.update({
+          id: userId,
+          picture: originalPath,
+          pictureUrl: thumbnailPaths[0],
+          updatedAt: new Date().toISOString(),
+        });
+
+        console.log('User update result:', updateResult);
+
+        if (!updateResult.data) {
+          throw new Error('User update returned no data.');
+        }
+      } catch (updateError) {
+        console.error('Error updating user in Amplify:', updateError);
+        setError('Failed to update user profile. Please try again.');
+        return;
+      }
 
       setSuccess('Profile picture updated successfully!');
       setFile(null);

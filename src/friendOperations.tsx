@@ -215,13 +215,14 @@ interface UserSearchResult {
   username: string | null;
   email: string | null;
   mutualFriends?: number;
+  picture?: string;
 }
 
 export async function searchUsers(
   searchTerm: string,
   searchType: 'email' | 'username',
   currentUserId: string,
-  getStorageUrl: (path: string) => Promise<string> // Pass getStorageUrl as a parameter
+  getStorageUrl: (path: string) => Promise<string>
 ): Promise<UserSearchResult[]> {
   try {
     let filter = {};
@@ -240,19 +241,33 @@ export async function searchUsers(
 
     const results = await client.models.User.list({ filter });
 
-    // Get mutual friends count for each user
-    const usersWithMutualFriends = await Promise.all(
+    // Get mutual friends count and profile pictures for each user
+    const usersWithDetails = await Promise.all(
       results.data
         .filter(user => user.id !== currentUserId) // Exclude current user
-        .map(async user => ({
-          userId: user.id,
-          username: user.preferred_username || user.username,
-          email: user.email || null,
-          mutualFriends: await getMutualFriendCount(currentUserId, user.id, getStorageUrl) // Pass getStorageUrl here
-        }))
+        .map(async user => {
+          // Get profile picture URL if it exists
+          let pictureUrl = '/profileDefault.png';
+          if (user.pictureUrl) {
+            try {
+              pictureUrl = await getStorageUrl(user.pictureUrl);
+            } catch (error) {
+              console.error('Error fetching profile picture:', error);
+              // Keep default picture if fetch fails
+            }
+          }
+
+          return {
+            userId: user.id,
+            username: user.preferred_username || user.username,
+            email: user.email || null,
+            picture: pictureUrl,
+            mutualFriends: await getMutualFriendCount(currentUserId, user.id, getStorageUrl)
+          };
+        })
     );
 
-    return usersWithMutualFriends;
+    return usersWithDetails;
   } catch (error) {
     console.error('Error searching users:', error);
     throw error;
