@@ -406,11 +406,14 @@
 
 .modal-search-container {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .modal-search-input {
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 2.5rem;
+  padding-right: 2.5rem !important;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
   font-size: 0.875rem;
@@ -429,6 +432,26 @@
   top: 50%;
   transform: translateY(-50%);
   color: #9ca3af;
+}
+
+.modal-search-clear {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: #6b7280;  /* Gray-500 */
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.modal-search-clear:hover {
+  background-color: #f3f4f6;  /* Gray-100 */
+  color: #374151;  /* Gray-700 */
 }
 
 /* Results Section */

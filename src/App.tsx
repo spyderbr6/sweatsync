@@ -160,14 +160,14 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
 
   return (
     <div className="post">
-      <div className="post__header" onClick={handlePostClick}>
+      <div className="post__header" >
         <div className="post__user-info">
           <img
             src={profileImageUrl ?? "profileDefault.png"}
             alt={post.username ?? "none"}
             className="post__avatar"
           />
-          <span className="post__username">{post.username}</span>
+          <span className="post__username"onClick={handlePostClick}>{post.username}</span>
           {userId === post.userID && (
             <button
               onClick={(e) => {
