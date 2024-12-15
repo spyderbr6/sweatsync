@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { Heart, MessageCircle, Share2, Trophy } from 'lucide-react';
-import ChallengeFeedHeader from './challengeFeedHeader';
 import { CommentSection } from './CommentSection';
 import { useNavigate } from 'react-router-dom';
 import { useUrlCache } from './urlCacheContext';
@@ -289,7 +288,6 @@ function App() {
   const BATCH_SIZE = 5; // number of posts to load each time
   const { getStorageUrl } = useUrlCache();
   const { userId } = useUser();  // Move this to component level
-  const [dataVersion] = useState(0);
 
 
   useEffect(() => {
@@ -541,7 +539,6 @@ function App() {
 
   return (
     <div className="feed">
-      <ChallengeFeedHeader dataVersion={dataVersion} />
 
       <div className="feed__content">
         {workoutposts.slice(0, visibleCount).map(post => (

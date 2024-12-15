@@ -24,8 +24,8 @@ const UrlCacheContext = createContext<UrlCacheContextType | undefined>(undefined
 const CACHE_STORAGE_KEY = 'urlCache';
 
 // URL expiration time (7 days in seconds)
-const URL_EXPIRATION = 604800;  // 7 days
-const MINIMUM_REMAINING_TIME = 7200; // 2 hours - minimum time before we refresh
+const URL_EXPIRATION = 3420;  // 7 days - 604800, 3420 seems like its amazons default and wont override.
+const MINIMUM_REMAINING_TIME = 3000; // 2 hours (7200) - minimum time before we refresh, lowering for testing
 
 
 export function UrlCacheProvider({ children }: { children: React.ReactNode }) {

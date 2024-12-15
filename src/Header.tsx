@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { CreatePostModal } from './CreatePostModal';
 import { useUser } from './userContext';
 import { useUrlCache } from './urlCacheContext';
+import ChallengeFeedHeader from './challengeFeedHeader';
 
 function Header() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ function Header() {
   const { getStorageUrl } = useUrlCache();
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("/profileDefault.png");
   const { pictureUrl } = useUser();  // Add this
+  const [dataVersion] = useState(0);
 
 
   useEffect(() => {
@@ -75,6 +77,7 @@ function Header() {
           </div>
         </div>
       </main>
+      <ChallengeFeedHeader dataVersion={dataVersion} />
 
       {/* Floating Action Button */}
       <button
