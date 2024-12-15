@@ -299,8 +299,8 @@ function App() {
         if (post.userID) {
           try {
             const userResult = await client.models.User.get({ id: post.userID });
-            if (userResult.data?.picture) {
-              const url = await getStorageUrl(userResult.data.picture);
+            if (userResult.data?.pictureUrl) {
+              const url = await getStorageUrl(userResult.data.pictureUrl);
               profileUrls[post.userID] = url;
             } else {
               profileUrls[post.userID] = "/profileDefault.png"; // Fallback URL
