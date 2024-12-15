@@ -285,6 +285,8 @@ function App() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const BATCH_SIZE = 5; // number of posts to load each time
   const { getStorageUrl } = useUrlCache();
+  const { userId } = useUser();  // Move this to component level
+
 
   useEffect(() => {
     const subscription = client.models.PostforWorkout.observeQuery().subscribe({
@@ -416,10 +418,8 @@ function App() {
     };
   }, [workoutposts, visibleCount]);
 
-  function deletePost(id: string) {
-    const { userId } = useUser(); // Get current user's ID
-
-    // First find the post to verify ownership
+  const deletePost = (id: string) => {
+    // Now use the userId from above instead of calling useUser() here
     const post = workoutposts.find(p => p.id === id);
 
     if (!post) {
@@ -428,7 +428,7 @@ function App() {
     }
 
     // Check if current user is the author
-    if (post.userID !== userId) {
+    if (post.userID !== userId) {  // Use userId from above
       alert("You can only delete your own posts");
       return;
     }
@@ -440,7 +440,7 @@ function App() {
           alert("Failed to delete the post. Please try again.");
         });
     }
-  }
+  };
 
   async function reactToPost(id: string, emojiType: string | null, reactionId?: string) {
     // Handle animation cleanup
