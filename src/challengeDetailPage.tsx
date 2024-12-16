@@ -9,11 +9,7 @@ import { useChallengeDetail } from './useChallengeDetail';
 
 export default function ChallengeDetailPage() {
 
-
   const { challengeId } = useParams<{ challengeId: string }>();
-  //const { challengeId } = "ff4cc4e8-697f-4e6f-913e-94f94ce5e937"
-  console.log("challengeId:", challengeId);
-
 
   const {
     isLoading,

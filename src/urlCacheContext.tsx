@@ -17,6 +17,9 @@ interface UrlCacheContextType {
   clearCache: () => void;  // Added type definition
 }
 
+// Hard-code testMode here
+const testMode = true;  // Change to false when you don't want test mode
+
 // Create the context
 const UrlCacheContext = createContext<UrlCacheContextType | undefined>(undefined);
 
@@ -68,6 +71,10 @@ export function UrlCacheProvider({ children }: { children: React.ReactNode }) {
   }, [cache]);
 
   const getStorageUrl = async (path: string): Promise<string> => {
+
+    if (testMode) {
+      return '/picsoritdidnthappen.webp';
+    }
     if (!path) {
       return '/picsoritdidnthappen.webp'; // Default image
     }
