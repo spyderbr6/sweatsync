@@ -1,5 +1,5 @@
 // ChallengeDetailPage.tsx
-import React from 'react';
+//import React from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Share2, UserPlus, Trophy, Calendar, Users, Dumbbell, Heart,
