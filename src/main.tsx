@@ -7,6 +7,7 @@ import App from "./App.tsx";
 import ProfilePage from "./profile.tsx";
 import FriendsPage from "./friendManagement.tsx";
 import ChallengesPage from "./Challenges.tsx";
+import ChallengeDetailPage from "./challengeDetailPage.tsx";
 import Header from "./Header.tsx";
 import SinglePostPage from "./SinglePagePost.tsx";
 import "./index.css";
@@ -56,6 +57,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/friends" element={<FriendsPage />} />
                 <Route path="/Challenges" element={<ChallengesPage />} />
+                <Route path="/challenge/:challengeId" element={<ChallengeDetailPage />} />
                 <Route path="/post/:postId" element={<SinglePostPage />} />
               </Routes>
             </Router>

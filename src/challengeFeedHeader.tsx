@@ -201,7 +201,7 @@ const ChallengeFeedHeader = () => {
             <div 
               key={challenge.id}
               className={`challenge-alert ${style.className}`}
-              onClick={() => navigate('/challenges')}
+              onClick={() => navigate(`/challenge/${challenge.id}`)} 
               style={{ cursor: 'pointer' }}
             >
               {style.icon}

@@ -349,7 +349,7 @@ max-width: 1620px;
 }
 
 .post {
-  width: 350px;
+  width: 450px;
   /*height: 400px; /* Set a consistent height for all cards */
   background-color: white;
   border-radius: 0.5rem;
@@ -370,7 +370,7 @@ max-width: 1620px;
   }
 
 .post__header {
-  padding: .75rem;
+  padding: .5rem;
   border-bottom: 1px solid rgb(229 231 235);
 }
 
