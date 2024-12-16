@@ -682,3 +682,435 @@
   .icon-button:hover {
     background-color: rgba(0, 0, 0, 0.05);
   }
+
+
+  /* challengeDetail.css */
+
+.challenge-container {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.challenge-hero {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.challenge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.challenge-description {
+  color: rgb(75, 85, 99);
+}
+
+.challenge-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+.action-button--share {
+  background-color: rgb(59, 130, 246);
+}
+
+.action-button--share:hover {
+  background-color: rgb(37, 99, 235);
+}
+
+.action-button--invite {
+  background-color: rgb(16, 185, 129);
+}
+
+.action-button--invite:hover {
+  background-color: rgb(5, 150, 105);
+}
+
+.progress-section {
+  margin-bottom: 2rem;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.progress-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: rgb(17, 24, 39);
+}
+
+.progress-count {
+  font-size: 0.875rem;
+  color: rgb(75, 85, 99);
+}
+
+.progress-bar {
+  height: 1rem;
+  background-color: rgb(243, 244, 246);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: rgb(59, 130, 246);
+  border-radius: 9999px;
+  transition: width 0.5s ease-out;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 1rem;
+  background-color: rgb(249, 250, 251);
+  border-radius: 0.5rem;
+}
+
+.stat-icon {
+  width: 2rem;
+  height: 2rem;
+  margin: 0 auto 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: rgb(17, 24, 39);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: rgb(75, 85, 99);
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .content-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Adding to challengeDetail.css */
+
+/* Personal Stats Card */
+.personal-stats {
+  background-color: rgb(239, 246, 255);
+  border: 1px solid rgb(219, 234, 254);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.profile-image {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 9999px;
+  border: 4px solid white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-name {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: rgb(17, 24, 39);
+}
+
+.profile-rank {
+  color: rgb(59, 130, 246);
+  font-weight: 600;
+}
+
+.stats-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.stat-box {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.stat-icon-wrapper {
+  padding: 0.75rem;
+  border-radius: 9999px;
+  margin-right: 1rem;
+}
+
+.stat-icon-wrapper--points {
+  background-color: rgb(219, 234, 254);
+}
+
+.stat-icon-wrapper--workouts {
+  background-color: rgb(220, 252, 231);
+}
+
+/* Leaderboard */
+.leaderboard {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.leaderboard-header {
+  padding: 1rem;
+  border-bottom: 1px solid rgb(229, 231, 235);
+}
+
+.leaderboard-title {
+  font-weight: 600;
+  color: rgb(17, 24, 39);
+}
+
+.leaderboard-list {
+  border-bottom-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  transition: background-color 0.2s;
+}
+
+.leaderboard-item:hover {
+  background-color: rgb(249, 250, 251);
+}
+
+.leaderboard-rank {
+  width: 2rem;
+  text-align: center;
+}
+
+.leaderboard-user {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.leaderboard-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  margin: 0 0.5rem;
+}
+
+.leaderboard-name {
+  font-weight: 500;
+  color: rgb(17, 24, 39);
+  font-size: 0.875rem;
+}
+
+.leaderboard-points {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(17, 24, 39);
+}
+
+/* Activity Feed */
+.activity-feed {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.activity-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgb(229, 231, 235);
+}
+
+.activity-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: rgb(17, 24, 39);
+}
+
+.activity-list {
+  border-bottom-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.activity-item {
+  padding: 1rem;
+  transition: background-color 0.2s;
+}
+
+.activity-item:hover {
+  background-color: rgb(249, 250, 251);
+}
+
+.activity-content {
+  display: flex;
+  gap: 1rem;
+}
+
+.activity-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+}
+
+.activity-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.activity-user {
+  font-weight: 500;
+  color: rgb(17, 24, 39);
+}
+
+.activity-time {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: rgb(107, 114, 128);
+  font-size: 0.875rem;
+}
+
+.activity-text {
+  color: rgb(55, 65, 81);
+  margin-bottom: 0.5rem;
+}
+
+.activity-media {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.activity-image {
+  width: 6rem;
+  height: 6rem;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
+.activity-image-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0);
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.activity-image-overlay:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.activity-points {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: rgb(59, 130, 246);
+  margin-bottom: 0.5rem;
+}
+
+.activity-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.action-button-small {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: rgb(107, 114, 128);
+  transition: color 0.2s;
+}
+
+.action-button-small:hover {
+  color: rgb(59, 130, 246);
+}
+
+/* Loading and Error States */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 16rem;
+  color: rgb(107, 114, 128);
+}
+
+.error-container {
+  background-color: rgb(254, 226, 226);
+  border: 1px solid rgb(252, 165, 165);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  color: rgb(185, 28, 28);
+}
+
+@media (max-width: 1024px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
