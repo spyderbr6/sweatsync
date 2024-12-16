@@ -283,9 +283,9 @@ function App() {
   const [workoutposts, setworkoutposts] = useState<Array<Post>>([]);
   const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({});
   const [profilePictureUrls, setProfilePictureUrls] = useState<{ [key: string]: string }>({});
-  const [visibleCount, setVisibleCount] = useState<number>(10); // number of posts to show initially
+  const [visibleCount, setVisibleCount] = useState<number>(4); // number of posts to show initially
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const BATCH_SIZE = 5; // number of posts to load each time
+  const BATCH_SIZE = 4; // number of posts to load each time
   const { getStorageUrl } = useUrlCache();
   const { userId } = useUser();  // Move this to component level
 
