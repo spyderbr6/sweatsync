@@ -9,7 +9,7 @@ import { useUser } from './userContext';
 
 
 
-const useSpoofData = true;
+const useSpoofData = false;
 const client = generateClient<Schema>();
 
 type Post = Schema["PostforWorkout"]["type"] & {
