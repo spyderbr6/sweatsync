@@ -100,7 +100,7 @@ const SinglePostPage: React.FC = () => {
     const [imageUrl, setImageUrl] = useState<string>("/picsoritdidnthappen.webp");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
+    
     // Fetch post data
     useEffect(() => {
         const fetchPost = async () => {
@@ -377,6 +377,7 @@ const SinglePostPage: React.FC = () => {
                                 <CommentSection
                                     postId={post.id}
                                     commentsLimit={10}
+                                    showInput = {true}
                                 />
                             </div>
                         </div>

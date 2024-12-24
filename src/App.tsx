@@ -158,6 +158,12 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
     navigate(`/post/${post.id}`);
   };
 
+  const [visibleCommentsPostId, setVisibleCommentsPostId] = useState<string | null>(null);
+
+  const toggleCommentSection = (postId: string) => {
+    setVisibleCommentsPostId((prev) => (prev === postId ? null : postId));
+  };
+
   return (
     <div className="post">
       <div className="post__header" >
@@ -223,8 +229,11 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
                   </span>
                 }
               </button>
-              <button className="post__button"
-                aria-label="Comment">
+              <button
+                className="post__button"
+                onClick={() => toggleCommentSection(post.id)}
+                aria-label="Toggle comments"
+              >
                 <MessageCircle className="w-6 h-6" />
               </button>
               <button
@@ -268,8 +277,11 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
               <span className="post__username">{post.username}</span>{' '}
               {post.content}
             </p>
-            <CommentSection postId={post.id} />
-            <p className="post__timestamp">
+            <CommentSection
+              postId={post.id}
+              commentsLimit={3} // Number of comments to initially load
+              showInput={visibleCommentsPostId === post.id} // Control input visibility
+            />            <p className="post__timestamp">
               {getTimeAgo(post.createdAt)}
             </p>
           </div>
