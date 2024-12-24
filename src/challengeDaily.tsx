@@ -5,6 +5,7 @@ import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { useUser } from './userContext';
 import { Calendar, Plus, Trophy } from 'lucide-react';
+import { checkAndRotateCreator } from './challengeRules';
 
 const client = generateClient<Schema>();
 
@@ -45,6 +46,8 @@ export function DailyChallenge({ groupChallengeId, onSuccess }: DailyChallengePr
         try {
             setLoading(true);
 
+            await checkAndRotateCreator(groupChallengeId);
+
             // Get the group challenge rules using the challengeRuleId
             const rulesResult = await client.models.GroupChallengeRules.list({
                 filter: {
@@ -53,7 +56,7 @@ export function DailyChallenge({ groupChallengeId, onSuccess }: DailyChallengePr
             });
 
             const rules = rulesResult.data[0];
-            if (!rules) {
+            if (!rulesResult.data || rulesResult.data.length === 0) {
                 throw new Error('Group challenge rules not found');
             }
 

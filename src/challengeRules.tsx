@@ -54,11 +54,18 @@ export async function createChallengeRules(
     specificRules?: GroupChallengeRules
 ): Promise<string> {
     try {
+        console.log('Creating challenge rules with:', {
+            challengeId,
+            type,
+            baseRules,
+            specificRules
+        });
         // First create base rules
         const baseRuleResponse = await client.models.ChallengeRules.create({
             challengeId,
             type,
             ...baseRules,
+            endDate: new Date(baseRules.endDate).toISOString(), // Convert string to ISO datetime
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         });
@@ -233,5 +240,82 @@ async function getPostsCount(
     } catch (error) {
         console.error('Error counting posts:', error);
         return 0;
+    }
+}
+
+async function updateDailyChallengeCreator(groupChallengeId: string): Promise<string | null> {
+    try {
+        const rulesResponse = await client.models.GroupChallengeRules.list({
+            filter: {
+                challengeRuleId: { eq: groupChallengeId }
+            }
+        });
+
+        if (!rulesResponse.data.length) return null;
+
+        const rules = rulesResponse.data[0];
+
+        // Get all active participants
+        const participants = await client.models.ChallengeParticipant.list({
+            filter: {
+                challengeID: { eq: groupChallengeId },
+                status: { eq: "ACTIVE" }
+            }
+        });
+
+        if (!participants.data.length) return null;
+
+        // Find next creator
+        const currentIndex = participants.data.findIndex(p => p.userID === rules.currentCreatorId);
+        const nextIndex = (currentIndex + 1) % participants.data.length;
+        const nextCreator = participants.data[nextIndex].userID;
+
+        // Update rules
+        if (!rules.rotationIntervalDays || !rules.currentCreatorId) {
+            return null;
+        }
+        
+        const nextRotationDate = new Date(
+            Date.now() + rules.rotationIntervalDays * 86400000
+        ).toISOString();
+        
+        await client.models.GroupChallengeRules.update({
+            id: rules.id,
+            currentCreatorId: nextCreator,
+            nextRotationDate
+        });
+
+        return nextCreator;
+    } catch (error) {
+        console.error('Error updating challenge creator:', error);
+        return null;
+    }
+}
+
+export async function checkAndRotateCreator(groupChallengeId: string): Promise<boolean> {
+    try {
+        const rulesResponse = await client.models.GroupChallengeRules.list({
+            filter: {
+                challengeRuleId: { eq: groupChallengeId }
+            }
+        });
+
+        if (!rulesResponse.data.length) return false;
+
+        const rules = rulesResponse.data[0];
+        if (!rules.nextRotationDate || !rules.dailyChallenges) return false;
+
+        const now = new Date();
+        const nextRotation = new Date(rules.nextRotationDate);
+
+        if (now >= nextRotation) {
+            const nextCreator = await updateDailyChallengeCreator(groupChallengeId);
+            return !!nextCreator;
+        }
+
+        return false;
+    } catch (error) {
+        console.error('Error checking rotation:', error);
+        return false;
     }
 }
