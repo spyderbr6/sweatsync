@@ -51,7 +51,7 @@ function Header() {
         <div className="header-input-container">
           <div className="header-container">
             <img
-              src="/sweatsync_logo.gif"
+              src="/logo.png"
               alt="SweatSync Logo"
               className="logo"
               onClick={() => navigate('/')}

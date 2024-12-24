@@ -35,7 +35,7 @@ if ('serviceWorker' in navigator) {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <Authenticator components={{ Header: () => <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}><img src="sweatsync_logo.gif" alt="Logo" style={{ width: '200px', height: 'auto' }} /></div> }}
+    <Authenticator components={{ Header: () => <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}><img src="logo.png" alt="Logo" style={{ width: '200px', height: 'auto' }} /></div> }}
       signUpAttributes={['preferred_username']}
       formFields={{
         signUp: {

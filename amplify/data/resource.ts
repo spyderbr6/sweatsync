@@ -54,7 +54,7 @@ const schema = a.schema({
   }).authorization((allow) => [allow.publicApiKey()]),
 
   ChallengeParticipant: a.model({
-    challengeID: a.string().required(),
+    challengeID: a.string().required(), //reference to Challenge model
     userID: a.string().required(),
     status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED']),
     points: a.integer().default(0),
@@ -72,6 +72,43 @@ const schema = a.schema({
     validated: a.boolean().default(false),
     validationComment: a.string()
   }).authorization((allow) => [allow.publicApiKey()]), 
+
+//BASE MODEL FOR ALL CHALLENGE TYPES
+  ChallengeRules: a.model({
+    challengeId: a.string().required(), //reference to Challenge model
+    type: a.string().required(),         // "group", "personal", "public", etc
+    endDate: a.datetime().required(),
+    basePointsPerWorkout: a.integer().required(),
+    isActive: a.boolean().required(),
+    createdAt: a.datetime().required(),
+    updatedAt: a.datetime().required()
+}).authorization((allow) => [allow.publicApiKey()]),
+
+//SEPERATE MODEL FOR GROUP CHALLENGES
+GroupChallengeRules: a.model({
+    challengeRuleId: a.string().required(),  // Links to base ChallengeRules
+    maxPostsPerDay: a.integer().required(),
+    maxPostsPerWeek: a.integer().required(),
+    dailyChallenges: a.boolean().required(),
+    rotationIntervalDays: a.integer(),      // Days between creator rotation
+    currentCreatorId: a.string(),           // Current daily challenge creator
+    nextRotationDate: a.datetime(),         // When to switch creators
+    dailyChallengePoints: a.integer(),      // Points for daily challenge completion
+    createdAt: a.datetime().required(),
+    updatedAt: a.datetime().required()
+}).authorization((allow) => [allow.publicApiKey()]),
+
+//Model for daily challenges within group challenges
+DailyChallenge: a.model({
+    groupChallengeId: a.string().required(), // Links to parent group challenge
+    creatorId: a.string().required(),        // Who created this daily challenge
+    title: a.string().required(),
+    description: a.string().required(),
+    date: a.datetime().required(),           // The date this challenge is for
+    pointsAwarded: a.integer().required(),
+    createdAt: a.datetime().required(),
+    updatedAt: a.datetime().required()
+}).authorization((allow) => [allow.publicApiKey()]),
 
 Comment: a.model({
   postId: a.string(),
