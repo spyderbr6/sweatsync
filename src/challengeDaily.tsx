@@ -5,7 +5,7 @@ import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { useUser } from './userContext';
 import { Calendar, Plus, Trophy } from 'lucide-react';
-import { checkAndRotateCreator } from './challengeRules';
+import { checkAndRotateCreator, updateChallengePoints } from './challengeRules';
 
 const client = generateClient<Schema>();
 
@@ -111,35 +111,47 @@ export function DailyChallenge({ groupChallengeId, onSuccess }: DailyChallengePr
         const [error, setError] = useState<string | null>(null);
         const { userId } = useUser();
 
-        const handleSubmit = async (e: React.FormEvent) => {
-            e.preventDefault();
-            if (!userId) {
-                setError('User must be logged in to create a challenge');
-                return;
-            }
+ // In CreateDailyChallengeForm component
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userId) {
+        setError('User must be logged in to create a daily challenge');
+        return;
+    }
 
-            try {
-                setIsSubmitting(true);
+    try {
+        setIsSubmitting(true);
 
-                await client.models.DailyChallenge.create({
-                    groupChallengeId,
-                    creatorId: userId,
-                    title: formData.title,
-                    description: formData.description,
-                    date: new Date().toISOString(),
-                    pointsAwarded: formData.pointsAwarded,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                });
+        // Create the daily challenge
+        const dailyChallengeResult = await client.models.DailyChallenge.create({
+            groupChallengeId,
+            creatorId: userId,
+            title: formData.title,
+            description: formData.description,
+            date: new Date().toISOString(),
+            pointsAwarded: formData.pointsAwarded,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        });
 
-                onSuccess();
-            } catch (error) {
-                console.error('Error creating daily challenge:', error);
-                setError(error instanceof Error ? error.message : 'Failed to create daily challenge');
-            } finally {
-                setIsSubmitting(false);
-            }
-        };
+        if (dailyChallengeResult.data) {
+            // Update points for creator (they get points for creating the challenge)
+            await updateChallengePoints({
+                challengeId: groupChallengeId,
+                userId,
+                postType: 'dailyChallenge',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        onSuccess();
+    } catch (error) {
+        console.error('Error creating daily challenge:', error);
+        setError(error instanceof Error ? error.message : 'Failed to create daily challenge');
+    } finally {
+        setIsSubmitting(false);
+    }
+};
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
             const { name, value } = e.target;
