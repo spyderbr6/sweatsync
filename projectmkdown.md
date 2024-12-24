@@ -16,6 +16,7 @@
             └── icon-512.png
             └── icon.png
         └── justicon.gif
+        └── logo.png
         └── manifest.json
         └── menu.png
         └── picsoritdidnthappen.webp
@@ -28,9 +29,11 @@
         └── 📁assets
             └── react.svg
         └── backup
+        └── challengeDaily.tsx
         └── challengeDetailPage.tsx
         └── challengeFeedHeader.tsx
         └── challengeOperations.tsx
+        └── challengeRules.tsx
         └── challenges.css
         └── Challenges.tsx
         └── challengeTypes.tsx
@@ -66,7 +69,6 @@
     └── .gitignore
     └── amplify_outputs.json
     └── amplify.yml
-    └── backup.json
     └── index.html
     └── package-lock.json
     └── package.json
