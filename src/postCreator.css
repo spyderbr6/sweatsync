@@ -242,3 +242,46 @@
     height: 24rem;
   }
 }
+
+
+.challenge-tag-container {
+  position: relative;
+  display: inline-block;
+}
+
+.post-creator__challenge-tag--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.challenge-tag-tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.5rem;
+  background-color: #374151;
+  color: white;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 10;
+  margin-bottom: 0.5rem;
+}
+
+.challenge-tag-container:hover .challenge-tag-tooltip {
+  display: block;
+}
+
+/* Add arrow */
+.challenge-tag-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: #374151 transparent transparent transparent;
+}

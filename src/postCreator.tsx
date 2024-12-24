@@ -3,6 +3,7 @@ import { Camera, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { listChallenges } from './challengeOperations';
+import { updateChallengePoints, validateChallengePost } from './challengeRules';
 import { useUser } from './userContext';
 import './postCreator.css';
 import { uploadImageWithThumbnails } from './utils/imageUploadUtils';
@@ -26,6 +27,12 @@ interface PostCreatorProps {
   onError?: (error: Error) => void;
 }
 
+interface ChallengeSelectability {
+  id: string;
+  canSelect: boolean;
+  reason?: string;
+}
+
 const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const { userId, userAttributes } = useUser();
   const { incrementVersion } = useDataVersion();
@@ -37,6 +44,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
   const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [challengeSelectability, setChallengeSelectability] = useState<Record<string, ChallengeSelectability>>({});
+
 
   // Define challenge colors mapping
   const challengeColors: { [key: string]: string } = {
@@ -49,20 +58,45 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
   // Fetch challenges and user data on component mount
   useEffect(() => {
-    const fetchChallenges = async () => {
-      try {
-        if (!userId) return; // Ensure userId is available
+    const loadAndValidateChallenges = async () => {
+        try {
+            if (!userId) return;
 
-        // Fetch only active challenges the user is participating in
-        const activeChallenges = await listChallenges(userId);
-        setAvailableChallenges(activeChallenges);
-      } catch (error) {
-        console.error("Error fetching active challenges:", error);
-      }
+            // Fetch challenges
+            const activeChallenges = await listChallenges(userId);
+            setAvailableChallenges(activeChallenges);
+
+            // Check selectability of fetched challenges
+            const selectabilityPromises = activeChallenges.map(async challenge => {
+                const validation = await validateChallengePost({
+                    challengeId: challenge.id,
+                    userId,
+                    postId: 'pending',
+                    timestamp: new Date().toISOString(),
+                    isDailyChallenge: false
+                });
+
+                return {
+                    id: challenge.id,
+                    canSelect: validation.isValid,
+                    reason: validation.isValid ? undefined : validation.message
+                };
+            });
+
+            const results = await Promise.all(selectabilityPromises);
+            const selectabilityMap = results.reduce((acc, result) => ({
+                ...acc,
+                [result.id]: result
+            }), {});
+
+            setChallengeSelectability(selectabilityMap);
+        } catch (error) {
+            console.error("Error loading and validating challenges:", error);
+        }
     };
 
-    fetchChallenges();
-  }, [userId]);
+    loadAndValidateChallenges();
+}, [userId]);
 
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,118 +125,107 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
   const handlePost = async () => {
     if (!file || !userId) {
-      onError?.(new Error("Missing required data for post"));
-      return;
+        onError?.(new Error("Missing required data for post"));
+        return;
     }
 
     try {
-      setLoading(true);
+        setLoading(true);
 
-      // Upload image
-      const { originalPath } = await uploadImageWithThumbnails(file, 'picture-submissions', 1200);
+        // Validate each selected challenge before proceeding
+        if (selectedChallenges.length > 0) {
+            const validationPromises = selectedChallenges.map(challengeId => 
+                validateChallengePost({
+                    challengeId,
+                    userId,
+                    postId: 'pending', // We don't have the postId yet
+                    timestamp: new Date().toISOString(),
+                    content,
+                    isDailyChallenge: false // Regular workout post
+                })
+            );
 
+            const validationResults = await Promise.all(validationPromises);
+            const invalidResults = validationResults.filter(result => !result.isValid);
 
-      //count challenges for storage
-      const taggedChallengesCount = selectedChallenges.length;
-
-      const result = await client.models.PostforWorkout.create({
-        content,
-        url: originalPath,
-        username: userAttributes?.preferred_username,
-        userID: userId,
-        thumbsUp: 0,
-        smiley: taggedChallengesCount,
-        trophy: 0
-      });
-
-      if (!result.data) {
-        throw new Error("Failed to create post");
-      }
-
-      const newPost = result.data;
-
-      // Process selected challenges
-      const challengePromises = selectedChallenges.map(async (challengeId) => {
-        try {
-          // Create PostChallenge entry to link post with challenge
-          await client.models.PostChallenge.create({
-            postId: newPost.id,
-            challengeId,
-            userId,
-            timestamp: new Date().toISOString(),
-            validated: true, // Default to true for now @future me, gpt should validate on publish
-            validationComment: "" // Empty string for initial creation
-          });
-
-          // Find the participant record
-          const participantResult = await client.models.ChallengeParticipant.list({
-            filter: {
-              challengeID: { eq: challengeId },
-              userID: { eq: userId },
-              status: { eq: "ACTIVE" }
+            if (invalidResults.length > 0) {
+                throw new Error(invalidResults.map(r => r.message).join(', '));
             }
-          });
-
-          const participant = participantResult.data[0];
-          if (participant) {
-            // Get the challenge to check totalWorkouts
-            const challengeResult = await client.models.Challenge.get({ id: challengeId });
-            if (!challengeResult.data) {
-              throw new Error("Challenge not found");
-            }
-
-            const newWorkoutCount = (participant.workoutsCompleted || 0) + 1;
-            const newPoints = (participant.points || 0) + 10;
-            const targetWorkouts = challengeResult.data.totalWorkouts || 30;
-
-            await client.models.ChallengeParticipant.update({
-              id: participant.id,
-              workoutsCompleted: newWorkoutCount,
-              points: newPoints,
-              updatedAt: new Date().toISOString(),
-              ...(newWorkoutCount >= targetWorkouts && {
-                status: "COMPLETED",
-                completedAt: new Date().toISOString()
-              })
-            });
-          }
-        } catch (error) {
-          console.error(`Error processing challenge ${challengeId}:`, error);
-          throw error;
         }
-      });
 
-      // Use Promise.allSettled to handle partial failures
-      const challengeResults = await Promise.allSettled(challengePromises);
+        // Upload image
+        const { originalPath } = await uploadImageWithThumbnails(file, 'picture-submissions', 1200);
 
-      // Check for any failures
-      const failures = challengeResults.filter(
-        (result): result is PromiseRejectedResult => result.status === 'rejected'
-      );
+        const result = await client.models.PostforWorkout.create({
+            content,
+            url: originalPath,
+            username: userAttributes?.preferred_username,
+            userID: userId,
+            thumbsUp: 0,
+            smiley: selectedChallenges.length,
+            trophy: 0
+        });
 
-      if (failures.length > 0) {
-        console.warn(`${failures.length} challenge updates failed:`, failures);
-        onError?.(new Error(`Post created but ${failures.length} challenge updates failed`));
-      }
+        if (!result.data) {
+            throw new Error("Failed to create post");
+        }
 
-      // Reset form
-      setContent("");
-      setFile(null);
-      setPreviewUrl(null);
-      setStep('initial');
-      setSelectedChallenges([]);
+        const newPost = result.data;
 
-      // Increment version after successful post creation. This is a performance improvement need.
-      incrementVersion();
+        // Process selected challenges
+        const challengePromises = selectedChallenges.map(async (challengeId) => {
+            try {
+                // Create PostChallenge entry with the actual postId now
+                await client.models.PostChallenge.create({
+                    postId: newPost.id,
+                    challengeId,
+                    userId,
+                    timestamp: new Date().toISOString(),
+                    validated: true,
+                    validationComment: ""
+                });
 
-      onSuccess();
+                // Update points now that the post is validated
+                await updateChallengePoints({
+                    challengeId,
+                    userId,
+                    postType: 'workout',
+                    timestamp: new Date().toISOString()
+                });
+
+            } catch (error) {
+                console.error(`Error processing challenge ${challengeId}:`, error);
+                throw error;
+            }
+        });
+
+        // Use Promise.allSettled to handle partial failures
+        const challengeResults = await Promise.allSettled(challengePromises);
+        const failures = challengeResults.filter(
+            (result): result is PromiseRejectedResult => result.status === 'rejected'
+        );
+
+        if (failures.length > 0) {
+            console.warn(`${failures.length} challenge updates failed:`, failures);
+            onError?.(new Error(`Post created but ${failures.length} challenge updates failed`));
+        }
+
+        // Reset form and notify success
+        setContent("");
+        setFile(null);
+        setPreviewUrl(null);
+        setStep('initial');
+        setSelectedChallenges([]);
+        incrementVersion();
+        onSuccess();
+
     } catch (error) {
-      console.error("Error creating post:", error);
-      onError?.(error instanceof Error ? error : new Error("Failed to create post"));
+        console.error("Error creating post:", error);
+        onError?.(error instanceof Error ? error : new Error("Failed to create post"));
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   if (step === 'initial') {
     return (

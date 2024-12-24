@@ -319,3 +319,167 @@ export async function checkAndRotateCreator(groupChallengeId: string): Promise<b
         return false;
     }
 }
+
+
+// Points calculation and update logic
+interface PointsUpdateContext {
+    challengeId: string;
+    userId: string;
+    postType: 'workout' | 'dailyChallenge';
+    timestamp: string;
+}
+
+export async function updateChallengePoints(context: PointsUpdateContext): Promise<boolean> {
+    try {
+        // Get participant record
+        const participantResult = await client.models.ChallengeParticipant.list({
+            filter: {
+                challengeID: { eq: context.challengeId },
+                userID: { eq: context.userId },
+                status: { eq: "ACTIVE" }
+            }
+        });
+
+        const participant = participantResult.data[0];
+        if (!participant) {
+            console.error('No active participant found');
+            return false;
+        }
+
+        // Get challenge rules to determine points
+        const rulesResult = await client.models.ChallengeRules.list({
+            filter: {
+                challengeId: { eq: context.challengeId }
+            }
+        });
+
+        if (!rulesResult.data.length) {
+            console.error('No rules found for challenge');
+            return false;
+        }
+
+        const baseRules = rulesResult.data[0];
+        let pointsToAdd = baseRules.basePointsPerWorkout;
+
+        // If it's a daily challenge, get specific points
+        if (context.postType === 'dailyChallenge') {
+            const groupRulesResult = await client.models.GroupChallengeRules.list({
+                filter: {
+                    challengeRuleId: { eq: context.challengeId }
+                }
+            });
+
+            if (groupRulesResult.data.length && groupRulesResult.data[0].dailyChallengePoints) {
+                pointsToAdd = groupRulesResult.data[0].dailyChallengePoints;
+            }
+        }
+
+        // Get the challenge to check totalWorkouts
+        const challengeResult = await client.models.Challenge.get({ id: context.challengeId });
+        if (!challengeResult.data) {
+            throw new Error("Challenge not found");
+        }
+
+        const newWorkoutCount = (participant.workoutsCompleted || 0) + 1;
+        const newPoints = (participant.points || 0) + pointsToAdd;
+        const targetWorkouts = challengeResult.data.totalWorkouts || 30;
+
+        // Update participant record
+        await client.models.ChallengeParticipant.update({
+            id: participant.id,
+            workoutsCompleted: newWorkoutCount,
+            points: newPoints,
+            updatedAt: new Date().toISOString(),
+            ...(newWorkoutCount >= targetWorkouts && {
+                status: "COMPLETED",
+                completedAt: new Date().toISOString()
+            })
+        });
+
+        return true;
+    } catch (error) {
+        console.error('Error updating challenge points:', error);
+        return false;
+    }
+}
+
+
+interface ValidatePostContext {
+    challengeId: string;
+    userId: string;
+    postId: string;
+    timestamp: string;
+    isDailyChallenge?: boolean;
+    content?: string;
+}
+
+interface ValidationResult {
+    isValid: boolean;
+    message: string;
+}
+
+export async function validateChallengePost(context: ValidatePostContext): Promise<ValidationResult> {
+    try {
+        // Check if challenge is still active
+        const challengeResult = await client.models.Challenge.get({ 
+            id: context.challengeId 
+        });
+
+        if (!challengeResult.data) {
+            return {
+                isValid: false,
+                message: "Challenge not found"
+            };
+        }
+
+        const challenge = challengeResult.data;
+
+        // Check end date
+        if (new Date(challenge.endAt || "") < new Date()) {
+            return {
+                isValid: false,
+                message: "Challenge has ended"
+            };
+        }
+
+        // Get the user's participation status
+        const participantResult = await client.models.ChallengeParticipant.list({
+            filter: {
+                challengeID: { eq: context.challengeId },
+                userID: { eq: context.userId }
+            }
+        });
+
+        if (!participantResult.data.length) {
+            return {
+                isValid: false,
+                message: "User is not a participant in this challenge"
+            };
+        }
+
+        const participant = participantResult.data[0];
+
+        if (participant.status !== "ACTIVE") {
+            return {
+                isValid: false,
+                message: `Challenge participation status is ${participant.status}`
+            };
+        }
+
+        // For group challenges, check daily and weekly limits
+        if (challenge.challengeType === "group") {
+            return await validateGroupChallengePost(context, challenge.id);
+        }
+
+        return {
+            isValid: true,
+            message: "Post validated successfully"
+        };
+    } catch (error) {
+        console.error('Error validating challenge post:', error);
+        return {
+            isValid: false,
+            message: error instanceof Error ? error.message : "Validation failed"
+        };
+    }
+}

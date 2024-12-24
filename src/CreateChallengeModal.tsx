@@ -71,6 +71,9 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
     const { incrementVersion } = useDataVersion();
     const showGroupRules = formData.challengeType === 'group';
     const [error, setError] = useState<string | null>(null);
+    const [titleError, setTitleError] = useState<string | null>(null);
+    const [startDateError, setStartDateError] = useState<string | null>(null);
+    const [endDateError, setEndDateError] = useState<string | null>(null);
 
     if (!isOpen) return null;
 
@@ -78,6 +81,38 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
     ) => {
         const { name, value } = e.target;
+
+        if (name === "title") {
+            if (value.length < 5) {
+                setTitleError("Title must be at least 5 characters long.");
+            } else if (value.length > 50) {
+                setTitleError("Title must not exceed 50 characters.");
+            } else {
+                setTitleError(null); // Clear the error if validation passes
+            }
+        }
+        if (name === "startDate") {
+            const startDate = new Date(value);
+            const endDate = new Date(formData.endDate);
+
+            if (startDate > endDate) {
+                setStartDateError("Start date cannot be later than the end date.");
+            } else {
+                setStartDateError(null);
+            }
+        }
+
+        if (name === "endDate") {
+            const startDate = new Date(formData.startDate);
+            const endDate = new Date(value);
+
+            if (endDate < startDate) {
+                setEndDateError("End date cannot be earlier than the start date.");
+            } else {
+                setEndDateError(null);
+            }
+        }
+
         setFormData(prev => ({
             ...prev,
             [name]: value
@@ -216,7 +251,16 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
     };
 
     const canSubmit = (): boolean => {
-        return isValidChallengeType(formData.challengeType) && !isSubmitting;
+        return (
+            !titleError &&
+            !startDateError &&
+            !endDateError &&
+            formData.title.trim().length > 0 && // Ensure title is not empty
+            formData.startDate.trim().length > 0 && // Ensure startDate is not empty
+            formData.endDate.trim().length > 0 && // Ensure endDate is not empty
+            isValidChallengeType(formData.challengeType) &&
+            !isSubmitting
+        );
     };
 
     return (
@@ -247,22 +291,24 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
                         <label className="form-label" htmlFor="title">
-                            Challenge Title
+                            Challenge Title <span className="required-asterisk">*</span>
                         </label>
                         <input
                             type="text"
                             id="title"
                             name="title"
-                            className="form-input"
+                            className={`form-input ${titleError ? 'input-error' : ''}`}
                             value={formData.title}
                             onChange={handleChange}
                             required
+                            maxLength={50} // Prevent typing beyond 50 characters
                         />
+                        {titleError && <p className="error-message">{titleError}</p>}
                     </div>
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="description">
-                            Description
+                            Description <span className="required-asterisk">*</span>
                         </label>
                         <textarea
                             id="description"
@@ -277,32 +323,36 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="startDate">
-                            Start Date
+                            Start Date <span className="required-asterisk">*</span>
                         </label>
                         <input
                             type="date"
                             id="startDate"
                             name="startDate"
-                            className="form-input"
+                            className={`form-input ${startDateError ? 'input-error' : ''}`}
                             value={formData.startDate}
                             onChange={handleChange}
                             required
                         />
+                        {startDateError && <p className="error-message">{startDateError}</p>}
+
                     </div>
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="endDate">
-                            End Date
+                            End Date <span className="required-asterisk">*</span>
                         </label>
                         <input
                             type="date"
                             id="endDate"
                             name="endDate"
-                            className="form-input"
+                            className={`form-input ${endDateError ? 'input-error' : ''}`}
                             value={formData.endDate}
                             onChange={handleChange}
                             required
                         />
+                        {endDateError && <p className="error-message">{endDateError}</p>}
+
                     </div>
 
                     <div className="form-group">
@@ -416,34 +466,34 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                         </div>
                     )}
 
-{formData.challengeType !== 'none' && (
-                    <div className="form-group">
-                        <label className="form-label">
-                            Total Required Workouts
-                        </label>
-                        <div className="form-static-value">
-                            {formData.challengeType === 'group' ? (
-                                <>
-                                    {calculateTotalWorkouts()} workouts
-                                    <span className="text-gray-500 text-sm">
-                                        (Calculated from challenge rules)
-                                    </span>
-                                </>
-                            ) : (
-                                <input
-                                    type="number"
-                                    id="totalWorkouts"
-                                    name="totalWorkouts"
-                                    className="form-input"
-                                    value={formData.totalWorkouts}
-                                    onChange={handleChange}
-                                    min="1"
-                                    required
-                                />
-                            )}
+                    {formData.challengeType !== 'none' && (
+                        <div className="form-group">
+                            <label className="form-label">
+                                Total Required Workouts
+                            </label>
+                            <div className="form-static-value">
+                                {formData.challengeType === 'group' ? (
+                                    <>
+                                        {calculateTotalWorkouts()} workouts
+                                        <span className="text-gray-500 text-sm">
+                                            (Calculated from challenge rules)
+                                        </span>
+                                    </>
+                                ) : (
+                                    <input
+                                        type="number"
+                                        id="totalWorkouts"
+                                        name="totalWorkouts"
+                                        className="form-input"
+                                        value={formData.totalWorkouts}
+                                        onChange={handleChange}
+                                        min="1"
+                                        required
+                                    />
+                                )}
+                            </div>
                         </div>
-                    </div>
-)}
+                    )}
                     <div className="form-actions">
                         <button
                             type="button"
@@ -456,8 +506,8 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                         <button
                             type="submit"
                             className="btn btn-primary"
-                            disabled={!canSubmit()}
-                        >
+                            disabled={!canSubmit()} // Disable the button if the form is invalid
+                            >
                             {isSubmitting ? 'Creating...' : 'Create Challenge'}
                         </button>
                     </div>
