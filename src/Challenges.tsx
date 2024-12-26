@@ -103,7 +103,6 @@ function ChallengesPage() {
 
   const loadPendingChallenges = async () => {
     try {
-      console.log('Loading pending challenges for user:', userId);
       const pending = await getPendingChallenges(userId!);
       setPendingChallenges(pending);
     } catch (err) {
