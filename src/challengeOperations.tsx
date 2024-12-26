@@ -156,7 +156,6 @@ export async function getPendingChallenges(userId: string) {
         status: { eq: 'PENDING' }
       }
     });
-    console.log(pendingParticipations);
 
     // Get full challenge details for each pending participation
     const pendingChallenges = await Promise.all(
@@ -217,7 +216,11 @@ export async function checkChallengeParticipation(challengeId: string, userId: s
     const result = await client.models.ChallengeParticipant.list({
       filter: {
         challengeID: { eq: challengeId },
-        userID: { eq: userId }
+        userID: { eq: userId },
+        or: [
+          { status: { eq: 'ACTIVE' } },
+          { status: { eq: 'COMPLETED' } }
+        ]
       }
     });
     
