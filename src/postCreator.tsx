@@ -59,44 +59,96 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   // Fetch challenges and user data on component mount
   useEffect(() => {
     const loadAndValidateChallenges = async () => {
-        try {
-            if (!userId) return;
+      try {
+        if (!userId) return;
 
-            // Fetch challenges
-            const activeChallenges = await listChallenges(userId);
-            setAvailableChallenges(activeChallenges);
+        // Fetch challenges
+        const activeChallenges = await listChallenges(userId);
+        setAvailableChallenges(activeChallenges);
 
-            // Check selectability of fetched challenges
-            const selectabilityPromises = activeChallenges.map(async challenge => {
-                const validation = await validateChallengePost({
-                    challengeId: challenge.id,
-                    userId,
-                    postId: 'pending',
-                    timestamp: new Date().toISOString(),
-                    isDailyChallenge: false
-                });
+        // Get group challenges
+        const groupChallenges = activeChallenges.filter(c => c.challengeType === 'group');
 
-                return {
-                    id: challenge.id,
-                    canSelect: validation.isValid,
-                    reason: validation.isValid ? undefined : validation.message
-                };
-            });
+        if (groupChallenges.length === 0) return;
 
-            const results = await Promise.all(selectabilityPromises);
-            const selectabilityMap = results.reduce((acc, result) => ({
-                ...acc,
-                [result.id]: result
-            }), {});
+        // Get group rules for all challenges in one query
+        const groupRulesResults = await Promise.all(
+          groupChallenges.map(challenge =>
+            client.models.GroupChallengeRules.list({
+              filter: {
+                challengeRuleId: { eq: challenge.id }
+              }
+            })
+          )
+        );
 
-            setChallengeSelectability(selectabilityMap);
-        } catch (error) {
-            console.error("Error loading and validating challenges:", error);
-        }
+        // Flatten results and create map
+        const groupRulesMap = groupRulesResults.reduce((acc, result) => {
+          if (result.data[0]) {
+            acc[result.data[0].challengeRuleId] = result.data[0];
+          }
+          return acc;
+        }, {} as Record<string, Schema["GroupChallengeRules"]["type"]>);
+
+        // Get today's posts
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const todaysPosts = await client.models.PostChallenge.list({
+          filter: {
+            userId: { eq: userId },
+            timestamp: { ge: today.toISOString() }
+          }
+        });
+
+        // Get week's posts
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+
+        const weeksPosts = await client.models.PostChallenge.list({
+          filter: {
+            userId: { eq: userId },
+            timestamp: { ge: weekStart.toISOString() }
+          }
+        });
+
+        // Build selectability map
+        const selectabilityMap = groupChallenges.reduce((acc, challenge) => {
+          const rules = groupRulesMap[challenge.id];
+          const dailyPostCount = todaysPosts.data.filter(p => p.challengeId === challenge.id).length;
+          const weeklyPostCount = weeksPosts.data.filter(p => p.challengeId === challenge.id).length;
+
+          let canSelect = true;
+          let reason;
+
+          if (!rules) {
+            canSelect = false;
+            reason = "Challenge rules not found";
+          } else if (dailyPostCount >= (rules.maxPostsPerDay || 1)) {
+            canSelect = false;
+            reason = "Daily post limit reached";
+          } else if (weeklyPostCount >= (rules.maxPostsPerWeek || 5)) {
+            canSelect = false;
+            reason = "Weekly post limit reached";
+          }
+
+          acc[challenge.id] = {
+            id: challenge.id,
+            canSelect,
+            reason
+          };
+          return acc;
+        }, {} as Record<string, ChallengeSelectability>);
+
+        setChallengeSelectability(selectabilityMap);
+      } catch (error) {
+        console.error("Error loading and validating challenges:", error);
+      }
     };
 
     loadAndValidateChallenges();
-}, [userId]);
+  }, [userId]);
 
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,107 +177,107 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
   const handlePost = async () => {
     if (!file || !userId) {
-        onError?.(new Error("Missing required data for post"));
-        return;
+      onError?.(new Error("Missing required data for post"));
+      return;
     }
 
     try {
-        setLoading(true);
+      setLoading(true);
 
-        // Validate each selected challenge before proceeding
-        if (selectedChallenges.length > 0) {
-            const validationPromises = selectedChallenges.map(challengeId => 
-                validateChallengePost({
-                    challengeId,
-                    userId,
-                    postId: 'pending', // We don't have the postId yet
-                    timestamp: new Date().toISOString(),
-                    content,
-                    isDailyChallenge: false // Regular workout post
-                })
-            );
-
-            const validationResults = await Promise.all(validationPromises);
-            const invalidResults = validationResults.filter(result => !result.isValid);
-
-            if (invalidResults.length > 0) {
-                throw new Error(invalidResults.map(r => r.message).join(', '));
-            }
-        }
-
-        // Upload image
-        const { originalPath } = await uploadImageWithThumbnails(file, 'picture-submissions', 1200);
-
-        const result = await client.models.PostforWorkout.create({
+      // Validate each selected challenge before proceeding
+      if (selectedChallenges.length > 0) {
+        const validationPromises = selectedChallenges.map(challengeId =>
+          validateChallengePost({
+            challengeId,
+            userId,
+            postId: 'pending', // We don't have the postId yet
+            timestamp: new Date().toISOString(),
             content,
-            url: originalPath,
-            username: userAttributes?.preferred_username,
-            userID: userId,
-            thumbsUp: 0,
-            smiley: selectedChallenges.length,
-            trophy: 0
-        });
-
-        if (!result.data) {
-            throw new Error("Failed to create post");
-        }
-
-        const newPost = result.data;
-
-        // Process selected challenges
-        const challengePromises = selectedChallenges.map(async (challengeId) => {
-            try {
-                // Create PostChallenge entry with the actual postId now
-                await client.models.PostChallenge.create({
-                    postId: newPost.id,
-                    challengeId,
-                    userId,
-                    timestamp: new Date().toISOString(),
-                    validated: true,
-                    validationComment: ""
-                });
-
-                // Update points now that the post is validated
-                await updateChallengePoints({
-                    challengeId,
-                    userId,
-                    postType: 'workout',
-                    timestamp: new Date().toISOString()
-                });
-
-            } catch (error) {
-                console.error(`Error processing challenge ${challengeId}:`, error);
-                throw error;
-            }
-        });
-
-        // Use Promise.allSettled to handle partial failures
-        const challengeResults = await Promise.allSettled(challengePromises);
-        const failures = challengeResults.filter(
-            (result): result is PromiseRejectedResult => result.status === 'rejected'
+            isDailyChallenge: false // Regular workout post
+          })
         );
 
-        if (failures.length > 0) {
-            console.warn(`${failures.length} challenge updates failed:`, failures);
-            onError?.(new Error(`Post created but ${failures.length} challenge updates failed`));
-        }
+        const validationResults = await Promise.all(validationPromises);
+        const invalidResults = validationResults.filter(result => !result.isValid);
 
-        // Reset form and notify success
-        setContent("");
-        setFile(null);
-        setPreviewUrl(null);
-        setStep('initial');
-        setSelectedChallenges([]);
-        incrementVersion();
-        onSuccess();
+        if (invalidResults.length > 0) {
+          throw new Error(invalidResults.map(r => r.message).join(', '));
+        }
+      }
+
+      // Upload image
+      const { originalPath } = await uploadImageWithThumbnails(file, 'picture-submissions', 1200);
+
+      const result = await client.models.PostforWorkout.create({
+        content,
+        url: originalPath,
+        username: userAttributes?.preferred_username,
+        userID: userId,
+        thumbsUp: 0,
+        smiley: selectedChallenges.length,
+        trophy: 0
+      });
+
+      if (!result.data) {
+        throw new Error("Failed to create post");
+      }
+
+      const newPost = result.data;
+
+      // Process selected challenges
+      const challengePromises = selectedChallenges.map(async (challengeId) => {
+        try {
+          // Create PostChallenge entry with the actual postId now
+          await client.models.PostChallenge.create({
+            postId: newPost.id,
+            challengeId,
+            userId,
+            timestamp: new Date().toISOString(),
+            validated: true,
+            validationComment: ""
+          });
+
+          // Update points now that the post is validated
+          await updateChallengePoints({
+            challengeId,
+            userId,
+            postType: 'workout',
+            timestamp: new Date().toISOString()
+          });
+
+        } catch (error) {
+          console.error(`Error processing challenge ${challengeId}:`, error);
+          throw error;
+        }
+      });
+
+      // Use Promise.allSettled to handle partial failures
+      const challengeResults = await Promise.allSettled(challengePromises);
+      const failures = challengeResults.filter(
+        (result): result is PromiseRejectedResult => result.status === 'rejected'
+      );
+
+      if (failures.length > 0) {
+        console.warn(`${failures.length} challenge updates failed:`, failures);
+        onError?.(new Error(`Post created but ${failures.length} challenge updates failed`));
+      }
+
+      // Reset form and notify success
+      setContent("");
+      setFile(null);
+      setPreviewUrl(null);
+      setStep('initial');
+      setSelectedChallenges([]);
+      incrementVersion();
+      onSuccess();
 
     } catch (error) {
-        console.error("Error creating post:", error);
-        onError?.(error instanceof Error ? error : new Error("Failed to create post"));
+      console.error("Error creating post:", error);
+      onError?.(error instanceof Error ? error : new Error("Failed to create post"));
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
+  };
 
   if (step === 'initial') {
     return (
@@ -317,21 +369,33 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
           <div className="post-creator__available-challenges">
             <h3 className="post-creator__section-title">Add to Active Challenges</h3>
             <div className="post-creator__challenge-tags">
-              {availableChallenges.map(challenge => (
-                <button
-                  key={challenge.id}
-                  onClick={() => toggleChallenge(challenge.id)}
-                  className={`post-creator__challenge-tag ${selectedChallenges.includes(challenge.id)
-                    ? 'post-creator__challenge-tag--selected'
-                    : ''
-                    }`}
-                  style={{
-                    '--tag-color': challengeColors[challenge.challengeType || 'general']
-                  } as React.CSSProperties}
-                >
-                  {challenge.title}
-                </button>
-              ))}
+              {availableChallenges.map(challenge => {
+                const selectability = challengeSelectability[challenge.id];
+                const isDisabled = !selectability?.canSelect;
+
+                return (
+                  <div key={challenge.id} className="challenge-tag-container">
+                    <button
+                      onClick={() => toggleChallenge(challenge.id)}
+                      className={`post-creator__challenge-tag 
+                    ${selectedChallenges.includes(challenge.id) ? 'post-creator__challenge-tag--selected' : ''} 
+                    ${isDisabled ? 'post-creator__challenge-tag--disabled' : ''}`}
+                      disabled={isDisabled}
+                      style={{
+                        '--tag-color': challengeColors[challenge.challengeType || 'general']
+                      } as React.CSSProperties}
+                      title={selectability?.reason}
+                    >
+                      {challenge.title}
+                    </button>
+                    {isDisabled && selectability?.reason && (
+                      <div className="challenge-tag-tooltip">
+                        {selectability.reason}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

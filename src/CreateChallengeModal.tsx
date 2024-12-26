@@ -196,7 +196,8 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                 endAt: new Date(formData.endDate).toISOString(),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                createdBy: userId // from useUser hook
+                createdBy: userId, // from useUser hook, 
+                status: 'DRAFT'
             });
 
             if (!challengeResult.data) {
