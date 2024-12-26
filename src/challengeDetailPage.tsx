@@ -45,7 +45,7 @@ export default function ChallengeDetailPage() {
         );
     }
 
-    const progress = challengeDetails.totalWorkouts
+    const progress = challengeDetails?.totalWorkouts 
         ? (challengeDetails.userParticipation?.workoutsCompleted || 0) / challengeDetails.totalWorkouts * 100
         : 0;
 

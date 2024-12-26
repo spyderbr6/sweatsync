@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Users, UserPlus, Target, Globe, Plus } from 'lucide-react';
+import { Users, UserPlus, Target, Globe, Plus, Trash2, UserMinus, Share2 } from 'lucide-react';
 import { CreateChallengeModal } from './CreateChallengeModal';
-import { listChallenges, checkChallengeParticipation, addParticipantToChallenge } from './challengeOperations';
+import { listChallenges, checkChallengeParticipation, addParticipantToChallenge, archiveChallenge,removeParticipantFromChallenge } from './challengeOperations';
 import type { Schema } from "../amplify/data/resource";
 import './challenges.css';
 import { getPendingChallenges, respondToChallenge } from './challengeOperations';
 import { useUser } from './userContext';
 import { useDataVersion } from './dataVersionContext';
+import { useNavigate } from 'react-router-dom';
+import ActionMenu from './components/cardActionMenu/cardActionMenu';
+import { shareContent } from './utils/shareAction';
+
+
 
 
 type ChallengeCategory = 'all' | 'public' | 'group' | 'friends' | 'personal';
@@ -26,10 +31,13 @@ function ChallengesPage() {
   const [participations, setParticipations] = useState<Record<string, boolean>>({});
   const [joiningChallenge, setJoiningChallenge] = useState<string | null>(null);
   const { incrementVersion } = useDataVersion();
+  const navigate = useNavigate();
+
 
 
   useEffect(() => {
     loadChallenges();
+    loadPendingChallenges();
   }, []);
 
   useEffect(() => {
@@ -52,7 +60,9 @@ function ChallengesPage() {
       console.error('Error checking participations:', error);
     }
   };
-
+  const handleNavigateToChallenge = (challengeId: string) => {
+    navigate(`/challenge/${challengeId}`);
+  };
   const handleJoinChallenge = async (challengeId: string) => {
     try {
       setJoiningChallenge(challengeId);
@@ -93,6 +103,7 @@ function ChallengesPage() {
 
   const loadPendingChallenges = async () => {
     try {
+      console.log('Loading pending challenges for user:', userId);
       const pending = await getPendingChallenges(userId!);
       setPendingChallenges(pending);
     } catch (err) {
@@ -107,6 +118,7 @@ function ChallengesPage() {
       // Refresh both pending challenges and main challenges list
       loadPendingChallenges();
       loadChallenges();
+      incrementVersion();
     } catch (err) {
       console.error('Error responding to challenge:', err);
     }
@@ -167,6 +179,48 @@ function ChallengesPage() {
   if (error) {
     return <div className="error-message">{error}</div>;
   }
+
+  const getChallengeActions = (challenge: Challenge) => {
+    const isOwner = challenge.createdBy === userId;
+
+    return [
+      {
+        label: 'Delete Challenge',
+        icon: <Trash2 size={16} />,
+        onClick: () => handleDeleteChallenge(challenge.id),
+        destructive: true,
+        show: isOwner,
+      },
+      {
+        label: 'Leave Challenge',
+        icon: <UserMinus size={16} />,
+        onClick: () => handleLeaveChallenge(challenge.id),
+        destructive: true,
+        show: participations[challenge.id],
+      },
+      {
+        label: 'Share',
+        icon: <Share2 size={16} />,
+        onClick: () => handleShare(challenge),
+        show: true,
+      },
+    ];
+  };
+
+  const handleDeleteChallenge = async (challengeId: string) => {
+    archiveChallenge(challengeId);
+  };
+
+  const handleLeaveChallenge = async (challengeId: string) => {
+    removeParticipantFromChallenge(challengeId, userId!)  };
+
+  const handleShare = (challenge: Challenge) => {
+    shareContent(
+      `${challenge.title}:${challenge.description}`,
+      'Join me on SweatSync',
+      `${import.meta.env.BASE_URL}challenge/${challenge.id}`
+    );
+  };
 
   return (
     <div className="challenges-container">
@@ -278,10 +332,13 @@ function ChallengesPage() {
                     {getChallengeIcon(challenge.challengeType)}
                   </div>
                   <div className="challenge-info">
-                    <h3 className="challenge-title">{challenge.title}</h3>
+                    <h3 className="challenge-title" onClick={() => handleNavigateToChallenge(challenge.id)}>{challenge.title}</h3>
                     <p className="challenge-meta">
                       {challenge.description}
                     </p>
+                  </div>
+                  <div className="challenge-card-header-menu">
+                    <ActionMenu actions={getChallengeActions(challenge)} />
                   </div>
                 </div>
 
