@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
-import { Heart, MessageCircle, Share2, Trophy } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Trophy, Trash2 } from 'lucide-react';
 import { CommentSection } from './CommentSection';
 import { useNavigate } from 'react-router-dom';
 import { useUrlCache } from './urlCacheContext';
 import { useUser } from './userContext';
-
-
+import { shareContent } from './utils/shareAction';
+import ActionMenu from './components/cardActionMenu/cardActionMenu';
 
 const useSpoofData = false;
 const client = generateClient<Schema>();
@@ -158,6 +158,26 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
     navigate(`/post/${post.id}`);
   };
 
+  const [visibleCommentsPostId, setVisibleCommentsPostId] = useState<string | null>(null);
+
+  const toggleCommentSection = (postId: string) => {
+    setVisibleCommentsPostId((prev) => (prev === postId ? null : postId));
+  };
+
+  const getPostActions = (post: Post) => {
+    const isOwner = post.userID === userId;
+
+    return [
+      {
+        label: 'Delete Post',
+        icon: <Trash2 size={16} />,
+        onClick: () => onDelete(post.id),
+        destructive: true,
+        show: isOwner,
+      }
+    ];
+  };
+
   return (
     <div className="post">
       <div className="post__header" >
@@ -167,18 +187,11 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
             alt={post.username ?? "none"}
             className="post__avatar"
           />
-          <span className="post__username"onClick={handlePostClick}>{post.username}</span>
-          {userId === post.userID && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation(); // This prevents the navigation when clicking delete
-                onDelete(post.id);
-              }}
-              className="post__delete-button"
-            >
-              ✕
-            </button>
+          <span className="post__username" onClick={handlePostClick}>{post.username}</span>
+          <div className="post__delete-button">{userId === post.userID && (
+            <ActionMenu actions={getPostActions(post)} position="right" />
           )}
+          </div>
         </div>
       </div>
 
@@ -223,28 +236,18 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
                   </span>
                 }
               </button>
-              <button className="post__button"
-                aria-label="Comment">
+              <button
+                className="post__button"
+                onClick={() => toggleCommentSection(post.id)}
+                aria-label="Toggle comments"
+              >
                 <MessageCircle className="w-6 h-6" />
               </button>
               <button
                 className="post__button"
                 aria-label="Share Button"
                 onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({
-                      title: 'Check out my workout!',
-                      text: 'Join me on SweatSync',
-                      url: window.location.href // or a specific URL for your post
-                    })
-                      .then(() => console.log('Successfully shared!'))
-                      .catch((error) => console.error('Error sharing:', error));
-                  } else {
-                    // Fallback: copy link to clipboard or show a message
-                    console.log('Web Share API not supported in this browser.');
-                    navigator.clipboard.writeText(window.location.href);
-                    alert('Link copied to clipboard!');
-                  }
+                  shareContent(post.content ?? 'I worked Out', 'Join me on SweatSync', `${import.meta.env.BASE_URL}post/${post.id}`)
                 }}
               >
                 <Share2 className="w-6 h-6" />
@@ -268,8 +271,11 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
               <span className="post__username">{post.username}</span>{' '}
               {post.content}
             </p>
-            <CommentSection postId={post.id} />
-            <p className="post__timestamp">
+            <CommentSection
+              postId={post.id}
+              commentsLimit={3} // Number of comments to initially load
+              showInput={visibleCommentsPostId === post.id} // Control input visibility
+            />            <p className="post__timestamp">
               {getTimeAgo(post.createdAt)}
             </p>
           </div>

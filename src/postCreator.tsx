@@ -3,6 +3,7 @@ import { Camera, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { listChallenges } from './challengeOperations';
+import { updateChallengePoints, validateChallengePost } from './challengeRules';
 import { useUser } from './userContext';
 import './postCreator.css';
 import { uploadImageWithThumbnails } from './utils/imageUploadUtils';
@@ -26,6 +27,12 @@ interface PostCreatorProps {
   onError?: (error: Error) => void;
 }
 
+interface ChallengeSelectability {
+  id: string;
+  canSelect: boolean;
+  reason?: string;
+}
+
 const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const { userId, userAttributes } = useUser();
   const { incrementVersion } = useDataVersion();
@@ -37,6 +44,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
   const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [challengeSelectability, setChallengeSelectability] = useState<Record<string, ChallengeSelectability>>({});
+
 
   // Define challenge colors mapping
   const challengeColors: { [key: string]: string } = {
@@ -49,19 +58,96 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
   // Fetch challenges and user data on component mount
   useEffect(() => {
-    const fetchChallenges = async () => {
+    const loadAndValidateChallenges = async () => {
       try {
-        if (!userId) return; // Ensure userId is available
+        if (!userId) return;
 
-        // Fetch only active challenges the user is participating in
+        // Fetch challenges
         const activeChallenges = await listChallenges(userId);
         setAvailableChallenges(activeChallenges);
+
+        // Get group challenges
+        const groupChallenges = activeChallenges.filter(c => c.challengeType === 'group');
+
+        if (groupChallenges.length === 0) return;
+
+        // Get group rules for all challenges in one query
+        const groupRulesResults = await Promise.all(
+          groupChallenges.map(challenge =>
+            client.models.GroupChallengeRules.list({
+              filter: {
+                challengeRuleId: { eq: challenge.id }
+              }
+            })
+          )
+        );
+
+        // Flatten results and create map
+        const groupRulesMap = groupRulesResults.reduce((acc, result) => {
+          if (result.data[0]) {
+            acc[result.data[0].challengeRuleId] = result.data[0];
+          }
+          return acc;
+        }, {} as Record<string, Schema["GroupChallengeRules"]["type"]>);
+
+        // Get today's posts
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const todaysPosts = await client.models.PostChallenge.list({
+          filter: {
+            userId: { eq: userId },
+            timestamp: { ge: today.toISOString() }
+          }
+        });
+
+        // Get week's posts
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+
+        const weeksPosts = await client.models.PostChallenge.list({
+          filter: {
+            userId: { eq: userId },
+            timestamp: { ge: weekStart.toISOString() }
+          }
+        });
+
+        // Build selectability map
+        const selectabilityMap = groupChallenges.reduce((acc, challenge) => {
+          const rules = groupRulesMap[challenge.id];
+          const dailyPostCount = todaysPosts.data.filter(p => p.challengeId === challenge.id).length;
+          const weeklyPostCount = weeksPosts.data.filter(p => p.challengeId === challenge.id).length;
+
+          let canSelect = true;
+          let reason;
+
+          if (!rules) {
+            canSelect = false;
+            reason = "Challenge rules not found";
+          } else if (dailyPostCount >= (rules.maxPostsPerDay || 1)) {
+            canSelect = false;
+            reason = "Daily post limit reached";
+          } else if (weeklyPostCount >= (rules.maxPostsPerWeek || 5)) {
+            canSelect = false;
+            reason = "Weekly post limit reached";
+          }
+
+          acc[challenge.id] = {
+            id: challenge.id,
+            canSelect,
+            reason
+          };
+          return acc;
+        }, {} as Record<string, ChallengeSelectability>);
+
+        setChallengeSelectability(selectabilityMap);
       } catch (error) {
-        console.error("Error fetching active challenges:", error);
+        console.error("Error loading and validating challenges:", error);
       }
     };
 
-    fetchChallenges();
+    loadAndValidateChallenges();
   }, [userId]);
 
 
@@ -98,12 +184,29 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     try {
       setLoading(true);
 
+      // Validate each selected challenge before proceeding
+      if (selectedChallenges.length > 0) {
+        const validationPromises = selectedChallenges.map(challengeId =>
+          validateChallengePost({
+            challengeId,
+            userId,
+            postId: 'pending', // We don't have the postId yet
+            timestamp: new Date().toISOString(),
+            content,
+            isDailyChallenge: false // Regular workout post
+          })
+        );
+
+        const validationResults = await Promise.all(validationPromises);
+        const invalidResults = validationResults.filter(result => !result.isValid);
+
+        if (invalidResults.length > 0) {
+          throw new Error(invalidResults.map(r => r.message).join(', '));
+        }
+      }
+
       // Upload image
       const { originalPath } = await uploadImageWithThumbnails(file, 'picture-submissions', 1200);
-
-
-      //count challenges for storage
-      const taggedChallengesCount = selectedChallenges.length;
 
       const result = await client.models.PostforWorkout.create({
         content,
@@ -111,7 +214,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         username: userAttributes?.preferred_username,
         userID: userId,
         thumbsUp: 0,
-        smiley: taggedChallengesCount,
+        smiley: selectedChallenges.length,
         trophy: 0
       });
 
@@ -124,48 +227,24 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       // Process selected challenges
       const challengePromises = selectedChallenges.map(async (challengeId) => {
         try {
-          // Create PostChallenge entry to link post with challenge
+          // Create PostChallenge entry with the actual postId now
           await client.models.PostChallenge.create({
             postId: newPost.id,
             challengeId,
             userId,
             timestamp: new Date().toISOString(),
-            validated: true, // Default to true for now @future me, gpt should validate on publish
-            validationComment: "" // Empty string for initial creation
+            validated: true,
+            validationComment: ""
           });
 
-          // Find the participant record
-          const participantResult = await client.models.ChallengeParticipant.list({
-            filter: {
-              challengeID: { eq: challengeId },
-              userID: { eq: userId },
-              status: { eq: "ACTIVE" }
-            }
+          // Update points now that the post is validated
+          await updateChallengePoints({
+            challengeId,
+            userId,
+            postType: 'workout',
+            timestamp: new Date().toISOString()
           });
 
-          const participant = participantResult.data[0];
-          if (participant) {
-            // Get the challenge to check totalWorkouts
-            const challengeResult = await client.models.Challenge.get({ id: challengeId });
-            if (!challengeResult.data) {
-              throw new Error("Challenge not found");
-            }
-
-            const newWorkoutCount = (participant.workoutsCompleted || 0) + 1;
-            const newPoints = (participant.points || 0) + 10;
-            const targetWorkouts = challengeResult.data.totalWorkouts || 30;
-
-            await client.models.ChallengeParticipant.update({
-              id: participant.id,
-              workoutsCompleted: newWorkoutCount,
-              points: newPoints,
-              updatedAt: new Date().toISOString(),
-              ...(newWorkoutCount >= targetWorkouts && {
-                status: "COMPLETED",
-                completedAt: new Date().toISOString()
-              })
-            });
-          }
         } catch (error) {
           console.error(`Error processing challenge ${challengeId}:`, error);
           throw error;
@@ -174,8 +253,6 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
       // Use Promise.allSettled to handle partial failures
       const challengeResults = await Promise.allSettled(challengePromises);
-
-      // Check for any failures
       const failures = challengeResults.filter(
         (result): result is PromiseRejectedResult => result.status === 'rejected'
       );
@@ -185,17 +262,15 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         onError?.(new Error(`Post created but ${failures.length} challenge updates failed`));
       }
 
-      // Reset form
+      // Reset form and notify success
       setContent("");
       setFile(null);
       setPreviewUrl(null);
       setStep('initial');
       setSelectedChallenges([]);
-
-      // Increment version after successful post creation. This is a performance improvement need.
       incrementVersion();
-
       onSuccess();
+
     } catch (error) {
       console.error("Error creating post:", error);
       onError?.(error instanceof Error ? error : new Error("Failed to create post"));
@@ -294,21 +369,33 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
           <div className="post-creator__available-challenges">
             <h3 className="post-creator__section-title">Add to Active Challenges</h3>
             <div className="post-creator__challenge-tags">
-              {availableChallenges.map(challenge => (
-                <button
-                  key={challenge.id}
-                  onClick={() => toggleChallenge(challenge.id)}
-                  className={`post-creator__challenge-tag ${selectedChallenges.includes(challenge.id)
-                    ? 'post-creator__challenge-tag--selected'
-                    : ''
-                    }`}
-                  style={{
-                    '--tag-color': challengeColors[challenge.challengeType || 'general']
-                  } as React.CSSProperties}
-                >
-                  {challenge.title}
-                </button>
-              ))}
+              {availableChallenges.map(challenge => {
+                const selectability = challengeSelectability[challenge.id];
+                const isDisabled = !selectability?.canSelect;
+
+                return (
+                  <div key={challenge.id} className="challenge-tag-container">
+                    <button
+                      onClick={() => toggleChallenge(challenge.id)}
+                      className={`post-creator__challenge-tag 
+                    ${selectedChallenges.includes(challenge.id) ? 'post-creator__challenge-tag--selected' : ''} 
+                    ${isDisabled ? 'post-creator__challenge-tag--disabled' : ''}`}
+                      disabled={isDisabled}
+                      style={{
+                        '--tag-color': challengeColors[challenge.challengeType || 'general']
+                      } as React.CSSProperties}
+                      title={selectability?.reason}
+                    >
+                      {challenge.title}
+                    </button>
+                    {isDisabled && selectability?.reason && (
+                      <div className="challenge-tag-tooltip">
+                        {selectability.reason}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

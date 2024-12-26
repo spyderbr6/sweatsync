@@ -15,11 +15,13 @@ type Comment = Schema['Comment']['type'] & {
 interface CommentSectionProps {
   postId: string;
   commentsLimit?: number;
+  showInput?: boolean;
 }
 
 export const CommentSection: React.FC<CommentSectionProps> = ({ 
   postId, 
-  commentsLimit = 3 
+  commentsLimit = 3, 
+  showInput = false
 }) => {
   const navigate = useNavigate();
   const { userId } = useUser();
@@ -174,7 +176,8 @@ const handleEditComment = async (commentId: string) => {
         </div>
       )}
       
-      {userId && (
+      
+      {userId && showInput && (
         <form onSubmit={handleSubmitComment} className="comment-section__form">
           <input
             type="text"
@@ -260,7 +263,7 @@ const handleEditComment = async (commentId: string) => {
         ))}
       </div>
 
-      {comments.length > 0 && (
+      {comments.length > 0 && comments.length > commentsLimit && (
         <button
           onClick={() => navigate(`/post/${postId}`)}
           className="comment-section__view-all"

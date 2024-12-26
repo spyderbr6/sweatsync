@@ -9,21 +9,23 @@ const client = generateClient<Schema>();
 export async function createChallenge(params: {
   title: string;
   description: string;
-  startAt?: Date;
-  endAt?: Date;
+  startAt: Date;
+  endAt: Date;
   reward?: string;
   challengeType: string;
   totalWorkouts?: number;
+  status?: 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' | 'DRAFT' | 'CANCELLED'; 
 }): Promise<string> {
   try {
     await client.models.Challenge.create({
       title: params.title,
       description: params.description,
-      startAt: params.startAt?.toISOString(),
-      endAt: params.endAt?.toISOString(),
+      startAt: params.startAt.toISOString(),
+      endAt: params.endAt.toISOString(),
       reward: params.reward,
       challengeType: params.challengeType,
       totalWorkouts: params.totalWorkouts,
+      status: params.status || 'DRAFT', // Set default to 'DRAFT' if not provided
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -100,11 +102,18 @@ export async function listChallenges(userId?: string): Promise<Schema["Challenge
   try {
     if (!userId) {
       // List all challenges if no userId is provided
-      const result = await client.models.Challenge.list({});
+      const result = await client.models.Challenge.list({
+        filter: {
+          or: [
+            { status: { eq: 'ACTIVE' } },
+            { status: { eq: 'DRAFT' } }
+          ]
+        }
+      });
       return result.data;
     }
 
-    // Fetch active participations for the given user
+    // Get active participations
     const participations = await client.models.ChallengeParticipant.list({
       filter: {
         userID: { eq: userId },
@@ -116,16 +125,20 @@ export async function listChallenges(userId?: string): Promise<Schema["Challenge
 
     if (activeChallengeIds.length === 0) return [];
 
-    // Fetch challenges and explicitly assert non-null return types
-    const challenges = await Promise.all(
+    // Since we can't use 'in' operator, we'll need to get all challenges
+    // and filter in memory
+    const allChallenges = await Promise.all(
       activeChallengeIds.map(async (id) => {
         const result = await client.models.Challenge.get({ id });
         return result.data;
       })
     );
 
-    // Filter out any `null` values and assert non-nullable type
-    return challenges.filter((challenge): challenge is NonNullable<typeof challenge> => challenge !== null);
+    // Filter null values and check status
+    return allChallenges.filter((challenge): challenge is NonNullable<typeof challenge> => 
+      challenge !== null && challenge.status === 'ACTIVE'
+    );
+
   } catch (error) {
     console.error("Error listing challenges:", error);
     return [];
@@ -203,7 +216,11 @@ export async function checkChallengeParticipation(challengeId: string, userId: s
     const result = await client.models.ChallengeParticipant.list({
       filter: {
         challengeID: { eq: challengeId },
-        userID: { eq: userId }
+        userID: { eq: userId },
+        or: [
+          { status: { eq: 'ACTIVE' } },
+          { status: { eq: 'COMPLETED' } }
+        ]
       }
     });
     
@@ -348,5 +365,53 @@ export async function getChallengeActivity(challengeId: string) {
   } catch (error) {
     console.error('Error fetching challenge activity:', error);
     throw error;
+  }
+}
+
+//Removes the challenge from the UI by changing the status to ARCHIVED
+export async function archiveChallenge(challengeID: string): Promise<string> {
+  try {
+    const challengeResp = await client.models.Challenge.get({ id: challengeID });
+    if (!challengeResp.data) {
+      return "Challenge not found";
+    }
+
+    await client.models.Challenge.update({
+      id: challengeID,
+      status: "ARCHIVED",
+      updatedAt: new Date().toISOString(),
+    });
+
+    return "Challenge archived successfully";
+  } catch (error) {
+    console.error("Error archiving challenge:", error);
+    return "Failed to archive challenge";
+  }
+}
+
+//Removes the requested participant from the provided challengID
+export async function removeParticipantFromChallenge(challengeID: string, userID: string): Promise<string> {
+  try {
+    const participantResp = await client.models.ChallengeParticipant.list({
+      filter: {
+        challengeID: { eq: challengeID },
+        userID: { eq: userID },
+      },
+    });
+
+    if (!participantResp.data.length) {
+      return "Participation not found";
+    }
+
+    await client.models.ChallengeParticipant.update({
+      id: participantResp.data[0].id,
+      status: "DROPPED",
+      updatedAt: new Date().toISOString(),
+    });
+
+    return "Removed from challenge successfully";
+  } catch (error) {
+    console.error("Error removing participant:", error);
+    return "Failed to remove participant";
   }
 }
