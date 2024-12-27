@@ -2,38 +2,9 @@
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
+import {ChallengeType} from "./challengeTypes"
 
 const client = generateClient<Schema>();
-
-// Define our challenge types
-export enum ChallengeType {
-    GROUP = 'group',
-    PERSONAL = 'personal',
-    PUBLIC = 'public',
-    NONE = 'none',
-    FRIENDS = 'friends'
-}
-
-// Base interface for all challenge rules
-interface BaseChallengeRules {
-    challengeId: string;
-    type: ChallengeType;
-    endDate: string;
-    basePointsPerWorkout: number;
-    isActive: boolean;
-}
-
-// Specific interface for group challenge rules
-interface GroupChallengeRules {
-    challengeRuleId: string;
-    maxPostsPerDay: number;
-    maxPostsPerWeek: number;
-    dailyChallenges: boolean;
-    rotationIntervalDays?: number;
-    currentCreatorId?: string;
-    nextRotationDate?: string;
-    dailyChallengePoints?: number;
-}
 
 interface ValidationResult {
     isValid: boolean;
@@ -42,53 +13,8 @@ interface ValidationResult {
 
 interface PostValidationContext {
     userId: string;
-    challengeId: string;
+    Id: string;
     timestamp: string;
-}
-
-// Helper function to create challenge rules
-export async function createChallengeRules(
-    challengeId: string,
-    type: ChallengeType,
-    baseRules: Omit<BaseChallengeRules, 'challengeId' | 'type'>,
-    specificRules?: GroupChallengeRules
-): Promise<string> {
-    try {
-        console.log('Creating challenge rules with:', {
-            challengeId,
-            type,
-            baseRules,
-            specificRules
-        });
-        // First create base rules
-        const baseRuleResponse = await client.models.ChallengeRules.create({
-            challengeId,
-            type,
-            ...baseRules,
-            endDate: new Date(baseRules.endDate).toISOString(), // Convert string to ISO datetime
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        });
-
-        if (!baseRuleResponse.data) {
-            throw new Error('Failed to create base challenge rules');
-        }
-
-        // If this is a group challenge and we have specific rules, create those too
-        if (type === ChallengeType.GROUP && specificRules) {
-            await client.models.GroupChallengeRules.create({
-                ...specificRules,
-                challengeRuleId: baseRuleResponse.data.id,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            });
-        }
-
-        return baseRuleResponse.data.id;
-    } catch (error) {
-        console.error('Error creating challenge rules:', error);
-        throw error;
-    }
 }
 
 export async function canPostToChallenge(
@@ -96,16 +22,16 @@ export async function canPostToChallenge(
 ): Promise<ValidationResult> {
     try {
         // First, get the base challenge rules using a filter on challengeId
-        const baseRulesResponse = await client.models.ChallengeRules.list({ 
+        const baseRulesResponse = await client.models.Challenge.list({ 
             filter: {
-                challengeId: { eq: context.challengeId }
+                id: { eq: context.Id }
             }
         });
 
         if (!baseRulesResponse.data || baseRulesResponse.data.length === 0) {
             return {
                 isValid: false,
-                message: "Challenge rules not found"
+                message: "Challenge not found"
             };
         }
 
@@ -120,7 +46,7 @@ export async function canPostToChallenge(
         }
 
         // Check if challenge has ended
-        if (new Date(baseRules.endDate) < new Date()) {
+        if (new Date(baseRules.endAt) < new Date()) {
             return {
                 isValid: false,
                 message: "This challenge has ended"
@@ -128,7 +54,7 @@ export async function canPostToChallenge(
         }
 
         // If it's a group challenge, perform group-specific validations
-        if (baseRules.type === ChallengeType.GROUP) {
+        if (baseRules.challengeType === ChallengeType.GROUP) {
             return await validateGroupChallengePost(context, baseRules.id);
         }
 
@@ -152,9 +78,9 @@ async function validateGroupChallengePost(
 ): Promise<ValidationResult> {
     try {
         // Get group-specific rules using list() with filter
-        const groupRulesResponse = await client.models.GroupChallengeRules.list({ 
+        const groupRulesResponse = await client.models.Challenge.list({ 
             filter: {
-                challengeRuleId: { eq: ruleId }
+                id: { eq: ruleId }
             }
         });
 
@@ -169,12 +95,12 @@ async function validateGroupChallengePost(
 
         // Check daily post limit
         const todayPosts = await getPostsCount(
-            context.challengeId,
+            context.Id,
             context.userId,
             'day'
         );
 
-        if (todayPosts >= groupRules.maxPostsPerDay) {
+        if (groupRules.maxPostsPerDay !==null && todayPosts >= groupRules.maxPostsPerDay) {
             return {
                 isValid: false,
                 message: `You've reached the daily limit of ${groupRules.maxPostsPerDay} posts`
@@ -183,12 +109,12 @@ async function validateGroupChallengePost(
 
         // Check weekly post limit
         const weeklyPosts = await getPostsCount(
-            context.challengeId,
+            context.Id,
             context.userId,
             'week'
         );
 
-        if (weeklyPosts >= groupRules.maxPostsPerWeek) {
+        if (groupRules.maxPostsPerWeek !==null && weeklyPosts >= groupRules.maxPostsPerWeek) {
             return {
                 isValid: false,
                 message: `You've reached the weekly limit of ${groupRules.maxPostsPerWeek} posts`
@@ -214,40 +140,32 @@ async function getPostsCount(
     userId: string,
     period: 'day' | 'week'
 ): Promise<number> {
-    try {
-        const now = new Date();
-        let startDate: Date;
-
-        if (period === 'day') {
-            startDate = new Date(now.setHours(0, 0, 0, 0));
-        } else {
-            // Get start of week (Sunday)
-            const day = now.getDay();
-            startDate = new Date(now.setDate(now.getDate() - day));
-            startDate.setHours(0, 0, 0, 0);
-        }
-
-        // Query PostChallenge entries
-        const postsResponse = await client.models.PostChallenge.list({
-            filter: {
-                challengeId: { eq: challengeId },
-                userId: { eq: userId },
-                timestamp: { ge: startDate.toISOString() }
-            }
-        });
-
-        return postsResponse.data.length;
-    } catch (error) {
-        console.error('Error counting posts:', error);
-        return 0;
+    const now = new Date();
+    let startDate = new Date(now);
+    
+    if (period === 'day') {
+        startDate.setHours(0, 0, 0, 0);
+    } else {
+        startDate.setDate(now.getDate() - now.getDay());
+        startDate.setHours(0, 0, 0, 0);
     }
+
+    const postsResponse = await client.models.PostChallenge.list({
+        filter: {
+            challengeId: { eq: challengeId },
+            userId: { eq: userId },
+            timestamp: { ge: startDate.toISOString() }
+        }
+    });
+
+    return postsResponse.data.length;
 }
 
 async function updateDailyChallengeCreator(groupChallengeId: string): Promise<string | null> {
     try {
-        const rulesResponse = await client.models.GroupChallengeRules.list({
+        const rulesResponse = await client.models.Challenge.list({
             filter: {
-                challengeRuleId: { eq: groupChallengeId }
+                id: { eq: groupChallengeId }
             }
         });
 
@@ -279,7 +197,7 @@ async function updateDailyChallengeCreator(groupChallengeId: string): Promise<st
             Date.now() + rules.rotationIntervalDays * 86400000
         ).toISOString();
         
-        await client.models.GroupChallengeRules.update({
+        await client.models.Challenge.update({
             id: rules.id,
             currentCreatorId: nextCreator,
             nextRotationDate
@@ -292,25 +210,41 @@ async function updateDailyChallengeCreator(groupChallengeId: string): Promise<st
     }
 }
 
-export async function checkAndRotateCreator(groupChallengeId: string): Promise<boolean> {
+export async function checkAndRotateCreator(challengeId: string): Promise<boolean> {
     try {
-        const rulesResponse = await client.models.GroupChallengeRules.list({
-            filter: {
-                challengeRuleId: { eq: groupChallengeId }
-            }
-        });
-
-        if (!rulesResponse.data.length) return false;
-
-        const rules = rulesResponse.data[0];
-        if (!rules.nextRotationDate || !rules.dailyChallenges) return false;
+        const challenge = await client.models.Challenge.get({ id: challengeId });
+        if (!challenge.data?.dailyChallenges) return false;
 
         const now = new Date();
-        const nextRotation = new Date(rules.nextRotationDate);
+        const nextRotation = new Date(challenge.data.nextRotationDate || '');
 
-        if (now >= nextRotation) {
-            const nextCreator = await updateDailyChallengeCreator(groupChallengeId);
-            return !!nextCreator;
+        if (now >= nextRotation && challenge.data.rotationIntervalDays) {
+            const participants = await client.models.ChallengeParticipant.list({
+                filter: {
+                    challengeID: { eq: challengeId },
+                    status: { eq: "ACTIVE" }
+                }
+            });
+
+            if (!participants.data.length) return false;
+
+            const currentIndex = participants.data.findIndex(
+                p => p.userID === challenge.data?.currentCreatorId
+            );
+            const nextIndex = (currentIndex + 1) % participants.data.length;
+            const nextCreator = participants.data[nextIndex].userID;
+            const nextRotationDate = new Date(
+                Date.now() + (challenge.data.rotationIntervalDays * 86400000)
+            ).toISOString();
+
+            await client.models.Challenge.update({
+                id: challengeId,
+                currentCreatorId: nextCreator,
+                nextRotationDate,
+                updatedAt: new Date().toISOString()
+            });
+
+            return true;
         }
 
         return false;
@@ -331,66 +265,37 @@ interface PointsUpdateContext {
 
 export async function updateChallengePoints(context: PointsUpdateContext): Promise<boolean> {
     try {
-        // Get participant record
         const participantResult = await client.models.ChallengeParticipant.list({
             filter: {
                 challengeID: { eq: context.challengeId },
-                userID: { eq: context.userId },
-                status: { eq: "ACTIVE" }
+                userID: { eq: context.userId }
             }
         });
 
         const participant = participantResult.data[0];
-        if (!participant) {
-            console.error('No active participant found');
-            return false;
-        }
+        if (!participant) return false;
 
-        // Get challenge rules to determine points
-        const rulesResult = await client.models.ChallengeRules.list({
-            filter: {
-                challengeId: { eq: context.challengeId }
-            }
+        const challenge = await client.models.Challenge.get({ 
+            id: context.challengeId 
         });
 
-        if (!rulesResult.data.length) {
-            console.error('No rules found for challenge');
-            return false;
-        }
+        if (!challenge.data) return false;
 
-        const baseRules = rulesResult.data[0];
-        let pointsToAdd = baseRules.basePointsPerWorkout;
+        let pointsToAdd = challenge.data.basePointsPerWorkout || 10;
 
-        // If it's a daily challenge, get specific points
-        if (context.postType === 'dailyChallenge') {
-            const groupRulesResult = await client.models.GroupChallengeRules.list({
-                filter: {
-                    challengeRuleId: { eq: context.challengeId }
-                }
-            });
-
-            if (groupRulesResult.data.length && groupRulesResult.data[0].dailyChallengePoints) {
-                pointsToAdd = groupRulesResult.data[0].dailyChallengePoints;
-            }
-        }
-
-        // Get the challenge to check totalWorkouts
-        const challengeResult = await client.models.Challenge.get({ id: context.challengeId });
-        if (!challengeResult.data) {
-            throw new Error("Challenge not found");
+        if (context.postType === 'dailyChallenge' && challenge.data.dailyChallengePoints) {
+            pointsToAdd = challenge.data.dailyChallengePoints;
         }
 
         const newWorkoutCount = (participant.workoutsCompleted || 0) + 1;
         const newPoints = (participant.points || 0) + pointsToAdd;
-        const targetWorkouts = challengeResult.data.totalWorkouts || 30;
 
-        // Update participant record
         await client.models.ChallengeParticipant.update({
             id: participant.id,
             workoutsCompleted: newWorkoutCount,
             points: newPoints,
             updatedAt: new Date().toISOString(),
-            ...(newWorkoutCount >= targetWorkouts && {
+            ...(newWorkoutCount >= (challenge.data.totalWorkouts || 30) && {
                 status: "COMPLETED",
                 completedAt: new Date().toISOString()
             })
@@ -407,7 +312,7 @@ export async function updateChallengePoints(context: PointsUpdateContext): Promi
 interface ValidatePostContext {
     challengeId: string;
     userId: string;
-    postId: string;
+    postId: string; 
     timestamp: string;
     isDailyChallenge?: boolean;
     content?: string;
@@ -420,7 +325,6 @@ interface ValidationResult {
 
 export async function validateChallengePost(context: ValidatePostContext): Promise<ValidationResult> {
     try {
-        // Check if challenge is still active
         const challengeResult = await client.models.Challenge.get({ 
             id: context.challengeId 
         });
@@ -435,19 +339,18 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
         const challenge = challengeResult.data;
 
         // Check end date
-        if (new Date(challenge.endAt || "") < new Date()) {
+        if (challenge.endAt && new Date(challenge.endAt) < new Date()) {
             return {
                 isValid: false,
                 message: "Challenge has ended"
             };
         }
 
-        // Get the user's participation status
+        // Get participation status
         const participantResult = await client.models.ChallengeParticipant.list({
             filter: {
                 challengeID: { eq: context.challengeId },
-                userID: { eq: context.userId }, 
-                status: { eq: "ACTIVE" }
+                userID: { eq: context.userId }
             }
         });
 
@@ -459,7 +362,6 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
         }
 
         const participant = participantResult.data[0];
-
         if (participant.status !== "ACTIVE") {
             return {
                 isValid: false,
@@ -467,9 +369,31 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
             };
         }
 
-        // For group challenges, check daily and weekly limits
-        if (challenge.challengeType === "group") {
-            return await validateGroupChallengePost(context, challenge.id);
+        // Group challenge specific validations
+        if (challenge.challengeType === "GROUP") {
+            const dailyPostCount = await getPostsCount(context.challengeId, context.userId, 'day');
+            if (dailyPostCount >= (challenge.maxPostsPerDay || 1)) {
+                return {
+                    isValid: false,
+                    message: "Daily post limit reached"
+                };
+            }
+
+            const weeklyPostCount = await getPostsCount(context.challengeId, context.userId, 'week');
+            if (weeklyPostCount >= (challenge.maxPostsPerWeek || 5)) {
+                return {
+                    isValid: false,
+                    message: "Weekly post limit reached"
+                };
+            }
+        }
+
+        // Personal challenge validation
+        if (challenge.challengeType === "PERSONAL" && challenge.createdBy !== context.userId) {
+            return {
+                isValid: false,
+                message: "Only the creator can post to personal challenges"
+            };
         }
 
         return {
