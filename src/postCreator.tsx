@@ -68,78 +68,122 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
         // Get group challenges
         const groupChallenges = activeChallenges.filter(c => c.challengeType === 'group');
+        const personalChallenges = activeChallenges.filter(c => c.challengeType === 'personal');
 
-        if (groupChallenges.length === 0) return;
+        // Initialize selectability map
+        const selectabilityMap: Record<string, ChallengeSelectability> = {};
 
-        // Get group rules for all challenges in one query
-        const groupRulesResults = await Promise.all(
-          groupChallenges.map(challenge =>
-            client.models.GroupChallengeRules.list({
-              filter: {
-                challengeRuleId: { eq: challenge.id }
-              }
-            })
-          )
-        );
-
-        // Flatten results and create map
-        const groupRulesMap = groupRulesResults.reduce((acc, result) => {
-          if (result.data[0]) {
-            acc[result.data[0].challengeRuleId] = result.data[0];
-          }
-          return acc;
-        }, {} as Record<string, Schema["GroupChallengeRules"]["type"]>);
-
-        // Get today's posts
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const todaysPosts = await client.models.PostChallenge.list({
-          filter: {
-            userId: { eq: userId },
-            timestamp: { ge: today.toISOString() }
-          }
-        });
-
-        // Get week's posts
-        const weekStart = new Date();
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-        weekStart.setHours(0, 0, 0, 0);
-
-        const weeksPosts = await client.models.PostChallenge.list({
-          filter: {
-            userId: { eq: userId },
-            timestamp: { ge: weekStart.toISOString() }
-          }
-        });
-
-        // Build selectability map
-        const selectabilityMap = groupChallenges.reduce((acc, challenge) => {
-          const rules = groupRulesMap[challenge.id];
-          const dailyPostCount = todaysPosts.data.filter(p => p.challengeId === challenge.id).length;
-          const weeklyPostCount = weeksPosts.data.filter(p => p.challengeId === challenge.id).length;
-
-          let canSelect = true;
-          let reason;
-
-          if (!rules) {
-            canSelect = false;
-            reason = "Challenge rules not found";
-          } else if (dailyPostCount >= (rules.maxPostsPerDay || 1)) {
-            canSelect = false;
-            reason = "Daily post limit reached";
-          } else if (weeklyPostCount >= (rules.maxPostsPerWeek || 5)) {
-            canSelect = false;
-            reason = "Weekly post limit reached";
-          }
-
-          acc[challenge.id] = {
+        // Handle personal challenges
+        personalChallenges.forEach(challenge => {
+          selectabilityMap[challenge.id] = {
             id: challenge.id,
-            canSelect,
-            reason
+            canSelect: challenge.createdBy === userId,
+            reason: challenge.createdBy !== userId ? "Only the creator can post to personal challenges" : undefined
           };
-          return acc;
-        }, {} as Record<string, ChallengeSelectability>);
+        });
+
+        if (groupChallenges.length > 0) {
+
+          // First get the base challenge rules
+          const baseRulesResults = await Promise.all(
+            groupChallenges.map(challenge =>
+              client.models.ChallengeRules.list({
+                filter: {
+                  challengeId: { eq: challenge.id }
+                }
+              })
+            )
+          );
+
+          // Then get group-specific rules using the base rules IDs
+          const groupRulesResults = await Promise.all(
+            baseRulesResults.map(result =>
+              result.data[0] ? client.models.GroupChallengeRules.list({
+                filter: {
+                  challengeRuleId: { eq: result.data[0].id }
+                }
+              }) : Promise.resolve({ data: [] })
+            )
+          );
+
+          // Create rules map
+          const rulesMap = baseRulesResults.reduce((acc, result, index) => {
+            if (result.data[0] && groupRulesResults[index].data[0]) {
+              acc[groupChallenges[index].id] = {
+                baseRules: result.data[0],
+                groupRules: groupRulesResults[index].data[0]
+              };
+            }
+            return acc;
+          }, {} as Record<string, any>);
+
+          // Get today's and week's posts
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const todaysPosts = await client.models.PostChallenge.list({
+            filter: {
+              userId: { eq: userId },
+              timestamp: { ge: today.toISOString() }
+            }
+          });
+
+          const weekStart = new Date();
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+          weekStart.setHours(0, 0, 0, 0);
+
+          const weeksPosts = await client.models.PostChallenge.list({
+            filter: {
+              userId: { eq: userId },
+              timestamp: { ge: weekStart.toISOString() }
+            }
+          });
+
+          // Validate group challenges
+          groupChallenges.forEach(challenge => {
+            const rules = rulesMap[challenge.id];
+            if (!rules) {
+              selectabilityMap[challenge.id] = {
+                id: challenge.id,
+                canSelect: false,
+                reason: "Challenge rules not found"
+              };
+              return;
+            }
+
+            const dailyPostCount = todaysPosts.data.filter(p => p.challengeId === challenge.id).length;
+            const weeklyPostCount = weeksPosts.data.filter(p => p.challengeId === challenge.id).length;
+
+            if (dailyPostCount >= rules.groupRules.maxPostsPerDay) {
+              selectabilityMap[challenge.id] = {
+                id: challenge.id,
+                canSelect: false,
+                reason: "Daily post limit reached"
+              };
+            } else if (weeklyPostCount >= rules.groupRules.maxPostsPerWeek) {
+              selectabilityMap[challenge.id] = {
+                id: challenge.id,
+                canSelect: false,
+                reason: "Weekly post limit reached"
+              };
+            } else {
+              selectabilityMap[challenge.id] = {
+                id: challenge.id,
+                canSelect: true
+              };
+            }
+          });
+        }
+
+        // Public challenges are always selectable
+        activeChallenges
+          .filter(c => c.challengeType === 'public')
+          .forEach(challenge => {
+            selectabilityMap[challenge.id] = {
+              id: challenge.id,
+              canSelect: true
+            };
+          });
 
         setChallengeSelectability(selectabilityMap);
       } catch (error) {

@@ -135,8 +135,10 @@ export async function listChallenges(userId?: string): Promise<Schema["Challenge
     );
 
     // Filter null values and check status
-    return allChallenges.filter((challenge): challenge is NonNullable<typeof challenge> => 
-      challenge !== null && challenge.status === 'ACTIVE'
+    return allChallenges.filter(
+      (challenge): challenge is NonNullable<typeof challenge> =>
+        challenge !== null &&
+        (challenge.status === 'ACTIVE' || challenge.status === 'DRAFT'),
     );
 
   } catch (error) {
@@ -147,13 +149,19 @@ export async function listChallenges(userId?: string): Promise<Schema["Challenge
 
 export async function getPendingChallenges(userId: string) {
   try {
-    const client = generateClient<Schema>();
+    // Calculate the cutoff time for expired invitations (48 hours ago)
+    const cutoffTime = new Date();
+    cutoffTime.setHours(cutoffTime.getHours() - 48);
     
     // Get pending challenge participations
     const pendingParticipations = await client.models.ChallengeParticipant.list({
       filter: {
-        userID: { eq: userId },
-        status: { eq: 'PENDING' }
+        and: [
+          { userID: { eq: userId } },
+          { status: { eq: 'PENDING' } },
+          // Only get invitations newer than cutoff time
+          { invitedAt: { ge: cutoffTime.toISOString() } }
+        ]
       }
     });
 
@@ -168,15 +176,22 @@ export async function getPendingChallenges(userId: string) {
 
         if (!challengeResult.data) return null;
 
-        // Get the creator's username
-        const creatorResult = await client.models.User.get({
-          id: challengeResult.data.createdBy || ''
-        });
+        // Get the inviter's username
+        const inviterResult = participation.invitedBy 
+          ? await client.models.User.get({
+              id: participation.invitedBy
+            })
+          : null;
 
         return {
           ...challengeResult.data,
           participationId: participation.id,
-          creatorName: creatorResult.data?.preferred_username || 'Unknown User'
+          inviterName: inviterResult?.data?.preferred_username || 'Unknown User',
+          invitedAt: participation.invitedAt,
+          // Calculate time remaining before expiration
+          expiresIn: participation.invitedAt 
+            ? Math.floor((new Date(participation.invitedAt).getTime() + (24 * 60 * 60 * 1000) - Date.now()) / (60 * 1000))
+            : 0 // minutes remaining
         };
       })
     );
@@ -413,5 +428,104 @@ export async function removeParticipantFromChallenge(challengeID: string, userID
   } catch (error) {
     console.error("Error removing participant:", error);
     return "Failed to remove participant";
+  }
+}
+
+// Add this to challengeOperations.tsx
+
+export async function inviteFriendToChallenge(params: {
+  challengeId: string;
+  inviterId: string;    
+  friendId: string;     
+}): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  try {
+    // 1. Verify challenge exists and inviter is the owner
+    const challengeResult = await client.models.Challenge.get({ 
+      id: params.challengeId 
+    });
+
+    if (!challengeResult.data) {
+      return {
+        success: false,
+        message: "Challenge not found"
+      };
+    }
+
+    if (challengeResult.data.createdBy !== params.inviterId) {
+      return {
+        success: false,
+        message: "Only the challenge creator can send invitations"
+      };
+    }
+
+    // 2. Verify they are friends
+    const friendshipResult = await client.models.Friend.list({
+      filter: {
+        and: [
+          { user: { eq: params.inviterId } },
+          { friendUser: { eq: params.friendId } }
+        ]
+      }
+    });
+
+    if (!friendshipResult.data.length) {
+      return {
+        success: false,
+        message: "You can only invite friends to challenges"
+      };
+    }
+
+    // 3. Check if already participating
+    const existingParticipation = await client.models.ChallengeParticipant.list({
+      filter: {
+        and: [
+          { challengeID: { eq: params.challengeId } },
+          { userID: { eq: params.friendId } },
+          { 
+            or: [
+              { status: { eq: 'ACTIVE' } },
+              { status: { eq: 'PENDING' } }
+            ]
+          }
+        ]
+      }
+    });
+
+    if (existingParticipation.data.length > 0) {
+      const status = existingParticipation.data[0].status;
+      return {
+        success: false,
+        message: status === 'ACTIVE' 
+          ? "User is already participating in this challenge"
+          : "User already has a pending invitation"
+      };
+    }
+
+    // 4. Create the invitation
+    await client.models.ChallengeParticipant.create({
+      challengeID: params.challengeId,
+      userID: params.friendId,
+      status: "PENDING",
+      points: 0,
+      workoutsCompleted: 0,
+      invitedBy: params.inviterId,
+      invitedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    return {
+      success: true,
+      message: "Invitation sent successfully"
+    };
+
+  } catch (error) {
+    console.error('Error inviting friend to challenge:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to send invitation"
+    };
   }
 }
