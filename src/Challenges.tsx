@@ -127,44 +127,44 @@ function ChallengesPage() {
 
   const stats = [
     {
-      category: 'public' as ChallengeCategory,
+      category: 'PUBLIC' as ChallengeCategory,
       label: 'Public Challenges',
       icon: Globe,
-      count: challenges.filter(c => c.challengeType === 'public').length,
+      count: challenges.filter(c => c.challengeType === 'PUBLIC').length,
       iconClass: 'stat-icon--public'
     },
     {
-      category: 'friends' as ChallengeCategory,
+      category: 'FRIENDS' as ChallengeCategory,
       label: 'Friend Challenges',
       icon: UserPlus,
-      count: challenges.filter(c => c.challengeType === 'friends').length,
+      count: challenges.filter(c => c.challengeType === 'FRIENDS').length,
       iconClass: 'stat-icon--friend'
     },
     {
-      category: 'group' as ChallengeCategory,
+      category: 'GROUP' as ChallengeCategory,
       label: 'Group Challenges',
       icon: Users,
-      count: challenges.filter(c => c.challengeType === 'group').length,
+      count: challenges.filter(c => c.challengeType === 'GROUP').length,
       iconClass: 'stat-icon--group'
     },
     {
-      category: 'personal' as ChallengeCategory,
+      category: 'PERSONAL' as ChallengeCategory,
       label: 'Personal Goals',
       icon: Target,
-      count: challenges.filter(c => c.challengeType === 'personal').length,
+      count: challenges.filter(c => c.challengeType === 'PERSONAL').length,
       iconClass: 'stat-icon--personal'
     },
   ];
 
   const getChallengeIcon = (type: string | null) => {
     switch (type?.toLowerCase()) {
-      case 'public':
+      case 'PUBLIC':
         return <Globe size={20} />;
-      case 'friends':
+      case 'FRIENDS':
         return <UserPlus size={20} />;
-      case 'group':
+      case 'GROUP':
         return <Users size={20} />;
-      case 'personal':
+      case 'PERSONAL':
         return <Target size={20} />;
       default:
         return <Globe size={20} />; // Fallback to Globe

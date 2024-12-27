@@ -41,38 +41,69 @@ const schema = a.schema({
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Challenge: a.model({
+    // Base Challenge fields 
+    id: a.string().required(),
     title: a.string().required(),
     description: a.string().required(),
-    startAt: a.datetime(),
-    endAt: a.datetime(),
     reward: a.string(),
-    totalWorkouts: a.integer().default(1),
-    challengeType: a.string().required(),
-    createdAt: a.datetime(),
-    updatedAt: a.datetime(),
+    challengeType: a.enum(['none', 'PUBLIC', 'GROUP', 'PERSONAL', 'FRIENDS','DAILY']), 
+    status: a.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED', 'DRAFT', 'CANCELLED']),
+    startAt: a.datetime().required(),
+    endAt: a.datetime().required(),
     createdBy: a.string(),
-    status: a.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED', 'DRAFT', 'CANCELLED']), 
+    totalWorkouts: a.integer(),
+    basePointsPerWorkout: a.integer(),
+    isActive: a.boolean(),
+
+    // Group Challenge specific fields (only populated for group type)
+    maxPostsPerDay: a.integer(),
+    maxPostsPerWeek: a.integer(),
+    dailyChallenges: a.boolean(),
+    rotationIntervalDays: a.integer(),
+    currentCreatorId: a.string(),
+    nextRotationDate: a.datetime(),
+    dailyChallengePoints: a.integer(),
+
+    // Timestamps
+    createdAt: a.datetime(),
+    updatedAt: a.datetime()
   }).authorization((allow) => [allow.publicApiKey()])
     .secondaryIndexes
-      ((index) => [
-        index('status')
+    ((index) => [
+      index('status')
         .name('byStatus')
         .sortKeys(["createdAt"])
-      ]),
+    ]),
+
+
+
+
+  // Keep DailyChallenge separate for time-series data
+  DailyChallenge: a.model({
+    id: a.string().required(),
+    challengeId: a.string().required(),
+    creatorId: a.string().required(),
+    title: a.string().required(),
+    description: a.string().required(),
+    date: a.datetime().required(),
+    pointsAwarded: a.integer().required(),
+    createdAt: a.datetime(),
+    updatedAt: a.datetime()
+  }).authorization((allow) => [allow.publicApiKey()]),
 
 
   ChallengeParticipant: a.model({
-    challengeID: a.string().required(), //reference to Challenge model
-    userID: a.string().required(),
-    status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED','PENDING']),
-    points: a.integer().default(0),
-    workoutsCompleted: a.integer().default(0),
-    joinedAt: a.datetime(),
-    completedAt: a.datetime(),
-    updatedAt: a.datetime(), 
-    invitedAt: a.datetime(),
-    invitedBy: a.string()
-  }).authorization((allow) => [allow.publicApiKey()]),
+      challengeID: a.string().required(), //reference to Challenge model
+      userID: a.string().required(),
+      status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED', 'PENDING']),
+      points: a.integer().default(0),
+      workoutsCompleted: a.integer().default(0),
+      joinedAt: a.datetime(),
+      completedAt: a.datetime(),
+      updatedAt: a.datetime(),
+      invitedAt: a.datetime(),
+      invitedBy: a.string()
+    }).authorization((allow) => [allow.publicApiKey()]),
 
   PostChallenge: a.model({
     postId: a.string(),
@@ -81,43 +112,6 @@ const schema = a.schema({
     timestamp: a.datetime(),
     validated: a.boolean().default(false),
     validationComment: a.string()
-  }).authorization((allow) => [allow.publicApiKey()]),
-
-  //BASE MODEL FOR ALL CHALLENGE TYPES
-  ChallengeRules: a.model({
-    challengeId: a.string().required(), //reference to Challenge model
-    type: a.string().required(),         // "group", "personal", "public", etc
-    endDate: a.datetime().required(),
-    basePointsPerWorkout: a.integer().required(),
-    isActive: a.boolean().required(),
-    createdAt: a.datetime().required(),
-    updatedAt: a.datetime().required()
-  }).authorization((allow) => [allow.publicApiKey()]),
-
-  //SEPERATE MODEL FOR GROUP CHALLENGES
-  GroupChallengeRules: a.model({
-    challengeRuleId: a.string().required(),  // Links to base ChallengeRules
-    maxPostsPerDay: a.integer().required(),
-    maxPostsPerWeek: a.integer().required(),
-    dailyChallenges: a.boolean().required(),
-    rotationIntervalDays: a.integer(),      // Days between creator rotation
-    currentCreatorId: a.string(),           // Current daily challenge creator
-    nextRotationDate: a.datetime(),         // When to switch creators
-    dailyChallengePoints: a.integer(),      // Points for daily challenge completion
-    createdAt: a.datetime().required(),
-    updatedAt: a.datetime().required()
-  }).authorization((allow) => [allow.publicApiKey()]),
-
-  //Model for daily challenges within group challenges
-  DailyChallenge: a.model({
-    groupChallengeId: a.string().required(), // Links to parent group challenge
-    creatorId: a.string().required(),        // Who created this daily challenge
-    title: a.string().required(),
-    description: a.string().required(),
-    date: a.datetime().required(),           // The date this challenge is for
-    pointsAwarded: a.integer().required(),
-    createdAt: a.datetime().required(),
-    updatedAt: a.datetime().required()
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Comment: a.model({

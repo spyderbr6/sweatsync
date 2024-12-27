@@ -16,6 +16,7 @@ interface DailyChallengeProps {
 
 interface DailyChallengeData {
     id: string;
+    challengeId: string;
     title: string;
     description: string;
     creatorId: string;
@@ -45,50 +46,37 @@ export function DailyChallenge({ groupChallengeId, onSuccess }: DailyChallengePr
     const loadDailyChallenge = async () => {
         try {
             setLoading(true);
-
             await checkAndRotateCreator(groupChallengeId);
-
-            // Get the group challenge rules using the challengeRuleId
-            const rulesResult = await client.models.GroupChallengeRules.list({
-                filter: {
-                    challengeRuleId: { eq: groupChallengeId }  // This links to the base ChallengeRules
-                }
-            });
-
-            const rules = rulesResult.data[0];
-            if (!rulesResult.data || rulesResult.data.length === 0) {
-                throw new Error('Group challenge rules not found');
+    
+            const challenge = await client.models.Challenge.get({ id: groupChallengeId });
+            if (!challenge.data?.dailyChallenges) {
+                throw new Error('Daily challenges not enabled for this group');
             }
-
-            // Check if user is the current assigned creator
-            const isCurrentCreator = rules.currentCreatorId === userId;
-            setIsCreator(isCurrentCreator);
-
-            // Get today's challenge if it exists
+    
+            setIsCreator(challenge.data.currentCreatorId === userId);
+    
             const today = new Date().toISOString().split('T')[0];
             const challengesResponse = await client.models.DailyChallenge.list({
                 filter: {
-                    groupChallengeId: { eq: groupChallengeId },
+                    challengeId: { eq: groupChallengeId },
                     date: { eq: today }
                 }
             });
-
+    
             if (challengesResponse.data.length > 0) {
-                const challenge = challengesResponse.data[0];
-
-                // Get creator's name
+                const dailyChallenge = challengesResponse.data[0];
                 const creatorResponse = await client.models.User.get({
-                    id: challenge.creatorId
+                    id: dailyChallenge.creatorId
                 });
-
+    
                 setDailyChallenge({
-                    ...challenge,
+                    ...dailyChallenge,
                     creatorName: creatorResponse.data?.preferred_username || 'Unknown User'
                 });
-            } else if (isCurrentCreator) {
+            } else if (challenge.data.currentCreatorId === userId) {
                 setShowCreateForm(true);
             }
-
+    
         } catch (error) {
             console.error('Error loading daily challenge:', error);
             setError('Failed to load daily challenge');
@@ -124,7 +112,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
         // Create the daily challenge
         const dailyChallengeResult = await client.models.DailyChallenge.create({
-            groupChallengeId,
+            challengeId:groupChallengeId,
             creatorId: userId,
             title: formData.title,
             description: formData.description,

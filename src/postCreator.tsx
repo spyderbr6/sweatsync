@@ -67,8 +67,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         setAvailableChallenges(activeChallenges);
 
         // Get group challenges
-        const groupChallenges = activeChallenges.filter(c => c.challengeType === 'group');
-        const personalChallenges = activeChallenges.filter(c => c.challengeType === 'personal');
+        const groupChallenges = activeChallenges.filter(c => c.challengeType === 'GROUP');
+        const personalChallenges = activeChallenges.filter(c => c.challengeType === 'PERSONAL');
 
         // Initialize selectability map
         const selectabilityMap: Record<string, ChallengeSelectability> = {};
@@ -87,9 +87,9 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
           // First get the base challenge rules
           const baseRulesResults = await Promise.all(
             groupChallenges.map(challenge =>
-              client.models.ChallengeRules.list({
+              client.models.Challenge.list({
                 filter: {
-                  challengeId: { eq: challenge.id }
+                  id: { eq: challenge.id }
                 }
               })
             )
@@ -98,9 +98,10 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
           // Then get group-specific rules using the base rules IDs
           const groupRulesResults = await Promise.all(
             baseRulesResults.map(result =>
-              result.data[0] ? client.models.GroupChallengeRules.list({
+              result.data[0] ? client.models.Challenge.list({
                 filter: {
-                  challengeRuleId: { eq: result.data[0].id }
+                  id: { eq: result.data[0].id }, 
+                  challengeType: { eq: 'GROUP' }
                 }
               }) : Promise.resolve({ data: [] })
             )
@@ -177,7 +178,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
         // Public challenges are always selectable
         activeChallenges
-          .filter(c => c.challengeType === 'public')
+          .filter(c => c.challengeType === 'PUBLIC')
           .forEach(challenge => {
             selectabilityMap[challenge.id] = {
               id: challenge.id,
