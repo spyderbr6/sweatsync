@@ -77,6 +77,7 @@ async function validateGroupChallengePost(
     ruleId: string
 ): Promise<ValidationResult> {
     try {
+        //TODO: i dont think i need any of this any more. this will always return results if it got this far. 
         // Get group-specific rules using list() with filter
         const groupRulesResponse = await client.models.Challenge.list({ 
             filter: {
@@ -159,55 +160,6 @@ async function getPostsCount(
     });
 
     return postsResponse.data.length;
-}
-
-async function updateDailyChallengeCreator(groupChallengeId: string): Promise<string | null> {
-    try {
-        const rulesResponse = await client.models.Challenge.list({
-            filter: {
-                id: { eq: groupChallengeId }
-            }
-        });
-
-        if (!rulesResponse.data.length) return null;
-
-        const rules = rulesResponse.data[0];
-
-        // Get all active participants
-        const participants = await client.models.ChallengeParticipant.list({
-            filter: {
-                challengeID: { eq: groupChallengeId },
-                status: { eq: "ACTIVE" }
-            }
-        });
-
-        if (!participants.data.length) return null;
-
-        // Find next creator
-        const currentIndex = participants.data.findIndex(p => p.userID === rules.currentCreatorId);
-        const nextIndex = (currentIndex + 1) % participants.data.length;
-        const nextCreator = participants.data[nextIndex].userID;
-
-        // Update rules
-        if (!rules.rotationIntervalDays || !rules.currentCreatorId) {
-            return null;
-        }
-        
-        const nextRotationDate = new Date(
-            Date.now() + rules.rotationIntervalDays * 86400000
-        ).toISOString();
-        
-        await client.models.Challenge.update({
-            id: rules.id,
-            currentCreatorId: nextCreator,
-            nextRotationDate
-        });
-
-        return nextCreator;
-    } catch (error) {
-        console.error('Error updating challenge creator:', error);
-        return null;
-    }
 }
 
 export async function checkAndRotateCreator(challengeId: string): Promise<boolean> {
