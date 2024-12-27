@@ -2,17 +2,9 @@
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
+import {ChallengeType} from "./challengeTypes"
 
 const client = generateClient<Schema>();
-
-// Define our challenge types
-export enum ChallengeType {
-    GROUP = 'GROUP',
-    PERSONAL = 'PERSONAL',
-    PUBLIC = 'PUBLIC',
-    NONE = 'none',
-    FRIENDS = 'FRIENDS'
-}
 
 interface ValidationResult {
     isValid: boolean;
@@ -108,7 +100,7 @@ async function validateGroupChallengePost(
             'day'
         );
 
-        if (todayPosts >= groupRules.maxPostsPerDay) {
+        if (groupRules.maxPostsPerDay !==null && todayPosts >= groupRules.maxPostsPerDay) {
             return {
                 isValid: false,
                 message: `You've reached the daily limit of ${groupRules.maxPostsPerDay} posts`
@@ -122,7 +114,7 @@ async function validateGroupChallengePost(
             'week'
         );
 
-        if (weeklyPosts >= groupRules.maxPostsPerWeek) {
+        if (groupRules.maxPostsPerWeek !==null && weeklyPosts >= groupRules.maxPostsPerWeek) {
             return {
                 isValid: false,
                 message: `You've reached the weekly limit of ${groupRules.maxPostsPerWeek} posts`
@@ -205,7 +197,7 @@ async function updateDailyChallengeCreator(groupChallengeId: string): Promise<st
             Date.now() + rules.rotationIntervalDays * 86400000
         ).toISOString();
         
-        await client.models.GroupChallengeRules.update({
+        await client.models.Challenge.update({
             id: rules.id,
             currentCreatorId: nextCreator,
             nextRotationDate
@@ -397,7 +389,7 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
         }
 
         // Personal challenge validation
-        if (challenge.challengeType === "personal" && challenge.createdBy !== context.userId) {
+        if (challenge.challengeType === "PERSONAL" && challenge.createdBy !== context.userId) {
             return {
                 isValid: false,
                 message: "Only the creator can post to personal challenges"

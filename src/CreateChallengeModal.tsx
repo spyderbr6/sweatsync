@@ -4,6 +4,7 @@ import { useDataVersion } from './dataVersionContext';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { useUser } from './userContext';
+import { ChallengeType } from './challengeTypes';
 
 const client = generateClient<Schema>();
 
@@ -11,14 +12,6 @@ interface CreateChallengeModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-}
-
-enum ChallengeType {
-    NONE = 'none',
-    PUBLIC = 'public',
-    GROUP = 'group',
-    FRIENDS = 'friends',
-    PERSONAL = 'personal'
 }
 
 // Add validation check
@@ -67,7 +60,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { incrementVersion } = useDataVersion();
-    const showGroupRules = formData.challengeType === 'group';
+    const showGroupRules = formData.challengeType === 'GROUP';
     const [error, setError] = useState<string | null>(null);
     const [titleError, setTitleError] = useState<string | null>(null);
     const [startDateError, setStartDateError] = useState<string | null>(null);
@@ -134,7 +127,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
 
     // Add a function to calculate total workouts
     const calculateTotalWorkouts = (): number => {
-        if (formData.challengeType !== 'group') {
+        if (formData.challengeType !== 'GROUP') {
             return formData.totalWorkouts;
         }
 
@@ -474,7 +467,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                                 Total Required Workouts
                             </label>
                             <div className="form-static-value">
-                                {formData.challengeType === 'group' ? (
+                                {formData.challengeType === 'GROUP' ? (
                                     <>
                                         {calculateTotalWorkouts()} workouts
                                         <span className="text-gray-500 text-sm">

@@ -10,11 +10,9 @@ import { useDataVersion } from './dataVersionContext';
 import { useNavigate } from 'react-router-dom';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
 import { shareContent } from './utils/shareAction';
+import { ChallengeType } from './challengeTypes';
 
-
-
-
-type ChallengeCategory = 'all' | 'public' | 'group' | 'friends' | 'personal';
+type ChallengeCategory = 'all' | ChallengeType;
 type Challenge = Schema["Challenge"]["type"];
 
 function ChallengesPage() {
@@ -156,23 +154,27 @@ function ChallengesPage() {
     },
   ];
 
-  const getChallengeIcon = (type: string | null) => {
-    switch (type?.toLowerCase()) {
-      case 'PUBLIC':
-        return <Globe size={20} />;
-      case 'FRIENDS':
-        return <UserPlus size={20} />;
-      case 'GROUP':
-        return <Users size={20} />;
-      case 'PERSONAL':
-        return <Target size={20} />;
-      default:
-        return <Globe size={20} />; // Fallback to Globe
+  const getChallengeIcon = (type: string | null | undefined) => {
+    // Convert string to enum value
+    const challengeType = type as ChallengeType;
+    
+    switch (challengeType) {
+        case ChallengeType.PUBLIC:
+            return <Globe size={20} />;
+        case ChallengeType.FRIENDS:
+            return <UserPlus size={20} />;
+        case ChallengeType.GROUP:
+            return <Users size={20} />;
+        case ChallengeType.PERSONAL:
+            return <Target size={20} />;
+        default:
+            return <Globe size={20} />; // Fallback to Globe
     }
-  };
+};
+
   const filteredChallenges = challenges.filter(challenge =>
-    activeFilter === 'all' || challenge.challengeType === activeFilter
-  );
+    activeFilter === 'all' || (challenge.challengeType && challenge.challengeType === activeFilter)
+);
 
   const handleCategoryClick = (category: ChallengeCategory) => {
     setActiveFilter(category === activeFilter ? 'all' : category);
@@ -330,7 +332,7 @@ function ChallengesPage() {
               >
                 <div className="challenge-card-header">
                   <div className={`challenge-icon-wrapper challenge-icon-wrapper--${challenge.challengeType}`}>
-                    {getChallengeIcon(challenge.challengeType)}
+                  {getChallengeIcon(challenge.challengeType || ChallengeType.NONE)}
                   </div>
                   <div className="challenge-info">
                     <h3 className="challenge-title" onClick={() => handleNavigateToChallenge(challenge.id)}>{challenge.title}</h3>
