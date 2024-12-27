@@ -1,8 +1,12 @@
 // ChallengeDetailPage.tsx
 import { useParams } from 'react-router-dom';
-import { Share2, UserPlus, Trophy, Calendar, Users, Dumbbell, Heart, 
-         MessageCircle, Clock, Medal, Crown, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import {
+    Share2, UserPlus, Trophy, Calendar, Users, Dumbbell, Heart,
+    MessageCircle, Clock, Medal, Crown, ExternalLink
+} from 'lucide-react';
 import { useChallengeDetail } from './useChallengeDetail';
+import InviteFriendsModal from './inviteFriendsModal';
 import './challenges.css';
 
 type RouteParams = {
@@ -11,15 +15,17 @@ type RouteParams = {
 
 export default function ChallengeDetailPage() {
     const { challengeId } = useParams<RouteParams>();
-    const { 
-        isLoading, 
-        error, 
-        challengeDetails, 
-        leaderboard, 
+    const {
+        isLoading,
+        error,
+        challengeDetails,
+        leaderboard,
         activity,
         profileUrls,
-        workoutUrls,
+        workoutUrls
     } = useChallengeDetail(challengeId ?? '');
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
 
     if (isLoading) {
         return (
@@ -45,7 +51,7 @@ export default function ChallengeDetailPage() {
         );
     }
 
-    const progress = challengeDetails?.totalWorkouts 
+    const progress = challengeDetails?.totalWorkouts
         ? (challengeDetails.userParticipation?.workoutsCompleted || 0) / challengeDetails.totalWorkouts * 100
         : 0;
 
@@ -63,10 +69,20 @@ export default function ChallengeDetailPage() {
                             <Share2 size={16} />
                             Share
                         </button>
-                        <button className="action-button action-button--invite">
+                        <button
+                            className="action-button action-button--invite"
+                            onClick={() => setIsInviteModalOpen(true)}
+                        >
                             <UserPlus size={16} />
                             Invite
                         </button>
+
+                        {/* Add the modal */}
+                        <InviteFriendsModal
+                            isOpen={isInviteModalOpen}
+                            onClose={() => setIsInviteModalOpen(false)}
+                            challengeId={challengeId ?? ''}
+                        />
                     </div>
                 </div>
 
@@ -83,7 +99,7 @@ export default function ChallengeDetailPage() {
                     </div>
 
                     <div className="progress-bar">
-                        <div 
+                        <div
                             className="progress-bar-fill"
                             style={{ width: `${progress}%` }}
                         />
@@ -118,7 +134,7 @@ export default function ChallengeDetailPage() {
                     {challengeDetails.userParticipation && (
                         <div className="personal-stats">
                             <div className="profile-header">
-                                <img 
+                                <img
                                     src={profileUrls[challengeDetails.userParticipation?.userID || ''] || '/profileDefault.png'}
                                     alt="Your profile"
                                     className="profile-image"
@@ -126,7 +142,7 @@ export default function ChallengeDetailPage() {
                                 <div className="profile-info">
                                     <h2 className="profile-name">Your Progress</h2>
                                     <p className="profile-rank">
-                                        {leaderboard.findIndex(user => 
+                                        {leaderboard.findIndex(user =>
                                             user.id === challengeDetails.userParticipation?.userID
                                         ) + 1} of {leaderboard.length}
                                     </p>
@@ -176,7 +192,7 @@ export default function ChallengeDetailPage() {
                                             {index === 2 && <Trophy size={20} />}
                                             {index > 2 && index + 1}
                                         </span>
-                                        <img 
+                                        <img
                                             src={profileUrls[user.id] || '/profileDefault.png'}
                                             alt={user.name}
                                             className="leaderboard-avatar"
@@ -200,7 +216,7 @@ export default function ChallengeDetailPage() {
                         {activity.map((item) => (
                             <div key={item.id} className="activity-item">
                                 <div className="activity-content">
-                                    <img 
+                                    <img
                                         src={profileUrls[item.userId] || '/profileDefault.png'}
                                         alt={item.username}
                                         className="activity-avatar"
@@ -219,7 +235,7 @@ export default function ChallengeDetailPage() {
 
                                         {item.workoutImage && (
                                             <div className="activity-media">
-                                                <img 
+                                                <img
                                                     src={workoutUrls[item.id] || '/picsoritdidnthappen.webp'}
                                                     alt="Workout"
                                                     className="activity-image"
