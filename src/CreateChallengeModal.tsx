@@ -215,7 +215,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                 },
                 // Only include group rules if it's a group challenge
                 formData.challengeType === ChallengeType.GROUP ? {
-                    challengeRuleId: challengeResult.data.id,  // Add this line
+                    challengeRuleId: challengeResult.data.id, 
                     maxPostsPerDay: formData.groupRules.maxPostsPerDay,
                     maxPostsPerWeek: formData.groupRules.maxPostsPerWeek,
                     dailyChallenges: formData.groupRules.enableDailyChallenges,
