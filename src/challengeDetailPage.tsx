@@ -7,7 +7,9 @@ import {
 } from 'lucide-react';
 import { useChallengeDetail } from './useChallengeDetail';
 import InviteFriendsModal from './inviteFriendsModal';
+import { shareContent } from './utils/shareAction';
 import './challenges.css';
+import { ChallengeDetails } from './challengeTypes';
 
 type RouteParams = {
     challengeId: string;
@@ -26,6 +28,13 @@ export default function ChallengeDetailPage() {
     } = useChallengeDetail(challengeId ?? '');
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
+    const handleShare = (challenge: ChallengeDetails) => {
+        shareContent(
+          `${challenge.title}:${challenge.description}`,
+          'Join me on SweatSync',
+          `${import.meta.env.BASE_URL}challenge/${challenge.id}`
+        );
+      };
 
     if (isLoading) {
         return (
@@ -65,7 +74,8 @@ export default function ChallengeDetailPage() {
                         <p className="challenge-description">{challengeDetails.description}</p>
                     </div>
                     <div className="challenge-actions">
-                        <button className="action-button action-button--share">
+                        <button className="action-button action-button--share"
+                                onClick={() => handleShare(challengeDetails)}>
                             <Share2 size={16} />
                             Share
                         </button>
