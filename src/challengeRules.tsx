@@ -446,7 +446,8 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
         const participantResult = await client.models.ChallengeParticipant.list({
             filter: {
                 challengeID: { eq: context.challengeId },
-                userID: { eq: context.userId }
+                userID: { eq: context.userId }, 
+                status: { eq: "ACTIVE" }
             }
         });
 

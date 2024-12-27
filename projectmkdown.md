@@ -39,6 +39,10 @@
         └── challengeTypes.tsx
         └── commentOperations.tsx
         └── CommentSection.tsx
+        └── 📁components
+            └── 📁cardActionMenu
+                └── cardActionMenu.css
+                └── cardActionMenu.tsx
         └── CreateChallengeModal.tsx
         └── CreatePostModal.tsx
         └── dataVersionContext.tsx
@@ -48,6 +52,7 @@
         └── friends.css
         └── Header.tsx
         └── index.css
+        └── inviteFriendsModal.tsx
         └── main.tsx
         └── postCreator.css
         └── postCreator.tsx
@@ -63,6 +68,7 @@
         └── 📁utils
             └── imageUploadUtils.ts
             └── profilePictureUploader.tsx
+            └── shareAction.tsx
         └── vite-env.d.ts
     └── .env
     └── .eslintrc.cjs

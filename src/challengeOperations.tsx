@@ -135,8 +135,10 @@ export async function listChallenges(userId?: string): Promise<Schema["Challenge
     );
 
     // Filter null values and check status
-    return allChallenges.filter((challenge): challenge is NonNullable<typeof challenge> => 
-      challenge !== null && challenge.status === 'ACTIVE'
+    return allChallenges.filter(
+      (challenge): challenge is NonNullable<typeof challenge> =>
+        challenge !== null &&
+        (challenge.status === 'ACTIVE' || challenge.status === 'DRAFT'),
     );
 
   } catch (error) {
