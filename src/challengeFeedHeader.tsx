@@ -4,7 +4,8 @@ import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { useUser } from './userContext';
 import { useNavigate } from 'react-router-dom';
-import { useDataVersion } from './dataVersionContext'; 
+import { useDataVersion } from './dataVersionContext';
+import { ChallengeType } from './challengeTypes';
 
 const client = generateClient<Schema>();
 
@@ -12,7 +13,7 @@ type ChallengeWithProgress = {
   id: string;
   title: string;
   description: string | null;
-  challengeType: string | null;
+  challengeType: ChallengeType | null; 
   totalWorkouts: number;
   progress: number;
 };
