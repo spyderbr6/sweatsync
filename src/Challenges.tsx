@@ -26,7 +26,9 @@ function ChallengesPage() {
   const { userId } = useUser();
   const [pendingChallenges, setPendingChallenges] = useState<(Challenge & {
     participationId: string;
-    creatorName: string;
+    inviterName: string;    
+    invitedAt: string | null;
+    expiresIn: number;
   })[]>([]);
   const [participations, setParticipations] = useState<Record<string, boolean>>({});
   const [joiningChallenge, setJoiningChallenge] = useState<string | null>(null);
@@ -247,11 +249,11 @@ function ChallengesPage() {
                   <div className="friend-card-header">
                     <img
                       src="/profileDefault.png"
-                      alt={challenge.creatorName}
+                      alt={challenge.inviterName}
                       className="friend-avatar"
                     />
                     <div className="friend-info">
-                      <div className="friend-name">{challenge.creatorName} challenged you!</div>
+                      <div className="friend-name">{challenge.inviterName} challenged you!</div>
                       <div className="challenge-type">{challenge.title}</div>
                     </div>
                   </div>

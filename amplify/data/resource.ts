@@ -69,7 +69,9 @@ const schema = a.schema({
     workoutsCompleted: a.integer().default(0),
     joinedAt: a.datetime(),
     completedAt: a.datetime(),
-    updatedAt: a.datetime()
+    updatedAt: a.datetime(), 
+    invitedAt: a.datetime(),
+    invitedBy: a.string()
   }).authorization((allow) => [allow.publicApiKey()]),
 
   PostChallenge: a.model({
