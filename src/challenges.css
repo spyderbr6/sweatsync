@@ -709,7 +709,8 @@
 }
 
 .challenge-header {
-  display: flex wrap;
+  display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 1.5rem;
@@ -721,6 +722,7 @@
 
 .challenge-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -887,7 +889,9 @@
 }
 
 .stats-grid-2 {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
@@ -1122,7 +1126,7 @@
   color: rgb(185, 28, 28);
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .content-grid {
     grid-template-columns: 1fr;
   }

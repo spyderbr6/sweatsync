@@ -125,9 +125,6 @@ export const PostChallenges: React.FC<PostChallengesProps> = ({
             <span className="challenge-tag__title">
               {challenge.title ?? 'Unnamed Challenge'}
             </span>
-            <span className="challenge-tag__type">
-              {challenge.type ?? 'other'}
-            </span>
           </div>
         ))}
       </div>
