@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, UserPlus, Target, Globe, Plus, Trash2, UserMinus, Share2 } from 'lucide-react';
 import { CreateChallengeModal } from './CreateChallengeModal';
-import { listChallenges, checkChallengeParticipation, addParticipantToChallenge, archiveChallenge,removeParticipantFromChallenge } from './challengeOperations';
+import { listChallenges, checkChallengeParticipation, addParticipantToChallenge, archiveChallenge, removeParticipantFromChallenge } from './challengeOperations';
 import type { Schema } from "../amplify/data/resource";
 import './challenges.css';
 import { getPendingChallenges, respondToChallenge } from './challengeOperations';
@@ -11,6 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
 import { shareContent } from './utils/shareAction';
 import { ChallengeType } from './challengeTypes';
+import { promptAction } from './utils/promptAction';
+
 
 type ChallengeCategory = 'all' | ChallengeType;
 type Challenge = Schema["Challenge"]["type"];
@@ -24,7 +26,7 @@ function ChallengesPage() {
   const { userId } = useUser();
   const [pendingChallenges, setPendingChallenges] = useState<(Challenge & {
     participationId: string;
-    inviterName: string;    
+    inviterName: string;
     invitedAt: string | null;
     expiresIn: number;
   })[]>([]);
@@ -157,24 +159,24 @@ function ChallengesPage() {
   const getChallengeIcon = (type: string | null | undefined) => {
     // Convert string to enum value
     const challengeType = type as ChallengeType;
-    
+
     switch (challengeType) {
-        case ChallengeType.PUBLIC:
-            return <Globe size={20} />;
-        case ChallengeType.FRIENDS:
-            return <UserPlus size={20} />;
-        case ChallengeType.GROUP:
-            return <Users size={20} />;
-        case ChallengeType.PERSONAL:
-            return <Target size={20} />;
-        default:
-            return <Globe size={20} />; // Fallback to Globe
+      case ChallengeType.PUBLIC:
+        return <Globe size={20} />;
+      case ChallengeType.FRIENDS:
+        return <UserPlus size={20} />;
+      case ChallengeType.GROUP:
+        return <Users size={20} />;
+      case ChallengeType.PERSONAL:
+        return <Target size={20} />;
+      default:
+        return <Globe size={20} />; // Fallback to Globe
     }
-};
+  };
 
   const filteredChallenges = challenges.filter(challenge =>
     activeFilter === 'all' || (challenge.challengeType && challenge.challengeType === activeFilter)
-);
+  );
 
   const handleCategoryClick = (category: ChallengeCategory) => {
     setActiveFilter(category === activeFilter ? 'all' : category);
@@ -214,8 +216,24 @@ function ChallengesPage() {
     archiveChallenge(challengeId);
   };
 
-  const handleLeaveChallenge = async (challengeId: string) => {
-    removeParticipantFromChallenge(challengeId, userId!)  };
+
+  async function handleLeaveChallenge(challengeId: string) {
+    const confirmed = await promptAction({
+      title: "Leave Challenge",
+      message: 'Are you sure you want to leave this challenge?',
+      confirmText: 'Leave',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+
+    if (confirmed) {
+      await removeParticipantFromChallenge(challengeId, userId!);
+      loadPendingChallenges();
+      loadChallenges();
+      incrementVersion();
+    }
+
+  };
 
   const handleShare = (challenge: Challenge) => {
     shareContent(
@@ -332,7 +350,7 @@ function ChallengesPage() {
               >
                 <div className="challenge-card-header">
                   <div className={`challenge-icon-wrapper challenge-icon-wrapper--${challenge.challengeType}`}>
-                  {getChallengeIcon(challenge.challengeType || ChallengeType.NONE)}
+                    {getChallengeIcon(challenge.challengeType || ChallengeType.NONE)}
                   </div>
                   <div className="challenge-info">
                     <h3 className="challenge-title" onClick={() => handleNavigateToChallenge(challenge.id)}>{challenge.title}</h3>

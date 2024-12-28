@@ -411,6 +411,7 @@ export async function removeParticipantFromChallenge(challengeID: string, userID
       filter: {
         challengeID: { eq: challengeID },
         userID: { eq: userID },
+        status: { eq: "ACTIVE" }
       },
     });
 

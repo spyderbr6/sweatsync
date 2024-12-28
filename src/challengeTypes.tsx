@@ -1,4 +1,4 @@
-// challengeTypes.ts
+// src/challengeTypes.tsx
 
 // Define the base enum for challenge types
 export enum ChallengeType {
