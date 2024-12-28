@@ -100,6 +100,8 @@ const SinglePostPage: React.FC = () => {
     const [imageUrl, setImageUrl] = useState<string>("/picsoritdidnthappen.webp");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [profilePictureUrl, setProfilePictureUrl] = useState<string>("/profileDefault.png");
+
     
     // Fetch post data
     useEffect(() => {
@@ -163,6 +165,18 @@ const SinglePostPage: React.FC = () => {
                         setImageUrl("/picsoritdidnthappen.webp");
                     }
                 }
+                if (response.data?.userID) {
+                    try {
+                      const userResult = await client.models.User.get({ id: response.data.userID });
+                      if (userResult.data?.pictureUrl) {
+                        const url = await getStorageUrl(userResult.data.pictureUrl);
+                        setProfilePictureUrl(url);
+                      }
+                    } catch (error) {
+                      console.error('Error fetching user profile picture:', error);
+                      setProfilePictureUrl("/profileDefault.png");
+                    }
+                  }
             } catch (err) {
                 console.error('Error fetching post:', err);
                 setError("Failed to load post");
@@ -293,7 +307,7 @@ const SinglePostPage: React.FC = () => {
                 <div className="post__header">
                     <div className="post__user-info">
                         <img
-                            src="../profileDefault.png"
+                            src={profilePictureUrl ?? "../profileDefault.png"}
                             alt={post.username ?? "User"}
                             className="post__avatar"
                         />
@@ -340,7 +354,7 @@ const SinglePostPage: React.FC = () => {
                             <div className="post__action-buttons">
                                 <button
                                     onClick={() => handleReaction("👍")}
-                                    className="post__button"
+                                    className="post__heart-button"
                                 >
                                     <Heart className="w-6 h-6" />
                                     <span className="post__heart-count">

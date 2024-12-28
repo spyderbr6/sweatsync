@@ -287,3 +287,43 @@ export async function getMutualFriendCount(
   }
 }
 
+export async function removeFriend(userId: string, friendId: string) {
+  try {
+    // Get all friend entries for both users (need to check both directions)
+    const [userFriendEntries, friendUserEntries] = await Promise.all([
+      client.models.Friend.list({
+        filter: {
+          and: [
+            { user: { eq: userId } },
+            { friendUser: { eq: friendId } }
+          ]
+        }
+      }),
+      client.models.Friend.list({
+        filter: {
+          and: [
+            { user: { eq: friendId } },
+            { friendUser: { eq: userId } }
+          ]
+        }
+      })
+    ]);
+
+    // Delete all related friend entries
+    const deletePromises = [
+      ...userFriendEntries.data.map(entry => 
+        client.models.Friend.delete({ id: entry.id })
+      ),
+      ...friendUserEntries.data.map(entry => 
+        client.models.Friend.delete({ id: entry.id })
+      )
+    ];
+
+    await Promise.all(deletePromises);
+
+    return true;
+  } catch (error) {
+    console.error('Error removing friend:', error);
+    throw error;
+  }
+}

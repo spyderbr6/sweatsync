@@ -1,20 +1,26 @@
 import { useState, useEffect } from 'react';
-import { Search, UserPlus, MessageCircle, Ban, Trophy, Activity, Users, X } from 'lucide-react';
+import { Search, UserPlus, Ban, Trophy, Activity, Users, X } from 'lucide-react';
 import {
   acceptFriendRequest,
   getFriendsList,
-  getPendingFriendRequests
+  getPendingFriendRequests,
+  removeFriend
 } from './friendOperations';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { useUser } from './userContext';
 import FriendModal from './friendModal';
 import './friends.css';
 import { useUrlCache } from './urlCacheContext';
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "../amplify/data/resource";
 
+const client = generateClient<Schema>();
 
 interface FriendRequest {
   id: string;
   sender: string | null;
+  senderUsername?: string | null;
+  senderPicture?: string | null;
   recipient: string | null;
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | null;
   createdAt: string | null;
@@ -35,6 +41,7 @@ const ModernFriendsPage = () => {
   const [isAddFriendModalOpen, setIsAddFriendModalOpen] = useState(false);
   const { userId } = useUser();
   const { getStorageUrl } = useUrlCache(); // Use the hook inside the component body
+  const [friendToRemove, setFriendToRemove] = useState<Friend | null>(null);
 
 
   const loadFriendsData = async () => {
@@ -42,11 +49,43 @@ const ModernFriendsPage = () => {
       setLoading(true);
       const currentUser = userId || (await getCurrentUser()).userId;
 
-      const friendsList = await getFriendsList(currentUser, getStorageUrl); // Pass getStorageUrl here
+      const friendsList = await getFriendsList(currentUser, getStorageUrl);
       const requests = await getPendingFriendRequests(currentUser);
 
+      // Enhance requests with sender details
+      const enhancedRequests = await Promise.all(
+        requests.map(async (request) => {
+          if (!request.sender) {
+            return request;
+          }
+
+          // Fetch sender's user details
+          const senderResult = await client.models.User.get({ id: request.sender });
+          let senderUsername = 'Unknown User';
+          let senderPicture = '/profileDefault.png';
+
+          if (senderResult.data) {
+            senderUsername = senderResult.data.preferred_username || senderResult.data.username || 'Unknown User';
+
+            if (senderResult.data.picture) {
+              try {
+                senderPicture = await getStorageUrl(senderResult.data.picture);
+              } catch (error) {
+                console.error('Error fetching sender picture:', error);
+              }
+            }
+          }
+
+          return {
+            ...request,
+            senderUsername,
+            senderPicture
+          };
+        })
+      );
+
       setFriends(friendsList);
-      setPendingRequests(requests);
+      setPendingRequests(enhancedRequests);
     } catch (err) {
       console.error('Error loading friends data:', err);
       setError('Failed to load friends data');
@@ -81,6 +120,19 @@ const ModernFriendsPage = () => {
   const filteredRequests = pendingRequests.filter(request =>
     request.sender?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleRemoveFriend = async (friend: Friend) => {
+    try {
+      if (!userId) return;
+
+      await removeFriend(userId, friend.userId);
+      await loadFriendsData(); // Refresh the list
+      setFriendToRemove(null); // Clear the confirmation dialog
+    } catch (err) {
+      console.error('Error removing friend:', err);
+      setError('Failed to remove friend');
+    }
+  };
 
   if (loading) {
     return (
@@ -167,8 +219,8 @@ const ModernFriendsPage = () => {
           <div key={request.id} className="friend-item friend-request">
             <div className="friend-info">
               <img
-                src="/profileDefault.png"
-                alt="Friend request avatar"
+                src={request.senderPicture ?? "/profileDefault.png"}
+                alt={request.senderUsername || "Friend request avatar"}
                 className="friend-avatar"
               />
               <div className="friend-details">
@@ -177,7 +229,7 @@ const ModernFriendsPage = () => {
               </div>
             </div>
             <div className="request-actions">
-              <button 
+              <button
                 onClick={() => handleAcceptRequest(request.id)}
                 className="request-button request-button--accept"
               >
@@ -205,15 +257,39 @@ const ModernFriendsPage = () => {
               </div>
             </div>
             <div className="friend-actions">
-              <button className="action-button action-button--message">
-                <MessageCircle size={20} />
-              </button>
-              <button className="action-button action-button--remove">
+              <button className="action-button action-button--remove"
+                onClick={() => setFriendToRemove(friend)}
+              >
                 <Ban size={20} />
               </button>
             </div>
           </div>
         ))}
+
+        {friendToRemove && (
+          <div className="modal-overlay">
+            <div className="confirmation-modal">
+              <h3>Remove Friend</h3>
+              <p>Are you sure you want to remove {friendToRemove.username} from your friends?</p>
+              <div className="confirmation-actions">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setFriendToRemove(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => handleRemoveFriend(friendToRemove)}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+
 
         {/* Empty State */}
         {filteredFriends.length === 0 && filteredRequests.length === 0 && (

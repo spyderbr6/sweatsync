@@ -4,8 +4,7 @@ import { useDataVersion } from './dataVersionContext';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { useUser } from './userContext';
-import { createChallengeRules } from './challengeRules';
-
+import { ChallengeType } from './challengeTypes';
 
 const client = generateClient<Schema>();
 
@@ -13,14 +12,6 @@ interface CreateChallengeModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-}
-
-enum ChallengeType {
-    NONE = 'none',
-    PUBLIC = 'public',
-    GROUP = 'group',
-    FRIENDS = 'friends',
-    PERSONAL = 'personal'
 }
 
 // Add validation check
@@ -69,7 +60,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { incrementVersion } = useDataVersion();
-    const showGroupRules = formData.challengeType === 'group';
+    const showGroupRules = formData.challengeType === 'GROUP';
     const [error, setError] = useState<string | null>(null);
     const [titleError, setTitleError] = useState<string | null>(null);
     const [startDateError, setStartDateError] = useState<string | null>(null);
@@ -136,7 +127,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
 
     // Add a function to calculate total workouts
     const calculateTotalWorkouts = (): number => {
-        if (formData.challengeType !== 'group') {
+        if (formData.challengeType !== 'GROUP') {
             return formData.totalWorkouts;
         }
 
@@ -168,25 +159,22 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
         if (!userId) {
             setError('User must be logged in to create a challenge');
             return;
         }
         setIsSubmitting(true);
-
+    
         try {
-            // Validate challenge type
             if (!isValidChallengeType(formData.challengeType)) {
                 throw new Error('Please select a valid challenge type');
             }
-
-            // Calculate total workouts for group challenges
+    
             const totalWorkouts = formData.challengeType === ChallengeType.GROUP
                 ? calculateTotalWorkouts()
                 : formData.totalWorkouts;
-
-            // Create the base challenge
+    
+            // Create challenge with all fields in one operation
             const challengeResult = await client.models.Challenge.create({
                 title: formData.title,
                 description: formData.description,
@@ -196,53 +184,59 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                 endAt: new Date(formData.endDate).toISOString(),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                createdBy: userId, // from useUser hook, 
-                status: 'DRAFT'
-            });
-
-            if (!challengeResult.data) {
-                throw new Error('Failed to create challenge');
-            }
-
-            // Create challenge rules
-            await createChallengeRules(
-                challengeResult.data.id,
-                formData.challengeType,
-                {
-                    endDate: formData.endDate,
-                    basePointsPerWorkout: formData.basePointsPerWorkout,
-                    isActive: true
-                },
-                // Only include group rules if it's a group challenge
-                formData.challengeType === ChallengeType.GROUP ? {
-                    challengeRuleId: challengeResult.data.id, 
+                createdBy: userId,
+                status: 'DRAFT',
+                basePointsPerWorkout: formData.basePointsPerWorkout,
+                isActive: true,
+                
+                // Add group-specific fields if it's a group challenge
+                ...(formData.challengeType === ChallengeType.GROUP && {
                     maxPostsPerDay: formData.groupRules.maxPostsPerDay,
                     maxPostsPerWeek: formData.groupRules.maxPostsPerWeek,
                     dailyChallenges: formData.groupRules.enableDailyChallenges,
                     rotationIntervalDays: formData.groupRules.rotationIntervalDays,
-                    dailyChallengePoints: formData.groupRules.dailyChallengePoints
-                } : undefined
-            );
-
-            // If it's a group challenge, create initial participant entry for creator
+                    dailyChallengePoints: formData.groupRules.dailyChallengePoints,
+                    currentCreatorId: userId,
+                    nextRotationDate: new Date(Date.now() + 
+                        formData.groupRules.rotationIntervalDays * 86400000).toISOString()
+                })
+            });
+    
+            if (!challengeResult.data) {
+                throw new Error('Failed to create challenge');
+            }
+    
+            // Create initial group participant entry
             if (formData.challengeType === ChallengeType.GROUP) {
                 await client.models.ChallengeParticipant.create({
                     challengeID: challengeResult.data.id,
-                    userID: userId,  // TypeScript now knows this is string
+                    userID: userId,
                     status: 'ACTIVE',
                     points: 0,
                     workoutsCompleted: 0,
                     joinedAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 });
+    
+                // Create initial daily challenge if enabled
+                if (formData.groupRules.enableDailyChallenges) {
+                    await client.models.DailyChallenge.create({
+                        challengeId: challengeResult.data.id,
+                        creatorId: userId,
+                        title: `${formData.title} - Day 1`,
+                        description: "Get started with your first daily challenge!",
+                        date: new Date().toISOString(),
+                        pointsAwarded: formData.groupRules.dailyChallengePoints || formData.basePointsPerWorkout,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    });
+                }
             }
-
-            // Inform parent component of success
+    
             onSuccess();
-            incrementVersion(); //this tells certain functions to rerender and pull data as a result of this change.
-            // Close the modal
+            incrementVersion();
             onClose();
-
+    
         } catch (error) {
             console.error('Error creating challenge:', error);
             setError(error instanceof Error ? error.message : 'Failed to create challenge');
@@ -473,7 +467,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                                 Total Required Workouts
                             </label>
                             <div className="form-static-value">
-                                {formData.challengeType === 'group' ? (
+                                {formData.challengeType === 'GROUP' ? (
                                     <>
                                         {calculateTotalWorkouts()} workouts
                                         <span className="text-gray-500 text-sm">

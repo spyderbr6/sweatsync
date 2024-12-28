@@ -709,7 +709,7 @@
 }
 
 .challenge-header {
-  display: flex;
+  display: flex wrap;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 1.5rem;
@@ -752,6 +752,15 @@
 .action-button--invite:hover {
   background-color: rgb(5, 150, 105);
 }
+
+.action-button--leave {
+  background-color: rgb(224, 14, 14);
+}
+
+.action-button--leave:hover {
+  background-color: rgb(235, 37, 63);
+}
+
 
 .progress-section {
   margin-bottom: 2rem;

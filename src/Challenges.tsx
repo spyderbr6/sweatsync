@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, UserPlus, Target, Globe, Plus, Trash2, UserMinus, Share2 } from 'lucide-react';
 import { CreateChallengeModal } from './CreateChallengeModal';
-import { listChallenges, checkChallengeParticipation, addParticipantToChallenge, archiveChallenge,removeParticipantFromChallenge } from './challengeOperations';
+import { listChallenges, checkChallengeParticipation, addParticipantToChallenge, archiveChallenge, removeParticipantFromChallenge } from './challengeOperations';
 import type { Schema } from "../amplify/data/resource";
 import './challenges.css';
 import { getPendingChallenges, respondToChallenge } from './challengeOperations';
@@ -10,11 +10,11 @@ import { useDataVersion } from './dataVersionContext';
 import { useNavigate } from 'react-router-dom';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
 import { shareContent } from './utils/shareAction';
+import { ChallengeType } from './challengeTypes';
+import { promptAction } from './utils/promptAction';
 
 
-
-
-type ChallengeCategory = 'all' | 'public' | 'group' | 'friends' | 'personal';
+type ChallengeCategory = 'all' | ChallengeType;
 type Challenge = Schema["Challenge"]["type"];
 
 function ChallengesPage() {
@@ -26,7 +26,7 @@ function ChallengesPage() {
   const { userId } = useUser();
   const [pendingChallenges, setPendingChallenges] = useState<(Challenge & {
     participationId: string;
-    inviterName: string;    
+    inviterName: string;
     invitedAt: string | null;
     expiresIn: number;
   })[]>([]);
@@ -127,51 +127,55 @@ function ChallengesPage() {
 
   const stats = [
     {
-      category: 'public' as ChallengeCategory,
+      category: 'PUBLIC' as ChallengeCategory,
       label: 'Public Challenges',
       icon: Globe,
-      count: challenges.filter(c => c.challengeType === 'public').length,
+      count: challenges.filter(c => c.challengeType === 'PUBLIC').length,
       iconClass: 'stat-icon--public'
     },
     {
-      category: 'friends' as ChallengeCategory,
+      category: 'FRIENDS' as ChallengeCategory,
       label: 'Friend Challenges',
       icon: UserPlus,
-      count: challenges.filter(c => c.challengeType === 'friends').length,
+      count: challenges.filter(c => c.challengeType === 'FRIENDS').length,
       iconClass: 'stat-icon--friend'
     },
     {
-      category: 'group' as ChallengeCategory,
+      category: 'GROUP' as ChallengeCategory,
       label: 'Group Challenges',
       icon: Users,
-      count: challenges.filter(c => c.challengeType === 'group').length,
+      count: challenges.filter(c => c.challengeType === 'GROUP').length,
       iconClass: 'stat-icon--group'
     },
     {
-      category: 'personal' as ChallengeCategory,
+      category: 'PERSONAL' as ChallengeCategory,
       label: 'Personal Goals',
       icon: Target,
-      count: challenges.filter(c => c.challengeType === 'personal').length,
+      count: challenges.filter(c => c.challengeType === 'PERSONAL').length,
       iconClass: 'stat-icon--personal'
     },
   ];
 
-  const getChallengeIcon = (type: string | null) => {
-    switch (type?.toLowerCase()) {
-      case 'public':
+  const getChallengeIcon = (type: string | null | undefined) => {
+    // Convert string to enum value
+    const challengeType = type as ChallengeType;
+
+    switch (challengeType) {
+      case ChallengeType.PUBLIC:
         return <Globe size={20} />;
-      case 'friends':
+      case ChallengeType.FRIENDS:
         return <UserPlus size={20} />;
-      case 'group':
+      case ChallengeType.GROUP:
         return <Users size={20} />;
-      case 'personal':
+      case ChallengeType.PERSONAL:
         return <Target size={20} />;
       default:
         return <Globe size={20} />; // Fallback to Globe
     }
   };
+
   const filteredChallenges = challenges.filter(challenge =>
-    activeFilter === 'all' || challenge.challengeType === activeFilter
+    activeFilter === 'all' || (challenge.challengeType && challenge.challengeType === activeFilter)
   );
 
   const handleCategoryClick = (category: ChallengeCategory) => {
@@ -212,8 +216,24 @@ function ChallengesPage() {
     archiveChallenge(challengeId);
   };
 
-  const handleLeaveChallenge = async (challengeId: string) => {
-    removeParticipantFromChallenge(challengeId, userId!)  };
+
+  async function handleLeaveChallenge(challengeId: string) {
+    const confirmed = await promptAction({
+      title: "Leave Challenge",
+      message: 'Are you sure you want to leave this challenge?',
+      confirmText: 'Leave',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+
+    if (confirmed) {
+      await removeParticipantFromChallenge(challengeId, userId!);
+      loadPendingChallenges();
+      loadChallenges();
+      incrementVersion();
+    }
+
+  };
 
   const handleShare = (challenge: Challenge) => {
     shareContent(
@@ -330,7 +350,7 @@ function ChallengesPage() {
               >
                 <div className="challenge-card-header">
                   <div className={`challenge-icon-wrapper challenge-icon-wrapper--${challenge.challengeType}`}>
-                    {getChallengeIcon(challenge.challengeType)}
+                    {getChallengeIcon(challenge.challengeType || ChallengeType.NONE)}
                   </div>
                   <div className="challenge-info">
                     <h3 className="challenge-title" onClick={() => handleNavigateToChallenge(challenge.id)}>{challenge.title}</h3>

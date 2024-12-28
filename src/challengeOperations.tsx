@@ -12,7 +12,7 @@ export async function createChallenge(params: {
   startAt: Date;
   endAt: Date;
   reward?: string;
-  challengeType: string;
+  challengeType: 'none';
   totalWorkouts?: number;
   status?: 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' | 'DRAFT' | 'CANCELLED'; 
 }): Promise<string> {
@@ -411,6 +411,7 @@ export async function removeParticipantFromChallenge(challengeID: string, userID
       filter: {
         challengeID: { eq: challengeID },
         userID: { eq: userID },
+        status: { eq: "ACTIVE" }
       },
     });
 

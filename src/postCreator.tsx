@@ -3,13 +3,11 @@ import { Camera, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { listChallenges } from './challengeOperations';
-import { updateChallengePoints, validateChallengePost } from './challengeRules';
+import { updateChallengePoints, validateChallengePost} from './challengeRules';
 import { useUser } from './userContext';
 import './postCreator.css';
 import { uploadImageWithThumbnails } from './utils/imageUploadUtils';
 import { useDataVersion } from './dataVersionContext'; // Add this import
-
-
 
 const client = generateClient<Schema>();
 
@@ -45,14 +43,15 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [challengeSelectability, setChallengeSelectability] = useState<Record<string, ChallengeSelectability>>({});
+  const { pictureUrl } = useUser();
 
 
   // Define challenge colors mapping
   const challengeColors: { [key: string]: string } = {
-    'group': '#10B981',
-    'personal': '#8B5CF6',
-    'public': '#EF4444',
-    'friends': '#3B82F6',
+    'GROUP': '#10B981',
+    'PERSONAL': '#8B5CF6',
+    'PUBLIC': '#EF4444',
+    'FRIENDS': '#3B82F6',
     'general': '#F59E0B'
   };
 
@@ -67,8 +66,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         setAvailableChallenges(activeChallenges);
 
         // Get group challenges
-        const groupChallenges = activeChallenges.filter(c => c.challengeType === 'group');
-        const personalChallenges = activeChallenges.filter(c => c.challengeType === 'personal');
+        const groupChallenges = activeChallenges.filter(c => c.challengeType === 'GROUP');
+        const personalChallenges = activeChallenges.filter(c => c.challengeType === 'PERSONAL');
 
         // Initialize selectability map
         const selectabilityMap: Record<string, ChallengeSelectability> = {};
@@ -82,102 +81,36 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
           };
         });
 
+        // Validate all group challenges if they exist
         if (groupChallenges.length > 0) {
-
-          // First get the base challenge rules
-          const baseRulesResults = await Promise.all(
-            groupChallenges.map(challenge =>
-              client.models.ChallengeRules.list({
-                filter: {
-                  challengeId: { eq: challenge.id }
-                }
-              })
-            )
-          );
-
-          // Then get group-specific rules using the base rules IDs
-          const groupRulesResults = await Promise.all(
-            baseRulesResults.map(result =>
-              result.data[0] ? client.models.GroupChallengeRules.list({
-                filter: {
-                  challengeRuleId: { eq: result.data[0].id }
-                }
-              }) : Promise.resolve({ data: [] })
-            )
-          );
-
-          // Create rules map
-          const rulesMap = baseRulesResults.reduce((acc, result, index) => {
-            if (result.data[0] && groupRulesResults[index].data[0]) {
-              acc[groupChallenges[index].id] = {
-                baseRules: result.data[0],
-                groupRules: groupRulesResults[index].data[0]
+          // Validate each challenge
+          await Promise.all(groupChallenges.map(async (challenge) => {
+            try {
+              const validationResult = await validateChallengePost({
+                challengeId: challenge.id,
+                userId,
+                postId: 'pending', // We don't have a post ID yet during validation
+                timestamp: new Date().toISOString()
+              });
+        
+              selectabilityMap[challenge.id] = {
+                id: challenge.id,
+                canSelect: validationResult.isValid,
+                reason: validationResult.isValid ? undefined : validationResult.message
               };
-            }
-            return acc;
-          }, {} as Record<string, any>);
-
-          // Get today's and week's posts
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          const todaysPosts = await client.models.PostChallenge.list({
-            filter: {
-              userId: { eq: userId },
-              timestamp: { ge: today.toISOString() }
-            }
-          });
-
-          const weekStart = new Date();
-          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-          weekStart.setHours(0, 0, 0, 0);
-
-          const weeksPosts = await client.models.PostChallenge.list({
-            filter: {
-              userId: { eq: userId },
-              timestamp: { ge: weekStart.toISOString() }
-            }
-          });
-
-          // Validate group challenges
-          groupChallenges.forEach(challenge => {
-            const rules = rulesMap[challenge.id];
-            if (!rules) {
+            } catch (error) {
+              console.error(`Error validating challenge ${challenge.id}:`, error);
               selectabilityMap[challenge.id] = {
                 id: challenge.id,
                 canSelect: false,
-                reason: "Challenge rules not found"
-              };
-              return;
-            }
-
-            const dailyPostCount = todaysPosts.data.filter(p => p.challengeId === challenge.id).length;
-            const weeklyPostCount = weeksPosts.data.filter(p => p.challengeId === challenge.id).length;
-
-            if (dailyPostCount >= rules.groupRules.maxPostsPerDay) {
-              selectabilityMap[challenge.id] = {
-                id: challenge.id,
-                canSelect: false,
-                reason: "Daily post limit reached"
-              };
-            } else if (weeklyPostCount >= rules.groupRules.maxPostsPerWeek) {
-              selectabilityMap[challenge.id] = {
-                id: challenge.id,
-                canSelect: false,
-                reason: "Weekly post limit reached"
-              };
-            } else {
-              selectabilityMap[challenge.id] = {
-                id: challenge.id,
-                canSelect: true
+                reason: "Error validating challenge"
               };
             }
-          });
+          }));
         }
-
         // Public challenges are always selectable
         activeChallenges
-          .filter(c => c.challengeType === 'public')
+          .filter(c => c.challengeType === 'PUBLIC')
           .forEach(challenge => {
             selectabilityMap[challenge.id] = {
               id: challenge.id,
@@ -395,7 +328,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         <div className="post-creator__form">
           <div className="post-creator__user-info">
             <img
-              src="/profileDefault.png"
+              src={pictureUrl ?? '/profileDefault.png'}
               alt="Profile"
               className="post-creator__avatar"
             />
