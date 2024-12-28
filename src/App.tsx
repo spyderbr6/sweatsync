@@ -7,7 +7,9 @@ import { useNavigate } from 'react-router-dom';
 import { useUrlCache } from './urlCacheContext';
 import { useUser } from './userContext';
 import { shareContent } from './utils/shareAction';
+import { promptAction } from './utils/promptAction';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
+import { PostChallenges } from './utils/postChallenges';
 
 const useSpoofData = false;
 const client = generateClient<Schema>();
@@ -152,6 +154,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
   // Add this line to get the navigate function
   const navigate = useNavigate();
   const { userId } = useUser(); // Add this line to get current user's ID
+  const [showChallenges, setShowChallenges] = useState(false);
 
   // Add this handler function
   const handlePostClick = () => {
@@ -253,15 +256,20 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
                 <Share2 className="w-6 h-6" />
               </button>
               <button
-                className="post__challenge-button"
+                className="post__challenge-button relative"
+                onClick={() => setShowChallenges(!showChallenges)}
               >
                 <Trophy className="post__challenge-icon w-5 h-5" />
                 <span className="post__challenge-text">Challenge</span>
-                {
-                  <span className="post__challenge-count">
-                    {post.smiley}
-                  </span>
-                }
+                <span className="post__challenge-count">
+                  {post.smiley}
+                </span>
+                {showChallenges && (
+                  <PostChallenges
+                    postId={post.id}
+                    className="absolute top-full right-0 mt-2 w-72"
+                  />
+                )}
               </button>
             </div>
           </div>
@@ -294,7 +302,6 @@ function App() {
   const BATCH_SIZE = 4; // number of posts to load each time
   const { getStorageUrl } = useUrlCache();
   const { userId } = useUser();  // Move this to component level
-
 
   useEffect(() => {
     const subscription = client.models.PostforWorkout.observeQuery().subscribe({
@@ -452,7 +459,7 @@ function App() {
     };
   }, [workoutposts, visibleCount]);
 
-  const deletePost = (id: string) => {
+  const deletePost = async (id: string) => {
     // Now use the userId from above instead of calling useUser() here
     const post = workoutposts.find(p => p.id === id);
 
@@ -467,7 +474,13 @@ function App() {
       return;
     }
 
-    if (window.confirm("Are you sure you want to delete this post?")) {
+    if (await promptAction({
+      title: "Delete Post",
+      message: 'Are you sure you want to delete this post?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger'
+    })) {
       client.models.PostforWorkout.delete({ id })
         .catch((error) => {
           console.error("Error Deleting Post", error);
@@ -475,6 +488,7 @@ function App() {
         });
     }
   };
+
 
   async function reactToPost(id: string, emojiType: string | null, reactionId?: string) {
     // Handle animation cleanup
