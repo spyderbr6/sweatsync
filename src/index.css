@@ -248,7 +248,6 @@ a:hover {
 }
 
 .feed {
-  display: flex;
   margin: 0 auto;
   background-color: rgb(249 250 251);
   min-height: 100vh;
