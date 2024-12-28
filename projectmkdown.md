@@ -62,12 +62,14 @@
         └── singlePage.css
         └── SinglePagePost.tsx
         └── 📁styles
+            └── promptAction.css
         └── urlCacheContext.tsx
         └── useChallengeDetail.ts
         └── userContext.tsx
         └── 📁utils
             └── imageUploadUtils.ts
             └── profilePictureUploader.tsx
+            └── promptAction.tsx
             └── shareAction.tsx
         └── vite-env.d.ts
     └── .env

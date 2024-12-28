@@ -354,7 +354,7 @@ const SinglePostPage: React.FC = () => {
                             <div className="post__action-buttons">
                                 <button
                                     onClick={() => handleReaction("👍")}
-                                    className="post__button"
+                                    className="post__heart-button"
                                 >
                                     <Heart className="w-6 h-6" />
                                     <span className="post__heart-count">
