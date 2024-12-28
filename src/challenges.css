@@ -753,6 +753,15 @@
   background-color: rgb(5, 150, 105);
 }
 
+.action-button--leave {
+  background-color: rgb(224, 14, 14);
+}
+
+.action-button--leave:hover {
+  background-color: rgb(235, 37, 63);
+}
+
+
 .progress-section {
   margin-bottom: 2rem;
 }

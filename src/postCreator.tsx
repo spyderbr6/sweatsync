@@ -4,12 +4,10 @@ import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { listChallenges } from './challengeOperations';
 import { updateChallengePoints, validateChallengePost } from './challengeRules';
-import { useUser } from './userContext';
+import { useUser} from './userContext';
 import './postCreator.css';
 import { uploadImageWithThumbnails } from './utils/imageUploadUtils';
 import { useDataVersion } from './dataVersionContext'; // Add this import
-
-
 
 const client = generateClient<Schema>();
 
@@ -45,6 +43,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [challengeSelectability, setChallengeSelectability] = useState<Record<string, ChallengeSelectability>>({});
+  const { pictureUrl} = useUser();
 
 
   // Define challenge colors mapping
@@ -396,7 +395,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         <div className="post-creator__form">
           <div className="post-creator__user-info">
             <img
-              src="/profileDefault.png"
+              src={pictureUrl ?? '/profileDefault.png'}
               alt="Profile"
               className="post-creator__avatar"
             />

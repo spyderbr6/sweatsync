@@ -3,13 +3,17 @@ import { useParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
     Share2, UserPlus, Trophy, Calendar, Users, Dumbbell, Heart,
-    MessageCircle, Clock, Medal, Crown, ExternalLink
+    MessageCircle, Clock, Medal, Crown, ExternalLink,
+    CircleMinus
 } from 'lucide-react';
 import { useChallengeDetail } from './useChallengeDetail';
 import InviteFriendsModal from './inviteFriendsModal';
 import { shareContent } from './utils/shareAction';
+import { promptAction } from './utils/promptAction';
 import './challenges.css';
 import { ChallengeDetails } from './challengeTypes';
+import { removeParticipantFromChallenge } from './challengeOperations';
+import { useUser } from './userContext';
 
 type RouteParams = {
     challengeId: string;
@@ -27,14 +31,30 @@ export default function ChallengeDetailPage() {
         workoutUrls
     } = useChallengeDetail(challengeId ?? '');
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const { userId } = useUser();
 
     const handleShare = (challenge: ChallengeDetails) => {
         shareContent(
-          `${challenge.title}:${challenge.description}`,
-          'Join me on SweatSync',
-          `${import.meta.env.BASE_URL}challenge/${challenge.id}`
+            `${challenge.title}:${challenge.description}`,
+            'Join me on SweatSync',
+            `${import.meta.env.BASE_URL}challenge/${challenge.id}`
         );
-      };
+    };
+
+    async function handleLeaveChallenge(challenge: ChallengeDetails) {
+        const confirmed = await promptAction({
+            title: "Leave Challenge",
+            message: 'Are you sure you want to leave this challenge?',
+            confirmText: 'Leave',
+            cancelText: 'Cancel',
+            type: 'danger'
+        });
+
+        if (confirmed) {
+            await removeParticipantFromChallenge(challenge.id, userId || '');
+        }
+
+    };
 
     if (isLoading) {
         return (
@@ -74,8 +94,14 @@ export default function ChallengeDetailPage() {
                         <p className="challenge-description">{challengeDetails.description}</p>
                     </div>
                     <div className="challenge-actions">
+                        <button className="action-button action-button--leave"
+                            onClick={() => handleLeaveChallenge(challengeDetails)}>
+                            <CircleMinus size={16} />
+                            Drop
+                        </button>
+
                         <button className="action-button action-button--share"
-                                onClick={() => handleShare(challengeDetails)}>
+                            onClick={() => handleShare(challengeDetails)}>
                             <Share2 size={16} />
                             Share
                         </button>
