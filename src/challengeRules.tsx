@@ -1,138 +1,13 @@
-// src/challengeRules.ts
+// src/challengeRules.tsx
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
-import {ChallengeType} from "./challengeTypes"
 
 const client = generateClient<Schema>();
 
 interface ValidationResult {
     isValid: boolean;
     message: string;
-}
-
-interface PostValidationContext {
-    userId: string;
-    Id: string;
-    timestamp: string;
-}
-
-export async function canPostToChallenge(
-    context: PostValidationContext
-): Promise<ValidationResult> {
-    try {
-        // First, get the base challenge rules using a filter on challengeId
-        const baseRulesResponse = await client.models.Challenge.list({ 
-            filter: {
-                id: { eq: context.Id }
-            }
-        });
-
-        if (!baseRulesResponse.data || baseRulesResponse.data.length === 0) {
-            return {
-                isValid: false,
-                message: "Challenge not found"
-            };
-        }
-
-        const baseRules = baseRulesResponse.data[0];
-
-        // Check if challenge is still active
-        if (!baseRules.isActive) {
-            return {
-                isValid: false,
-                message: "This challenge is no longer active"
-            };
-        }
-
-        // Check if challenge has ended
-        if (new Date(baseRules.endAt) < new Date()) {
-            return {
-                isValid: false,
-                message: "This challenge has ended"
-            };
-        }
-
-        // If it's a group challenge, perform group-specific validations
-        if (baseRules.challengeType === ChallengeType.GROUP) {
-            return await validateGroupChallengePost(context, baseRules.id);
-        }
-
-        // For other challenge types, just return valid
-        return {
-            isValid: true,
-            message: "Post allowed"
-        };
-    } catch (error) {
-        console.error('Error validating post:', error);
-        return {
-            isValid: false,
-            message: "An error occurred while validating the post"
-        };
-    }
-}
-
-async function validateGroupChallengePost(
-    context: PostValidationContext,
-    ruleId: string
-): Promise<ValidationResult> {
-    try {
-        //TODO: i dont think i need any of this any more. this will always return results if it got this far. 
-        // Get group-specific rules using list() with filter
-        const groupRulesResponse = await client.models.Challenge.list({ 
-            filter: {
-                id: { eq: ruleId }
-            }
-        });
-
-        if (!groupRulesResponse.data || groupRulesResponse.data.length === 0) {
-            return {
-                isValid: false,
-                message: "Group challenge rules not found"
-            };
-        }
-
-        const groupRules = groupRulesResponse.data[0];
-
-        // Check daily post limit
-        const todayPosts = await getPostsCount(
-            context.Id,
-            context.userId,
-            'day'
-        );
-
-        if (groupRules.maxPostsPerDay !==null && todayPosts >= groupRules.maxPostsPerDay) {
-            return {
-                isValid: false,
-                message: `You've reached the daily limit of ${groupRules.maxPostsPerDay} posts`
-            };
-        }
-
-        // Check weekly post limit
-        const weeklyPosts = await getPostsCount(
-            context.Id,
-            context.userId,
-            'week'
-        );
-
-        if (groupRules.maxPostsPerWeek !==null && weeklyPosts >= groupRules.maxPostsPerWeek) {
-            return {
-                isValid: false,
-                message: `You've reached the weekly limit of ${groupRules.maxPostsPerWeek} posts`
-            };
-        }
-
-        return {
-            isValid: true,
-            message: "Post allowed"
-        };
-    } catch (error) {
-        console.error('Error validating group challenge post:', error);
-        return {
-            isValid: false,
-            message: "An error occurred while validating the post"
-        };
-    }
 }
 
 // Helper function to count posts within a time period
@@ -302,7 +177,8 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
         const participantResult = await client.models.ChallengeParticipant.list({
             filter: {
                 challengeID: { eq: context.challengeId },
-                userID: { eq: context.userId }
+                userID: { eq: context.userId },
+                status: { eq: "ACTIVE" }
             }
         });
 
