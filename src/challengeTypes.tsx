@@ -35,6 +35,7 @@ export interface ChallengeDetails {
   } | null;
   totalParticipants: number;
   daysRemaining: number | null;
+createdBy: string | null;
 }
 
 // Your other existing interfaces...
