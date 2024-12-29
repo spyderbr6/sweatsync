@@ -7,6 +7,6 @@ export const rotateCreator = defineFunction({
   entry: './handler.ts',
   schedule: [
     // Runs at midnight UTC daily
-    "0 0 * * *"
+    "every day"
   ]
 });
