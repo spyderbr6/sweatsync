@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
     Share2, UserPlus, Trophy, Calendar, Users, Dumbbell, Heart,
     MessageCircle, Clock, Medal, Crown, ExternalLink,
-    CircleMinus
+    Trash2, UserMinus
 } from 'lucide-react';
 import { useChallengeDetail } from './useChallengeDetail';
 import InviteFriendsModal from './inviteFriendsModal';
@@ -12,8 +12,9 @@ import { shareContent } from './utils/shareAction';
 import { promptAction } from './utils/promptAction';
 import './challenges.css';
 import { ChallengeDetails } from './challengeTypes';
-import { removeParticipantFromChallenge } from './challengeOperations';
+import { removeParticipantFromChallenge, archiveChallenge } from './challengeOperations';
 import { useUser } from './userContext';
+import ActionMenu from './components/cardActionMenu/cardActionMenu';
 
 type RouteParams = {
     challengeId: string;
@@ -55,6 +56,9 @@ export default function ChallengeDetailPage() {
         }
 
     };
+    const handleDeleteChallenge = async (challengeId: string) => {
+        archiveChallenge(challengeId);
+    };
 
     if (isLoading) {
         return (
@@ -80,9 +84,33 @@ export default function ChallengeDetailPage() {
         );
     }
 
-    const progress = challengeDetails?.totalWorkouts
-        ? (challengeDetails.userParticipation?.workoutsCompleted || 0) / challengeDetails.totalWorkouts * 100
-        : 0;
+
+    const getChallengeActions = (challenge: ChallengeDetails) => {
+        const isOwner = challenge.createdBy === userId;
+
+        return [
+            {
+                label: 'Delete Challenge',
+                icon: <Trash2 size={16} />,
+                onClick: () => handleDeleteChallenge(challenge.id),
+                destructive: true,
+                show: isOwner,
+            },
+            {
+                label: 'Leave Challenge',
+                icon: <UserMinus size={16} />,
+                onClick: () => handleLeaveChallenge(challenge),
+                destructive: true,
+                show: challengeDetails.userParticipation?.userID,
+            },
+            {
+                label: 'Share',
+                icon: <Share2 size={16} />,
+                onClick: () => handleShare(challenge),
+                show: true,
+            },
+        ];
+    };
 
     return (
         <div className="challenge-container">
@@ -94,17 +122,6 @@ export default function ChallengeDetailPage() {
                         <p className="challenge-description">{challengeDetails.description}</p>
                     </div>
                     <div className="challenge-actions">
-                        <button className="action-button action-button--leave"
-                            onClick={() => handleLeaveChallenge(challengeDetails)}>
-                            <CircleMinus size={16} />
-                            Drop
-                        </button>
-
-                        <button className="action-button action-button--share"
-                            onClick={() => handleShare(challengeDetails)}>
-                            <Share2 size={16} />
-                            Share
-                        </button>
                         <button
                             className="action-button action-button--invite"
                             onClick={() => setIsInviteModalOpen(true)}
@@ -112,6 +129,7 @@ export default function ChallengeDetailPage() {
                             <UserPlus size={16} />
                             Invite
                         </button>
+                        <ActionMenu actions={getChallengeActions(challengeDetails)} />
 
                         {/* Add the modal */}
                         <InviteFriendsModal
@@ -122,36 +140,24 @@ export default function ChallengeDetailPage() {
                     </div>
                 </div>
 
-                <div className="progress-section">
-                    <div className="progress-header">
-                        <div className="progress-label">
-                            <Trophy size={20} />
-                            <span>Challenge Progress</span>
-                        </div>
-                        <span className="progress-count">
-                            {challengeDetails.userParticipation?.workoutsCompleted || 0} of{' '}
-                            {challengeDetails.totalWorkouts || 0} workouts completed
-                        </span>
-                    </div>
-
-                    <div className="progress-bar">
-                        <div
-                            className="progress-bar-fill"
-                            style={{ width: `${progress}%` }}
-                        />
-                    </div>
-                </div>
 
                 <div className="stats-grid">
                     <div className="stat-card">
                         <Calendar className="stat-icon" />
                         <p className="stat-value">{challengeDetails.daysRemaining ?? 0}</p>
                         <p className="stat-label">Days Left</p>
-                    </div>
-                    <div className="stat-card">
                         <Users className="stat-icon" />
                         <p className="stat-value">{challengeDetails.totalParticipants}</p>
                         <p className="stat-label">Participants</p>
+                    </div>
+                    <div className="stat-card">
+                        <p className="stat-label">Your Rank</p>
+
+                        <p className="profile-rank">
+                            {leaderboard.findIndex(user =>
+                                user.id === challengeDetails.userParticipation?.userID
+                            ) + 1} of {leaderboard.length}
+                        </p>
                     </div>
                     <div className="stat-card">
                         <Dumbbell className="stat-icon" />
@@ -159,6 +165,9 @@ export default function ChallengeDetailPage() {
                             {challengeDetails.userParticipation?.workoutsCompleted ?? 0}
                         </p>
                         <p className="stat-label">Your Workouts</p>
+                        <Trophy className="stat-icon" />
+                        <p className="stat-value"> {challengeDetails.userParticipation.points}</p>
+                        <p className="stat-label">Points</p>
                     </div>
                 </div>
             </div>
@@ -167,52 +176,6 @@ export default function ChallengeDetailPage() {
             <div className="content-grid">
                 {/* Left Column - Your Stats & Leaderboard */}
                 <div>
-                    {challengeDetails.userParticipation && (
-                        <div className="personal-stats">
-                            <div className="profile-header">
-                                <img
-                                    src={profileUrls[challengeDetails.userParticipation?.userID || ''] || '/profileDefault.png'}
-                                    alt="Your profile"
-                                    className="profile-image"
-                                />
-                                <div className="profile-info">
-                                    <h2 className="profile-name">Your Progress</h2>
-                                    <p className="profile-rank">
-                                        {leaderboard.findIndex(user =>
-                                            user.id === challengeDetails.userParticipation?.userID
-                                        ) + 1} of {leaderboard.length}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="stats-grid-2">
-                                <div className="stat-box">
-                                    <div className="stat-icon-wrapper stat-icon-wrapper--points">
-                                        <Trophy className="stat-icon" />
-                                    </div>
-                                    <div>
-                                        <p className="stat-label">Points</p>
-                                        <p className="stat-value">
-                                            {challengeDetails.userParticipation.points}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="stat-box">
-                                    <div className="stat-icon-wrapper stat-icon-wrapper--workouts">
-                                        <Dumbbell className="stat-icon" />
-                                    </div>
-                                    <div>
-                                        <p className="stat-label">Workouts</p>
-                                        <p className="stat-value">
-                                            {challengeDetails.userParticipation.workoutsCompleted}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                     {/* Leaderboard */}
                     <div className="leaderboard">
                         <div className="leaderboard-header">
