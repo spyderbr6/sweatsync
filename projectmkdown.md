@@ -6,6 +6,10 @@
         └── backend.ts
         └── 📁data
             └── resource.ts
+        └── 📁functions
+            └── 📁rotateCreator
+                └── handler.ts
+                └── resource.ts
         └── package.json
         └── 📁storage
             └── resource.ts
