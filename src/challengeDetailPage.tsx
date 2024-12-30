@@ -123,6 +123,7 @@ export default function ChallengeDetailPage() {
                     <ChallengeDailyPrompt
                         challengeId={challengeId}
                         challengePoints={challengeDetails.dailyChallengePoints || 10}
+                        parentTitle={challengeDetails.title || ''}
                         onSuccess={() => { refreshData();
                         }}
                     />
