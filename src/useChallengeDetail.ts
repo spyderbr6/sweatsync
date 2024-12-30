@@ -6,15 +6,22 @@ import {
   getChallengeLeaderboard, 
   getChallengeActivity 
 } from './challengeOperations';
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "../amplify/data/resource";
+
+const client = generateClient<Schema>();
+
 
 interface ChallengeDetailState {
   isLoading: boolean;
   error: Error | null;
-  challengeDetails: any | null; // We'll type this properly 
-  leaderboard: any[]; // We'll type this properly
-  activity: any[]; // We'll type this properly
+  challengeDetails: any | null;
+  leaderboard: any[];
+  activity: any[];
   profileUrls: { [key: string]: string };
   workoutUrls: { [key: string]: string };
+  todaysChallengeCreated: boolean; 
+  isCurrentCreator: boolean;      
 }
 
 export function useChallengeDetail(challengeId: string) {
@@ -27,7 +34,9 @@ export function useChallengeDetail(challengeId: string) {
     leaderboard: [],
     activity: [],
     profileUrls: {},
-    workoutUrls: {}
+    workoutUrls: {}, 
+    todaysChallengeCreated: false,
+    isCurrentCreator: false
   });
 
   useEffect(() => {
@@ -37,11 +46,26 @@ export function useChallengeDetail(challengeId: string) {
       try {
         setState(prev => ({ ...prev, isLoading: true }));
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
         // Fetch all data in parallel
-        const [details, leaderboard, activity] = await Promise.all([
+        const [details, leaderboard, activity,todaysChallenge] = await Promise.all([
           getChallengeDetails(challengeId, userId),
           getChallengeLeaderboard(challengeId),
-          getChallengeActivity(challengeId)
+          getChallengeActivity(challengeId), 
+          client.models.Challenge.list({
+            filter: {
+              and: [
+                { parentChallengeId: { eq: challengeId }},
+                { isDailyChallenge: { eq: true }},
+                { startAt: { ge: today.toISOString() }},
+                { startAt: { lt: tomorrow.toISOString() }}
+              ]
+            }
+          })
         ]);
 
         // Process profile pictures and workout images
@@ -97,7 +121,9 @@ export function useChallengeDetail(challengeId: string) {
           leaderboard,
           activity,
           profileUrls,
-          workoutUrls
+          workoutUrls,
+          todaysChallengeCreated: todaysChallenge.data.length > 0,
+          isCurrentCreator: details.currentCreatorId === userId
         });
 
       } catch (error) {

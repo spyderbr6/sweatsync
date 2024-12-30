@@ -86,8 +86,11 @@ export async function checkAndRotateCreator(challengeId: string): Promise<boolea
 interface PointsUpdateContext {
     challengeId: string;
     userId: string;
-    postType: 'workout' | 'dailyChallenge';
+    postType: 'workout' | 'dailyChallenge' | 'dailyChallengeCreation';
     timestamp: string;
+    streakCount?: number;  // For tracking consecutive days
+    isGroupChallenge?: boolean;
+    bonusPoints?: number;  // For special achievements
 }
 
 export async function updateChallengePoints(context: PointsUpdateContext): Promise<boolean> {

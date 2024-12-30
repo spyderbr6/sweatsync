@@ -15,6 +15,7 @@ import { ChallengeDetails } from './challengeTypes';
 import { removeParticipantFromChallenge, archiveChallenge } from './challengeOperations';
 import { useUser } from './userContext';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
+import ChallengeDailyPrompt from './utils/challengeDailyPrompt';
 
 type RouteParams = {
     challengeId: string;
@@ -28,8 +29,11 @@ export default function ChallengeDetailPage() {
         challengeDetails,
         leaderboard,
         activity,
+        isCurrentCreator,
+        todaysChallengeCreated,
         profileUrls,
-        workoutUrls
+        workoutUrls,
+        refreshData
     } = useChallengeDetail(challengeId ?? '');
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const { userId } = useUser();
@@ -84,7 +88,6 @@ export default function ChallengeDetailPage() {
         );
     }
 
-
     const getChallengeActions = (challenge: ChallengeDetails) => {
         const isOwner = challenge.createdBy === userId;
 
@@ -116,6 +119,14 @@ export default function ChallengeDetailPage() {
         <div className="challenge-container">
             {/* Hero Section */}
             <div className="challenge-hero">
+                {isCurrentCreator && challengeDetails?.dailyChallenges && !todaysChallengeCreated && challengeId && (
+                    <ChallengeDailyPrompt
+                        challengeId={challengeId}
+                        challengePoints={challengeDetails.dailyChallengePoints || 10}
+                        onSuccess={() => { refreshData();
+                        }}
+                    />
+                )}
                 <div className="challenge-header">
                     <div>
                         <h1 className="challenge-title">{challengeDetails.title}</h1>
