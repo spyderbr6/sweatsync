@@ -15,7 +15,9 @@ import { ChallengeDetails } from './challengeTypes';
 import { removeParticipantFromChallenge, archiveChallenge } from './challengeOperations';
 import { useUser } from './userContext';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
+import { ActivityItem } from './components/challengeActivityItem/challengeActivityItem';
 import ChallengeDailyPrompt from './utils/challengeDailyPrompt';
+import { useNavigate } from 'react-router-dom';
 
 type RouteParams = {
     challengeId: string;
@@ -37,6 +39,7 @@ export default function ChallengeDetailPage() {
     } = useChallengeDetail(challengeId ?? '');
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const { userId } = useUser();
+    const navigate = useNavigate();
 
     const handleShare = (challenge: ChallengeDetails) => {
         shareContent(
@@ -231,70 +234,15 @@ export default function ChallengeDetailPage() {
                         <h2 className="activity-title">Recent Activity</h2>
                     </div>
 
-                    <div className="activity-list">
+                    <div className="space-y-3">
                         {activity.map((item) => (
-                            <div key={item.id} className="activity-item">
-                                <div className="activity-content">
-                                    <img
-                                        src={profileUrls[item.userId] || '/profileDefault.png'}
-                                        alt={item.username}
-                                        className="activity-avatar"
-                                    />
-
-                                    <div className="activity-details">
-                                        <div className="activity-meta">
-                                            <span className="activity-user">{item.username}</span>
-                                            {item.isDaily && (
-                                                <span className="daily-badge">
-                                                    Daily Challenge
-                                                </span>
-                                            )}
-                                            <div className="activity-time">
-                                                <Clock size={16} />
-                                                <time>{new Date(item.timestamp).toLocaleDateString()}</time>
-                                            </div>
-                                        </div>
-
-                                        {/* Add challenge title for daily challenges */}
-                                        {item.isDaily && (
-                                            <p className="daily-challenge-title">
-                                                {item.challengeTitle}
-                                            </p>
-                                        )}
-
-                                        <p className="activity-text">{item.content}</p>
-
-                                        {item.workoutImage && (
-                                            <div className="activity-media">
-                                                <img
-                                                    src={workoutUrls[item.id] || '/picsoritdidnthappen.webp'}
-                                                    alt="Workout"
-                                                    className="activity-image"
-                                                />
-                                                <div className="activity-image-overlay">
-                                                    <ExternalLink size={20} />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="activity-points">
-                                            <Medal size={16} />
-                                            <span>+{item.points} points earned</span>
-                                        </div>
-
-                                        <div className="activity-actions">
-                                            <button className="action-button-small">
-                                                <Heart size={16} />
-                                                <span>{item.likes}</span>
-                                            </button>
-                                            <button className="action-button-small">
-                                                <MessageCircle size={16} />
-                                                <span>{item.comments}</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <ActivityItem
+                                key={item.id}
+                                item={item}
+                                profileUrl={profileUrls[item.userId] || '/profileDefault.png'}
+                                workoutUrl={workoutUrls[item.id] || '/picsoritdidnthappen.webp'}
+                                navigate={navigate}
+                            />
                         ))}
                     </div>
                 </div>
