@@ -1,5 +1,6 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
+//amplify/data/resource.ts
 const schema = a.schema({
   PostforWorkout: a.model({
     content: a.string(),

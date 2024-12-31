@@ -338,6 +338,21 @@ a:hover {
 .challenge-alert--weekly:hover {
   background-color: rgb(187 247 208);
 }
+.challenge-alert.posted {
+  opacity: 0.6;
+}
+
+.challenge-alert--personal.posted {
+  background-color: rgb(254 215 170 / 0.5);
+}
+
+.challenge-alert--group.posted {
+  background-color: rgb(191 219 254 / 0.5);
+}
+
+.challenge-alert--weekly.posted {
+  background-color: rgb(187 247 208 / 0.5);
+}
 
 .feed__content {
   padding: 1rem;

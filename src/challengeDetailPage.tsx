@@ -1,4 +1,4 @@
-// ChallengeDetailPage.tsx
+// src/challengeDetailPage.tsx
 import { useParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
@@ -117,17 +117,18 @@ export default function ChallengeDetailPage() {
 
     return (
         <div className="challenge-container">
+            {isCurrentCreator && challengeDetails?.dailyChallenges && !todaysChallengeCreated && challengeId && (
+                <ChallengeDailyPrompt
+                    challengeId={challengeId}
+                    challengePoints={challengeDetails.dailyChallengePoints || 10}
+                    parentTitle={challengeDetails.title || ''}
+                    onSuccess={() => {
+                        refreshData();
+                    }}
+                />
+            )}
             {/* Hero Section */}
             <div className="challenge-hero">
-                {isCurrentCreator && challengeDetails?.dailyChallenges && !todaysChallengeCreated && challengeId && (
-                    <ChallengeDailyPrompt
-                        challengeId={challengeId}
-                        challengePoints={challengeDetails.dailyChallengePoints || 10}
-                        parentTitle={challengeDetails.title || ''}
-                        onSuccess={() => { refreshData();
-                        }}
-                    />
-                )}
                 <div className="challenge-header">
                     <div>
                         <h1 className="challenge-title">{challengeDetails.title}</h1>

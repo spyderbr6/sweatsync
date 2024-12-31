@@ -270,7 +270,10 @@ export async function getChallengeDetails(challengeId: string, userId: string) {
     const participantsResult = await client.models.ChallengeParticipant.list({
       filter: {
         challengeID: { eq: challengeId },
-        status: { eq: 'ACTIVE' }
+        or: [
+          { status: { eq: 'ACTIVE' } },
+          { status: { eq: 'COMPLETED' } }
+        ]
       }
     });
 
@@ -305,7 +308,10 @@ export async function getChallengeLeaderboard(challengeId: string) {
     const participantsResult = await client.models.ChallengeParticipant.list({
       filter: {
         challengeID: { eq: challengeId },
-        status: { eq: 'ACTIVE' }
+        or: [
+          { status: { eq: 'ACTIVE' } },
+          { status: { eq: 'COMPLETED' } }
+        ]
       }
     });
 

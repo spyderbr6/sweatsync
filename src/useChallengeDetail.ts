@@ -1,3 +1,4 @@
+//src/useChallengeDetail.ts
 import { useState, useEffect } from 'react';
 import { useUser } from './userContext';
 import { useUrlCache } from './urlCacheContext';
@@ -27,6 +28,7 @@ interface ChallengeDetailState {
 export function useChallengeDetail(challengeId: string) {
   const { userId } = useUser();
   const { getStorageUrl } = useUrlCache();
+  const [refreshTrigger, setRefreshTrigger] = useState(0); 
   const [state, setState] = useState<ChallengeDetailState>({
     isLoading: true,
     error: null,
@@ -137,12 +139,11 @@ export function useChallengeDetail(challengeId: string) {
     }
 
     loadChallengeData();
-  }, [challengeId, userId, getStorageUrl]);
+  }, [challengeId, userId, getStorageUrl,refreshTrigger]);
 
-  // Optional: Add refresh function
+  // refresh function
   const refreshData = () => {
-    setState(prev => ({ ...prev, isLoading: true }));
-    // This will trigger the useEffect
+    setRefreshTrigger(prev => prev + 1); // This will trigger the useEffect
   };
 
   return {
