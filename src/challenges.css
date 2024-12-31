@@ -1261,3 +1261,19 @@
 .btn-secondary:hover:not(:disabled) {
   background-color: #d1d5db;
 }
+
+.daily-badge {
+  background-color: #3b82f6;
+  color: white;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  margin-left: 8px;
+}
+
+.daily-challenge-title {
+  color: #4b5563;
+  font-size: 0.875rem;
+  margin-top: 2px;
+  font-style: italic;
+}

@@ -153,7 +153,6 @@ export default function ChallengeDetailPage() {
                     </div>
                 </div>
 
-
                 <div className="stats-grid">
                     <div className="stat-card">
                         <Calendar className="stat-icon" />
@@ -165,7 +164,6 @@ export default function ChallengeDetailPage() {
                     </div>
                     <div className="stat-card">
                         <p className="stat-label">Your Rank</p>
-
                         <p className="profile-rank">
                             {leaderboard.findIndex(user =>
                                 user.id === challengeDetails.userParticipation?.userID
@@ -179,8 +177,17 @@ export default function ChallengeDetailPage() {
                         </p>
                         <p className="stat-label">Your Workouts</p>
                         <Trophy className="stat-icon" />
-                        <p className="stat-value"> {challengeDetails.userParticipation.points}</p>
-                        <p className="stat-label">Points</p>
+                        <p className="stat-value">{challengeDetails.userParticipation?.points ?? 0}</p>
+                        <p className="stat-label">Total Points</p>
+                        {challengeDetails.userParticipation?.dailyChallengesCompleted && (
+                            <>
+                                <Calendar className="stat-icon" />
+                                <p className="stat-value">
+                                    {challengeDetails.userParticipation.dailyChallengesCompleted}
+                                </p>
+                                <p className="stat-label">Daily Challenges</p>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -237,11 +244,23 @@ export default function ChallengeDetailPage() {
                                     <div className="activity-details">
                                         <div className="activity-meta">
                                             <span className="activity-user">{item.username}</span>
+                                            {item.isDaily && (
+                                                <span className="daily-badge">
+                                                    Daily Challenge
+                                                </span>
+                                            )}
                                             <div className="activity-time">
                                                 <Clock size={16} />
                                                 <time>{new Date(item.timestamp).toLocaleDateString()}</time>
                                             </div>
                                         </div>
+
+                                        {/* Add challenge title for daily challenges */}
+                                        {item.isDaily && (
+                                            <p className="daily-challenge-title">
+                                                {item.challengeTitle}
+                                            </p>
+                                        )}
 
                                         <p className="activity-text">{item.content}</p>
 

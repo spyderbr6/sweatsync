@@ -59,6 +59,10 @@ export interface ActivityEntry {
   profilePicture: string | null;
   workoutImage: string | null;
   achievement?: string;
+  // Add new fields
+  isDaily: boolean;
+  challengeTitle: string;
+  challengeType: string;
 }
 
 // Add validation type for challenge posts
