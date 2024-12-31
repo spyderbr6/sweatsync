@@ -218,20 +218,6 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                     joinedAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 });
-    
-                // Create initial daily challenge if enabled
-                if (formData.groupRules.enableDailyChallenges) {
-                    await client.models.DailyChallenge.create({
-                        challengeId: challengeResult.data.id,
-                        creatorId: userId,
-                        title: `${formData.title} - Day 1`,
-                        description: "Get started with your first daily challenge!",
-                        date: new Date().toISOString(),
-                        pointsAwarded: formData.groupRules.dailyChallengePoints || formData.basePointsPerWorkout,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    });
-                }
             }
     
             onSuccess();
