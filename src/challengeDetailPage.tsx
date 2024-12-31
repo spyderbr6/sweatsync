@@ -2,9 +2,8 @@
 import { useParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
-    Share2, UserPlus, Trophy, Calendar, Users, Dumbbell, Heart,
-    MessageCircle, Clock, Medal, Crown, ExternalLink,
-    Trash2, UserMinus
+    Share2, UserPlus, Trophy, Calendar, Users, Dumbbell,
+    Crown,Trash2, UserMinus
 } from 'lucide-react';
 import { useChallengeDetail } from './useChallengeDetail';
 import InviteFriendsModal from './inviteFriendsModal';
