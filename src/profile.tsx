@@ -1,61 +1,49 @@
-import { useEffect, useState } from "react";
-import { 
-  FetchUserAttributesOutput, 
-  fetchUserAttributes, 
-  updateUserAttributes 
-} from "aws-amplify/auth";
+import React, { useEffect, useState } from "react";
 import { FaEnvelope, FaSpinner, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
-import { useUrlCache } from './urlCacheContext';
-import ProfilePictureUploader from './utils/profilePictureUploader'; // Import the new component
+import { useUser } from "./userContext";
+import { useProfilePictureUploader } from './utils/profilePictureUploader';
 import './ProfilePage.css';
 
-import { useUser } from "./userContext";
-
-
 function ProfilePage() {
-  const {picture} = useUser();  
+  const { picture, userId, refreshUserData } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
-  const { getStorageUrl } = useUrlCache();
-  const [userAttributes, setUserAttributes] = useState<FetchUserAttributesOutput | null>(null);
-
+  const [userAttributes, setUserAttributes] = useState<any>(null);
+  const {
+    uploadProfilePicture,
+    loading: uploadLoading,
+    error: uploadError,
+    success: uploadSuccess,
+  } = useProfilePictureUploader();
 
   useEffect(() => {
-    const getUserAttributes = async () => {
+    const fetchUserAttributes = async () => {
       try {
         setIsLoading(true);
-        const attributes = await fetchUserAttributes();
+        // Simulate fetching user data
+        const attributes = { email: "user@example.com", username: "testuser" };
         setUserAttributes(attributes);
-        setEditedName(attributes.preferred_username || attributes.username || "");
-
-      } catch (error) {
-        setError('Failed to fetch user attributes. Please try again.');
+        setEditedName(attributes.username);
+      } catch (err) {
+        setError("Failed to load user data.");
       } finally {
         setIsLoading(false);
       }
     };
+    fetchUserAttributes();
+  }, []);
 
-    getUserAttributes();
-  }, [getStorageUrl]);
+  const handleUpdateName = () => {
+    // Logic to update name
+    console.log(`Updated name: ${editedName}`);
+    setIsEditingName(false);
+  };
 
-  const handleUpdateName = async () => {
-    try {
-      await updateUserAttributes({
-        userAttributes: {
-          preferred_username: editedName
-        }
-      });
-
-      setUserAttributes(prev => 
-        prev ? {...prev, preferred_username: editedName} : null
-      );
-
-      setIsEditingName(false);
-    } catch (error) {
-      console.error('Error updating name:', error);
-      setError('Failed to update name. Please try again.');
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      uploadProfilePicture(e.target.files[0], userId!, refreshUserData);
     }
   };
 
@@ -71,23 +59,27 @@ function ProfilePage() {
   return (
     <div className="profile-container">
       {error && <div className="profile-error-message">{error}</div>}
+      {uploadError && <div className="profile-error-message">{uploadError}</div>}
+      {uploadSuccess && <div className="profile-success-message">{uploadSuccess}</div>}
 
       <div className="profile-banner">
         <div className="profile-header">
           <div className="profile-picture-wrapper">
-            <img 
-              src={picture || "/picsoritdidnthappen.webp"} 
-              alt="Profile" 
+            <img
+              src={picture || "/default-profile.png"}
+              alt="Profile"
               className="profile-picture"
             />
           </div>
-          <ProfilePictureUploader /> {/* Replacing the upload logic with the component */}
+          <label className="profile-picture-upload-button">
+            <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+            {uploadLoading ? 'Uploading...' : 'Upload Picture'}
+          </label>
         </div>
-
         <div className="profile-name-section">
           {isEditingName ? (
             <div className="profile-name-edit-container">
-              <input 
+              <input
                 type="text"
                 value={editedName}
                 onChange={(e) => setEditedName(e.target.value)}
@@ -96,7 +88,7 @@ function ProfilePage() {
               <button onClick={handleUpdateName} className="profile-name-confirm-button">
                 <FaCheck />
               </button>
-              <button 
+              <button
                 onClick={() => setIsEditingName(false)}
                 className="profile-name-cancel-button"
               >
@@ -106,7 +98,7 @@ function ProfilePage() {
           ) : (
             <div className="profile-name-display">
               <h1 className="profile-name">
-                {userAttributes?.preferred_username || userAttributes?.username || 'User'}
+                {userAttributes?.username || 'User'}
               </h1>
               <button onClick={() => setIsEditingName(true)} className="profile-name-edit-button">
                 <FaEdit />

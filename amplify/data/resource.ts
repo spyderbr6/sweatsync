@@ -82,23 +82,6 @@ const schema = a.schema({
         .sortKeys(["createdAt"])
     ]),
 
-
-
-
-  // Keep DailyChallenge separate for time-series data
-  DailyChallenge: a.model({
-    id: a.string().required(),
-    challengeId: a.string().required(),
-    creatorId: a.string().required(),
-    title: a.string().required(),
-    description: a.string().required(),
-    date: a.datetime().required(),
-    pointsAwarded: a.integer().required(),
-    createdAt: a.datetime(),
-    updatedAt: a.datetime()
-  }).authorization((allow) => [allow.publicApiKey()]),
-
-
   ChallengeParticipant: a.model({
       challengeID: a.string().required(), //reference to Challenge model
       userID: a.string().required(),

@@ -52,7 +52,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     'PERSONAL': '#8B5CF6',
     'PUBLIC': '#EF4444',
     'FRIENDS': '#3B82F6',
-    'general': '#F59E0B'
+    'general': '#F59E0B', 
+    'DAILY': '#Ff0000'
   };
 
   // Fetch challenges and user data on component mount
@@ -345,8 +346,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
                   const challenge = availableChallenges.find(c => c.id === challengeId);
                   if (!challenge?.title) return null;
 
-                  const top = 20 + (Math.floor(index / 2) * 40);
-                  const left = 20 + ((index % 2) * 50);
+                  const top = 20 + (Math.floor(index / 2) * 50);
+                  const left = 10 + ((index % 2) * 50);
                   const color = challengeColors[challenge.challengeType || 'general'];
 
                   return (
