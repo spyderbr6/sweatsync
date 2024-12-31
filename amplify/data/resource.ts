@@ -1,5 +1,6 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
+//amplify/data/resource.ts
 const schema = a.schema({
   PostforWorkout: a.model({
     content: a.string(),
@@ -61,8 +62,14 @@ const schema = a.schema({
     dailyChallenges: a.boolean(),
     rotationIntervalDays: a.integer(),
     currentCreatorId: a.string(),
-    nextRotationDate: a.datetime(),
     dailyChallengePoints: a.integer(),
+
+    //Daily Challenge specific fields
+    parentChallengeId: a.string(),     // Link to parent group challenge
+    isDailyChallenge: a.boolean(),     // Flag for daily challenges
+    creatorRotation: a.boolean(),      // For parent challenge - indicates daily creator rotation
+    nextCreatorId: a.string(),         // For parent challenge - tracks next creator
+    nextRotationDate: a.string(),      // For parent challenge - when to rotate creator
 
     // Timestamps
     createdAt: a.datetime(),
@@ -111,7 +118,8 @@ const schema = a.schema({
     userId: a.string(),
     timestamp: a.datetime(),
     validated: a.boolean().default(false),
-    validationComment: a.string()
+    validationComment: a.string(), 
+    points:a.integer().default(0)
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Comment: a.model({

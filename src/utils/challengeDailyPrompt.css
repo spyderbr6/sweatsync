@@ -1,0 +1,108 @@
+/* src/styles/challengeDailyPrompt.css */
+.challenge-daily-prompt {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .challenge-daily-prompt__content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .challenge-daily-prompt__text {
+    flex: 1;
+  }
+  
+  .challenge-daily-prompt__title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  
+  .challenge-daily-prompt__description {
+    font-size: 0.875rem;
+  }
+  
+  .challenge-daily-prompt__button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  /* Variants */
+  .challenge-daily-prompt--default {
+    background: linear-gradient(to right, #f3f4f6, #e5e7eb);
+  }
+  
+  .challenge-daily-prompt--default .challenge-daily-prompt__title {
+    color: #111827;
+  }
+  
+  .challenge-daily-prompt--default .challenge-daily-prompt__description {
+    color: #374151;
+  }
+  
+  .challenge-daily-prompt--default .challenge-daily-prompt__button {
+    background-color: #374151;
+    color: white;
+  }
+  
+  .challenge-daily-prompt--warning {
+    background: linear-gradient(to right, #fef3c7, #fde68a);
+  }
+  
+  .challenge-daily-prompt--warning .challenge-daily-prompt__title {
+    color: #92400e;
+  }
+  
+  .challenge-daily-prompt--warning .challenge-daily-prompt__description {
+    color: #92400e;
+  }
+  
+  .challenge-daily-prompt--warning .challenge-daily-prompt__button {
+    background-color: #92400e;
+    color: white;
+  }
+/* Add to challengeDailyPrompt.css */
+.challenge-daily-prompt__form {
+  margin-top: 1rem;
+}
+
+.challenge-daily-prompt__info {
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  color: #92400e;
+}
+
+.challenge-daily-prompt__textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #f59e0b;
+  border-radius: 0.375rem;
+  margin-bottom: 0.5rem;
+  background: white;
+  resize: vertical;
+}
+
+.challenge-daily-prompt__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.challenge-daily-prompt__button--secondary {
+  background-color: transparent;
+  color: #92400e;
+  border: 1px solid currentColor;
+}
+
+.challenge-daily-prompt__button--secondary:hover {
+  background-color: rgb(255, 237, 213);
+}
+
+.challenge-daily-prompt__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,3 +1,4 @@
+//src/useChallengeDetail.ts
 import { useState, useEffect } from 'react';
 import { useUser } from './userContext';
 import { useUrlCache } from './urlCacheContext';
@@ -6,20 +7,28 @@ import {
   getChallengeLeaderboard, 
   getChallengeActivity 
 } from './challengeOperations';
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "../amplify/data/resource";
+
+const client = generateClient<Schema>();
+
 
 interface ChallengeDetailState {
   isLoading: boolean;
   error: Error | null;
-  challengeDetails: any | null; // We'll type this properly 
-  leaderboard: any[]; // We'll type this properly
-  activity: any[]; // We'll type this properly
+  challengeDetails: any | null;
+  leaderboard: any[];
+  activity: any[];
   profileUrls: { [key: string]: string };
   workoutUrls: { [key: string]: string };
+  todaysChallengeCreated: boolean; 
+  isCurrentCreator: boolean;      
 }
 
 export function useChallengeDetail(challengeId: string) {
   const { userId } = useUser();
   const { getStorageUrl } = useUrlCache();
+  const [refreshTrigger, setRefreshTrigger] = useState(0); 
   const [state, setState] = useState<ChallengeDetailState>({
     isLoading: true,
     error: null,
@@ -27,7 +36,9 @@ export function useChallengeDetail(challengeId: string) {
     leaderboard: [],
     activity: [],
     profileUrls: {},
-    workoutUrls: {}
+    workoutUrls: {}, 
+    todaysChallengeCreated: false,
+    isCurrentCreator: false
   });
 
   useEffect(() => {
@@ -37,11 +48,26 @@ export function useChallengeDetail(challengeId: string) {
       try {
         setState(prev => ({ ...prev, isLoading: true }));
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
         // Fetch all data in parallel
-        const [details, leaderboard, activity] = await Promise.all([
+        const [details, leaderboard, activity,todaysChallenge] = await Promise.all([
           getChallengeDetails(challengeId, userId),
           getChallengeLeaderboard(challengeId),
-          getChallengeActivity(challengeId)
+          getChallengeActivity(challengeId), 
+          client.models.Challenge.list({
+            filter: {
+              and: [
+                { parentChallengeId: { eq: challengeId }},
+                { isDailyChallenge: { eq: true }},
+                { startAt: { ge: today.toISOString() }},
+                { startAt: { lt: tomorrow.toISOString() }}
+              ]
+            }
+          })
         ]);
 
         // Process profile pictures and workout images
@@ -97,7 +123,9 @@ export function useChallengeDetail(challengeId: string) {
           leaderboard,
           activity,
           profileUrls,
-          workoutUrls
+          workoutUrls,
+          todaysChallengeCreated: todaysChallenge.data.length > 0,
+          isCurrentCreator: details.currentCreatorId === userId
         });
 
       } catch (error) {
@@ -111,12 +139,11 @@ export function useChallengeDetail(challengeId: string) {
     }
 
     loadChallengeData();
-  }, [challengeId, userId, getStorageUrl]);
+  }, [challengeId, userId, getStorageUrl,refreshTrigger]);
 
-  // Optional: Add refresh function
+  // refresh function
   const refreshData = () => {
-    setState(prev => ({ ...prev, isLoading: true }));
-    // This will trigger the useEffect
+    setRefreshTrigger(prev => prev + 1); // This will trigger the useEffect
   };
 
   return {

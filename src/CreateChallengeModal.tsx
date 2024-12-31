@@ -1,3 +1,4 @@
+//src/createChallengeModal.tsx
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useDataVersion } from './dataVersionContext';
@@ -185,7 +186,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 createdBy: userId,
-                status: 'DRAFT',
+                status: 'ACTIVE',
                 basePointsPerWorkout: formData.basePointsPerWorkout,
                 isActive: true,
                 

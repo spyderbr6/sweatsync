@@ -86,8 +86,11 @@ export async function checkAndRotateCreator(challengeId: string): Promise<boolea
 interface PointsUpdateContext {
     challengeId: string;
     userId: string;
-    postType: 'workout' | 'dailyChallenge';
+    postType: 'workout' | 'dailyChallenge' | 'dailyChallengeCreation';
     timestamp: string;
+    streakCount?: number;  // For tracking consecutive days
+    isGroupChallenge?: boolean;
+    bonusPoints?: number;  // For special achievements
 }
 
 export async function updateChallengePoints(context: PointsUpdateContext): Promise<boolean> {
@@ -197,6 +200,30 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
             };
         }
 
+        // First check if this is a daily challenge
+        if (challenge.isDailyChallenge) {
+            // Check if user has already posted today for this challenge
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const existingPosts = await getPostsCount(context.challengeId, context.userId, 'day');
+            if (existingPosts > 0) {
+                return {
+                    isValid: false,
+                    message: "You've already completed today's challenge"
+                };
+            }
+
+            // If we reach here, user hasn't posted today
+            return {
+                isValid: true,
+                message: "Post validated successfully"
+            };
+        }
+
+
         // Group challenge specific validations
         if (challenge.challengeType === "GROUP") {
             const dailyPostCount = await getPostsCount(context.challengeId, context.userId, 'day');
@@ -223,6 +250,8 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
                 message: "Only the creator can post to personal challenges"
             };
         }
+
+
 
         return {
             isValid: true,

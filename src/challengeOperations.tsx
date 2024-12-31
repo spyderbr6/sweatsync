@@ -258,35 +258,60 @@ export async function getChallengeDetails(challengeId: string, userId: string) {
       throw new Error('Challenge not found');
     }
 
-    // Get user's participation details
-    const participationResult = await client.models.ChallengeParticipant.list({
+    // Get child challenges
+    const childChallenges = await client.models.Challenge.list({
       filter: {
-        challengeID: { eq: challengeId },
-        userID: { eq: userId }
-      }
-    });
-    
-    // Get total participants count
-    const participantsResult = await client.models.ChallengeParticipant.list({
-      filter: {
-        challengeID: { eq: challengeId },
-        status: { eq: 'ACTIVE' }
+        parentChallengeId: { eq: challengeId }
       }
     });
 
-    // Get total workouts count from PostChallenge
-    const workoutsResult = await client.models.PostChallenge.list({
-      filter: {
-        challengeId: { eq: challengeId },
-        validated: { eq: true }
-      }
-    });
+    // Get user's participation details for parent and child challenges
+    const participationPromises = [challengeId, ...childChallenges.data.map(c => c.id)]
+      .map(cId => client.models.ChallengeParticipant.list({
+        filter: {
+          challengeID: { eq: cId },
+          userID: { eq: userId }
+        }
+      }));
+
+    const participationResults = await Promise.all(participationPromises);
+    
+    // Combine all participations
+    const allParticipations = participationResults.flatMap(result => result.data);
+    
+    // Calculate total points and workouts
+    const totalPoints = allParticipations.reduce((sum, p) => sum + (p.points || 0), 0);
+    const totalWorkouts = allParticipations.reduce((sum, p) => sum + (p.workoutsCompleted || 0), 0);
+
+    // Get total participants count (unique users across parent and child challenges)
+    const participantPromises = [challengeId, ...childChallenges.data.map(c => c.id)]
+      .map(cId => client.models.ChallengeParticipant.list({
+        filter: {
+          challengeID: { eq: cId },
+          or: [
+            { status: { eq: 'ACTIVE' } },
+            { status: { eq: 'COMPLETED' } }
+          ]
+        }
+      }));
+
+    const participantResults = await Promise.all(participantPromises);
+    
+    // Get unique participant count
+    const uniqueParticipants = new Set(
+      participantResults.flatMap(result => 
+        result.data.map(p => p.userID)
+      ).filter((id): id is string => id !== null)
+    );
 
     return {
       ...challengeResult.data,
-      userParticipation: participationResult.data[0] || null,
-      totalParticipants: participantsResult.data.length,
-      totalWorkouts: workoutsResult.data.length,
+      userParticipation: {
+        ...allParticipations[0],  // Use first participation for status
+        points: totalPoints,
+        workoutsCompleted: totalWorkouts
+      },
+      totalParticipants: uniqueParticipants.size,
       daysRemaining: challengeResult.data.endAt 
         ? Math.ceil((new Date(challengeResult.data.endAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
         : null
@@ -302,29 +327,74 @@ export async function getChallengeLeaderboard(challengeId: string) {
   try {
     const client = generateClient<Schema>();
     
-    const participantsResult = await client.models.ChallengeParticipant.list({
+    // First get all child challenges
+    const childChallenges = await client.models.Challenge.list({
       filter: {
-        challengeID: { eq: challengeId },
-        status: { eq: 'ACTIVE' }
+        parentChallengeId: { eq: challengeId }
       }
     });
 
-    // Get user details for each participant
-    const leaderboardData = await Promise.all(
-      participantsResult.data.map(async (participant) => {
-        const userResult = await client.models.User.get({ 
-          id: participant.userID || '' 
-        });
+    // Get all challenge IDs (parent + children)
+    const allChallengeIds = [challengeId, ...childChallenges.data.map(c => c.id)];
 
-        return {
-          id: participant.userID,
-          name: userResult.data?.preferred_username || 'Unknown User',
-          points: participant.points || 0,
-          workouts: participant.workoutsCompleted || 0,
-          profilePicture: userResult.data?.pictureUrl || null
-        };
+    // Get all participants from all challenges
+    const participationsPromises = allChallengeIds.map(cId =>
+      client.models.ChallengeParticipant.list({
+        filter: {
+          challengeID: { eq: cId },
+          or: [
+            { status: { eq: 'ACTIVE' } },
+            { status: { eq: 'COMPLETED' } }
+          ]
+        }
       })
     );
+
+    const participationsResults = await Promise.all(participationsPromises);
+    
+    // Combine and aggregate participant data
+    const userStats = new Map<string, {
+      id: string;
+      name: string;
+      points: number;
+      workouts: number;
+      profilePicture: string | null;
+    }>();
+
+    // Process all participations
+    for (const participations of participationsResults) {
+      for (const participant of participations.data) {
+        if (!participant.userID) continue;
+
+        const currentStats = userStats.get(participant.userID) || {
+          id: participant.userID,
+          name: '',
+          points: 0,
+          workouts: 0,
+          profilePicture: null
+        };
+
+        // Add points and workouts from this participation
+        currentStats.points += participant.points || 0;
+        currentStats.workouts += participant.workoutsCompleted || 0;
+
+        userStats.set(participant.userID, currentStats);
+      }
+    }
+
+    // Get user details for each unique participant
+    const userDetailsPromises = Array.from(userStats.keys()).map(async (userId) => {
+      const userResult = await client.models.User.get({ id: userId });
+      const stats = userStats.get(userId)!;
+      
+      return {
+        ...stats,
+        name: userResult.data?.preferred_username || 'Unknown User',
+        profilePicture: userResult.data?.pictureUrl || null
+      };
+    });
+
+    const leaderboardData = await Promise.all(userDetailsPromises);
 
     // Sort by points in descending order
     return leaderboardData.sort((a, b) => b.points - a.points);
@@ -339,24 +409,50 @@ export async function getChallengeActivity(challengeId: string) {
   try {
     const client = generateClient<Schema>();
     
-    // Get all posts for this challenge
-    const postsResult = await client.models.PostChallenge.list({
+    // Get the parent challenge first to verify it exists
+    const parentChallenge = await client.models.Challenge.get({ id: challengeId });
+    if (!parentChallenge.data) {
+      throw new Error('Challenge not found');
+    }
+
+    // Get all child challenge IDs
+    const childChallenges = await client.models.Challenge.list({
       filter: {
-        challengeId: { eq: challengeId },
-        validated: { eq: true }
+        parentChallengeId: { eq: challengeId }
+      }
+    });
+
+    // Create the filter condition using 'or'
+    const challengeIdFilters = childChallenges.data.map(challenge => ({
+      challengeId: { eq: challenge.id }
+    }));
+
+    // Add the parent challenge ID to the conditions
+    challengeIdFilters.push({ challengeId: { eq: challengeId } });
+
+    // Get all posts for these challenges
+    const postsResponse = await client.models.PostChallenge.list({
+      filter: {
+        and: [
+          {
+            or: challengeIdFilters
+          },
+          { validated: { eq: true } }
+        ]
       }
     });
 
     // Get additional details for each post
     const activityFeed = await Promise.all(
-      postsResult.data.map(async (post) => {
-        const userResult = await client.models.User.get({ 
-          id: post.userId || '' 
-        });
+      postsResponse.data.map(async (post) => {
+        const [userResult, postResult, challengeResult] = await Promise.all([
+          client.models.User.get({ id: post.userId || '' }),
+          client.models.PostforWorkout.get({ id: post.postId || '' }),
+          client.models.Challenge.get({ id: post.challengeId || '' })
+        ]);
 
-        const postResult = await client.models.PostforWorkout.get({ 
-          id: post.postId || '' 
-        });
+        // Calculate points for this post
+        const points = await getPostPoints(post, post.challengeId || '');
 
         return {
           id: post.postId,
@@ -364,11 +460,14 @@ export async function getChallengeActivity(challengeId: string) {
           username: userResult.data?.preferred_username || 'Unknown User',
           content: postResult.data?.content || '',
           timestamp: post.timestamp || '',
-          points: 50, // You might want to calculate this based on your rules
+          points,
           likes: postResult.data?.thumbsUp || 0,
-          comments: 0, // You'll need to implement comment counting
+          comments: 0,
           profilePicture: userResult.data?.pictureUrl || null,
-          workoutImage: postResult.data?.url || null
+          workoutImage: postResult.data?.url || null,
+          isDaily: challengeResult.data?.isDailyChallenge || false,
+          challengeTitle: challengeResult.data?.title || '',
+          challengeType: challengeResult.data?.challengeType || ''
         };
       })
     );
@@ -528,5 +627,70 @@ export async function inviteFriendToChallenge(params: {
       success: false,
       message: error instanceof Error ? error.message : "Failed to send invitation"
     };
+  }
+}
+
+async function getPostPoints(post: Schema['PostChallenge']['type'], challengeId: string) {
+  try {
+    if (!post || !challengeId) return 0;
+
+    const challenge = await client.models.Challenge.get({ id: challengeId });
+    if (!challenge.data) return 0;
+
+    // If this is a daily challenge
+    if (challenge.data.isDailyChallenge) {
+      return challenge.data.dailyChallengePoints || 10; // Default to 10 if not specified
+    }
+
+    // For regular challenge posts
+    return challenge.data.basePointsPerWorkout || 10; // Default to 10 if not specified
+
+    // Note: If we need to calculate points based on post properties in the future,
+    // we can use the 'post' parameter here
+  } catch (error) {
+    console.error('Error calculating post points:', error);
+    return 0;
+  }
+}
+
+// generate stat display for user in challenge
+export async function getChallengeStats(challengeId: string, userId: string) {
+  try {
+    const client = generateClient<Schema>();
+
+    // Get all challenges (parent and children)
+    const childChallenges = await client.models.Challenge.list({
+      filter: {
+        parentChallengeId: { eq: challengeId }
+      }
+    });
+
+    const allChallengeIds = [challengeId, ...childChallenges.data.map(c => c.id)];
+
+    // Get all participations for these challenges
+    const participations = await Promise.all(
+      allChallengeIds.map(cId => 
+        client.models.ChallengeParticipant.list({
+          filter: {
+            challengeID: { eq: cId },
+            userID: { eq: userId }
+          }
+        })
+      )
+    );
+
+    // Calculate total workouts and points
+    const stats = participations.reduce((acc, curr) => {
+      curr.data.forEach(participation => {
+        acc.totalWorkouts += participation.workoutsCompleted || 0;
+        acc.totalPoints += participation.points || 0;
+      });
+      return acc;
+    }, { totalWorkouts: 0, totalPoints: 0 });
+
+    return stats;
+  } catch (error) {
+    console.error('Error calculating challenge stats:', error);
+    throw error;
   }
 }

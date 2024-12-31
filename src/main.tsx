@@ -49,7 +49,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       }}>
        <UrlCacheProvider>
         <UserProvider>
-          <DataVersionProvider>  {/* Add the new provider here */}
+          <DataVersionProvider>
             <Router>
               <Header />
               <Routes>
