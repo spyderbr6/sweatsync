@@ -1,0 +1,190 @@
+.activity-feed {
+    width: 100%;
+  }
+  
+  .activity-item {
+    background-color: white;
+    border-radius: 0.25rem;
+    border: 1px solid rgb(243 244 246);
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .activity-item__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  
+  .activity-item__avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    object-fit: cover;
+    border: 1px solid rgb(243 244 246);
+  }
+  
+  .activity-item__user-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .activity-item__username-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .activity-item__username {
+    font-weight: 500;
+    color: rgb(17 24 39);
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  
+  .activity-item__daily-badge {
+    padding: 0.125rem 0.375rem;
+    font-size: 0.75rem;
+    background-color: rgb(239 246 255);
+    color: rgb(37 99 235);
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+  
+  .activity-item__timestamp {
+    display: flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: rgb(107 114 128);
+  }
+  
+  .activity-item__content-wrapper {
+    padding: 0 0.5rem 0.5rem;
+    display: flex;
+    gap: 0.75rem;
+  }
+  
+  .activity-item__content {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .activity-item__challenge-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgb(37 99 235);
+    margin-bottom: 0.25rem;
+    cursor: pointer;
+  }
+  
+  .activity-item__challenge-title:hover {
+    color: rgb(29 78 216);
+  }
+  
+  .activity-item__text {
+    color: rgb(75 85 99);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+  }
+  
+  .activity-item__thumbnail-wrapper {
+    position: relative;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  
+  .activity-item__thumbnail {
+    width: 6rem;
+    height: 6rem;
+    object-fit: cover;
+    border-radius: 0.25rem;
+  }
+  
+  .activity-item__thumbnail-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0);
+    transition: background-color 0.2s;
+    border-radius: 0.25rem;
+  }
+  
+  .activity-item__thumbnail-wrapper:hover .activity-item__thumbnail-overlay {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+  
+  .activity-item__thumbnail-icon {
+    opacity: 0;
+    color: white;
+    transform: scale(0.9);
+    transition: all 0.2s;
+  }
+  
+  .activity-item__thumbnail-wrapper:hover .activity-item__thumbnail-icon {
+    opacity: 1;
+    transform: scale(1);
+  }
+  
+  .activity-item__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.375rem 0.5rem;
+    background-color: rgb(249 250 251);
+    font-size: 0.75rem;
+  }
+  
+  .activity-item__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .activity-item__points {
+    display: flex;
+    align-items: center;
+    color: rgb(217 119 6);
+  }
+  
+  .activity-item__action-button {
+    display: flex;
+    align-items: center;
+    color: rgb(75 85 99);
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  
+  .activity-item__action-button:hover {
+    color: rgb(37 99 235);
+  }
+  
+  .activity-item__action-button--like:hover {
+    color: rgb(239 68 68);
+  }
+  
+  .activity-item__action-count {
+    margin-left: 0.25rem;
+  }
+  
+  .activity-item__view-button {
+    color: rgb(37 99 235);
+    font-weight: 500;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  
+  .activity-item__view-button:hover {
+    color: rgb(29 78 216);
+  }
