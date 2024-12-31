@@ -214,7 +214,7 @@ export default function ChallengeDetailPage() {
                                             {index > 2 && index + 1}
                                         </span>
                                         <img
-                                            src={profileUrls[user.id] || '/profileDefault.png'}
+                                            src={profileUrls[user.id] || '../../profileDefault.png'}
                                             alt={user.name}
                                             className="leaderboard-avatar"
                                         />
@@ -238,7 +238,7 @@ export default function ChallengeDetailPage() {
                             <ActivityItem
                                 key={item.id}
                                 item={item}
-                                profileUrl={profileUrls[item.userId] || '/profileDefault.png'}
+                                profileUrl={profileUrls[item.userId] || '../../profileDefault.png'}
                                 workoutUrl={workoutUrls[item.id] || '/picsoritdidnthappen.webp'}
                                 navigate={navigate}
                             />
