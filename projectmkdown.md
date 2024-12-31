@@ -71,6 +71,8 @@
         └── useChallengeDetail.ts
         └── userContext.tsx
         └── 📁utils
+            └── challengeDailyPrompt.css
+            └── challengeDailyPrompt.tsx
             └── imageUploadUtils.ts
             └── postChallenges.css
             └── postChallenges.tsx

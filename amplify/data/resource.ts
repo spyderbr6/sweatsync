@@ -1,5 +1,6 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
+//amplify/data/resource.ts
 const schema = a.schema({
   PostforWorkout: a.model({
     content: a.string(),
@@ -117,7 +118,8 @@ const schema = a.schema({
     userId: a.string(),
     timestamp: a.datetime(),
     validated: a.boolean().default(false),
-    validationComment: a.string()
+    validationComment: a.string(), 
+    points:a.integer().default(0)
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Comment: a.model({

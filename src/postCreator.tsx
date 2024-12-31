@@ -3,7 +3,7 @@ import { Camera, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { listChallenges } from './challengeOperations';
-import { updateChallengePoints, validateChallengePost} from './challengeRules';
+import { updateChallengePoints, validateChallengePost } from './challengeRules';
 import { useUser } from './userContext';
 import './postCreator.css';
 import { uploadImageWithThumbnails } from './utils/imageUploadUtils';
@@ -60,39 +60,54 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     const loadAndValidateChallenges = async () => {
       try {
         if (!userId) return;
-
-        // Fetch challenges
-        const activeChallenges = await listChallenges(userId);
-        setAvailableChallenges(activeChallenges);
-
+    
+        // Fetch both regular challenges and daily challenges
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+    
+        // Get all active challenges
+        const [activeChallenges] = await Promise.all([
+          listChallenges(userId),
+        ]);
+    
+        // Combine regular and daily challenges
+        const allChallenges = [
+          ...activeChallenges
+        ];
+    
+        setAvailableChallenges(allChallenges);
+    
         // Get group challenges
         const groupChallenges = activeChallenges.filter(c => c.challengeType === 'GROUP');
         const personalChallenges = activeChallenges.filter(c => c.challengeType === 'PERSONAL');
-
+        const dailyTypeChallenges = activeChallenges.filter(c => c.challengeType === 'DAILY');
+    
         // Initialize selectability map
         const selectabilityMap: Record<string, ChallengeSelectability> = {};
-
+    
         // Handle personal challenges
         personalChallenges.forEach(challenge => {
           selectabilityMap[challenge.id] = {
             id: challenge.id,
             canSelect: challenge.createdBy === userId,
-            reason: challenge.createdBy !== userId ? "Only the creator can post to personal challenges" : undefined
+            reason: challenge.createdBy !== userId ? 
+              "Only the creator can post to personal challenges" : undefined
           };
         });
-
-        // Validate all group challenges if they exist
+    
+        // Validate group challenges
         if (groupChallenges.length > 0) {
-          // Validate each challenge
           await Promise.all(groupChallenges.map(async (challenge) => {
             try {
               const validationResult = await validateChallengePost({
                 challengeId: challenge.id,
                 userId,
-                postId: 'pending', // We don't have a post ID yet during validation
+                postId: 'pending',
                 timestamp: new Date().toISOString()
               });
-        
+    
               selectabilityMap[challenge.id] = {
                 id: challenge.id,
                 canSelect: validationResult.isValid,
@@ -108,7 +123,36 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             }
           }));
         }
-        // Public challenges are always selectable
+    
+        // Validate daily challenges
+        if (dailyTypeChallenges.length > 0) {
+          await Promise.all(dailyTypeChallenges.map(async (challenge) => {
+            try {
+              const validationResult = await validateChallengePost({
+                challengeId: challenge.id,
+                userId,
+                postId: 'pending',
+                timestamp: new Date().toISOString(),
+                isDailyChallenge: true
+              });
+    
+              selectabilityMap[challenge.id] = {
+                id: challenge.id,
+                canSelect: validationResult.isValid,
+                reason: validationResult.isValid ? undefined : validationResult.message
+              };
+            } catch (error) {
+              console.error(`Error validating daily challenge ${challenge.id}:`, error);
+              selectabilityMap[challenge.id] = {
+                id: challenge.id,
+                canSelect: false,
+                reason: "Error validating daily challenge"
+              };
+            }
+          }));
+        }
+    
+        // Make sure public challenges are always selectable
         activeChallenges
           .filter(c => c.challengeType === 'PUBLIC')
           .forEach(challenge => {
@@ -117,7 +161,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
               canSelect: true
             };
           });
-
+    
         setChallengeSelectability(selectabilityMap);
       } catch (error) {
         console.error("Error loading and validating challenges:", error);
