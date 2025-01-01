@@ -1,6 +1,8 @@
-import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
-
 //amplify/data/resource.ts
+
+import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
+import { rotateCreator } from "../functions/rotateCreator/resource";
+
 const schema = a.schema({
   PostforWorkout: a.model({
     content: a.string(),
@@ -128,7 +130,27 @@ const schema = a.schema({
     updatedAt: a.datetime().required(),
   }).authorization((allow) => [allow.publicApiKey()]),
 
-});
+  rotateCreator: a
+  .query()
+  .arguments({
+    challengeId: a.string().required()
+  })  
+  .returns(a.boolean())
+  .handler(a.handler.function(rotateCreator))
+  .authorization((allow) => [allow.publicApiKey()]),
+ // allow query and subscription operations but not mutations
+
+
+})  .authorization((allow) => [
+  /**
+   * 1) Let the function be invoked if you actually want to call it
+   *    as a query from a client. If you *only* run it on a schedule
+   *    and never from a client, you could remove or minimize these.
+   */
+  allow.resource(rotateCreator).to(["query", "listen", "mutate"])
+]);
+
+
 
 export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
