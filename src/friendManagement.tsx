@@ -66,7 +66,6 @@ const ModernFriendsPage = () => {
 
           if (senderResult.data) {
             senderUsername = senderResult.data.preferred_username || senderResult.data.username || 'Unknown User';
-
             if (senderResult.data.picture) {
               try {
                 senderPicture = await getStorageUrl(senderResult.data.picture);
@@ -160,24 +159,38 @@ const ModernFriendsPage = () => {
         {/* Stats Cards */}
         <div className="stats-grid">
           <div className="stat-card stat-card--friends">
-            <Users className="stat-icon stat-icon--friends" />
+            <div className="stat-icon stat-icon--friends">
+              <Users size={20} />
+            </div>
             <div className="stat-content">
-              <p className="stat-label">Total Friends</p>
-              <p className="stat-value">{friends.length}</p>
+              <div className="stat-info">
+                <span className="stat-label">Total Friends</span>
+                <span className="stat-value">{friends.length}</span>
+              </div>
             </div>
           </div>
+
           <div className="stat-card stat-card--challenges">
-            <Trophy className="stat-icon stat-icon--challenges" />
+            <div className="stat-icon stat-icon--challenges">
+              <Trophy size={20} />
+            </div>
             <div className="stat-content">
-              <p className="stat-label">Pending Requests</p>
-              <p className="stat-value">{pendingRequests.length}</p>
+              <div className="stat-info">
+                <span className="stat-label">Pending Requests</span>
+                <span className="stat-value">{pendingRequests.length}</span>
+              </div>
             </div>
           </div>
+
           <div className="stat-card stat-card--active">
-            <Activity className="stat-icon stat-icon--active" />
+            <div className="stat-icon stat-icon--active">
+              <Activity size={20} />
+            </div>
             <div className="stat-content">
-              <p className="stat-label">Active Now</p>
-              <p className="stat-value">{Math.floor(friends.length * 0.3)}</p>
+              <div className="stat-info">
+                <span className="stat-label">Active Now</span>
+                <span className="stat-value">{Math.floor(friends.length * 0.3)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -224,7 +237,7 @@ const ModernFriendsPage = () => {
                 className="friend-avatar"
               />
               <div className="friend-details">
-                <h3 className="friend-name">{request.sender}</h3>
+                <h3 className="friend-name">{request.senderUsername}</h3>
                 <p className="friend-status">Wants to connect</p>
               </div>
             </div>
