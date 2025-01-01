@@ -1,11 +1,20 @@
-//amplify/backend/function/rotateCreator/handler.ts
+// amplify/functions/rotateCreator/handler.ts
+import { type EventBridgeHandler } from "aws-lambda";
 import { generateClient } from 'aws-amplify/api';
 import type { Schema } from '../../data/resource';
-import type { EventBridgeHandler } from "aws-lambda";
+import {Amplify} from 'aws-amplify';
+import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime';
+import { env } from '$amplify/env/rotateCreator'; // replace with your function name
+import outputs from "../../../amplify_outputs.json";
+
+
+const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env);
+
+Amplify.configure(outputs);
 
 const client = generateClient<Schema>();
 
-export const handler: EventBridgeHandler<"Scheduled Event", null, void> = async (event) => {
+export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = async (event) => {
   try {
     // Get all active group challenges that have creator rotation enabled
     const challenges = await client.models.Challenge.list({
@@ -13,7 +22,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, void> = async 
         and: [
           { challengeType: { eq: 'GROUP' }},
           { status: { eq: 'ACTIVE' }},
-          { creatorRotation: { eq: true }},
+          { dailyChallenges: { eq: true }}, // Make sure daily challenges are enabled
           // Only get challenges where next rotation is due (before now)
           { nextRotationDate: { le: new Date().toISOString() }}
         ]
@@ -23,7 +32,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, void> = async 
     const rotationResults = await Promise.allSettled(
       challenges.data.map(async (challenge) => {
         try {
-          if (!challenge.id) return;
+          if (!challenge.id) return false;
 
           // Get active participants
           const participants = await client.models.ChallengeParticipant.list({
@@ -35,7 +44,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, void> = async 
 
           if (!participants.data.length) {
             console.log(`No active participants for challenge ${challenge.id}`);
-            return;
+            return false;
           }
 
           // Find current creator's index
@@ -49,7 +58,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, void> = async 
 
           if (!nextCreator) {
             console.log(`Could not determine next creator for challenge ${challenge.id}`);
-            return;
+            return false;
           }
 
           // Calculate next rotation date (midnight tomorrow)
@@ -65,45 +74,30 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, void> = async 
             updatedAt: new Date().toISOString()
           });
 
-          return {
-            challengeId: challenge.id,
+          console.log(`Successfully rotated creator for challenge ${challenge.id}`, {
             previousCreator: challenge.currentCreatorId,
             newCreator: nextCreator,
             nextRotation: nextRotationDate
-          };
+          });
+
+          return true;
         } catch (error) {
           console.error(`Error processing challenge ${challenge.id}:`, error);
-          throw error;
+          return false;
         }
       })
     );
 
-    // Clean up old daily challenges
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    // Count successful rotations
+    const successfulRotations = rotationResults.filter(
+      result => result.status === 'fulfilled' && result.value
+    ).length;
 
-    await client.models.Challenge.list({
-      filter: {
-        and: [
-          { challengeType: { eq: 'DAILY' }},
-          { endAt: { le: yesterday.toISOString() }}
-        ]
-      }
-    }).then(async (oldChallenges) => {
-      // Archive old daily challenges
-      await Promise.all(
-        oldChallenges.data.map(challenge => 
-          client.models.Challenge.update({
-            id: challenge.id,
-            status: 'ARCHIVED',
-            updatedAt: new Date().toISOString()
-          })
-        )
-      );
-    });
+    console.log(`Completed creator rotation. ${successfulRotations} challenges updated.`);
+    return true;
 
-    } catch (error) {
-      console.error('Error in creator rotation:', error);
-      throw error;
-    }
+  } catch (error) {
+    console.error('Error in creator rotation:', error);
+    return false;
   }
+};

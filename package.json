@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-amplify/backend-graphql": "^0.3.2",
     "@aws-amplify/ui": "^6.7.2",
     "@aws-amplify/ui-react": "^6.7.2",
     "@aws-amplify/ui-react-storage": "^3.5.1",
