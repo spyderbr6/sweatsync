@@ -66,7 +66,6 @@ const ModernFriendsPage = () => {
 
           if (senderResult.data) {
             senderUsername = senderResult.data.preferred_username || senderResult.data.username || 'Unknown User';
-
             if (senderResult.data.picture) {
               try {
                 senderPicture = await getStorageUrl(senderResult.data.picture);
@@ -224,7 +223,7 @@ const ModernFriendsPage = () => {
                 className="friend-avatar"
               />
               <div className="friend-details">
-                <h3 className="friend-name">{request.sender}</h3>
+                <h3 className="friend-name">{request.senderUsername}</h3>
                 <p className="friend-status">Wants to connect</p>
               </div>
             </div>
