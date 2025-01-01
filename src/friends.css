@@ -51,72 +51,125 @@
   margin-right: 0.5rem;
 }
 
-/* Stats Cards */
+/*Stats Cards */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .stat-card {
-  padding: 1rem;
+  background: white;
   border-radius: 0.5rem;
+  padding: 0.75rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 }
 
+/* Different background gradients for each card */
 .stat-card--friends {
-  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  background: linear-gradient(135deg, #dbeafe20, #eff6ff20);
+  border: 1px solid #dbeafe;
 }
 
 .stat-card--challenges {
-  background: linear-gradient(135deg, #dcfce7, #f0fdf4);
+  background: linear-gradient(135deg, #dcfce720, #f0fdf420);
+  border: 1px solid #dcfce7;
 }
 
 .stat-card--active {
-  background: linear-gradient(135deg, #f3e8ff, #faf5ff);
-}
-
-.stat-icon {
-  width: 2rem;
-  height: 2rem;
-}
-
-.stat-icon--friends {
-  color: #2563eb;
-}
-
-.stat-icon--challenges {
-  color: #16a34a;
-}
-
-.stat-icon--active {
-  color: #7c3aed;
+  background: linear-gradient(135deg, #f3e8ff20, #faf5ff20);
+  border: 1px solid #f3e8ff;
 }
 
 .stat-content {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-info {
   display: flex;
   flex-direction: column;
 }
 
 .stat-label {
   font-size: 0.875rem;
-  color: #4b5563;
+  color: #6b7280;
+  margin: 0;
 }
 
 .stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: #111827;
+  margin: 0;
 }
+
+.stat-icon {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon--friends {
+  color: #2563eb;
+  background-color: #dbeafe;
+}
+
+.stat-icon--challenges {
+  color: #16a34a;
+  background-color: #dcfce7;
+}
+
+.stat-icon--active {
+  color: #7c3aed;
+  background-color: #f3e8ff;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    padding: 0 0.5rem;
+  }
+
+  .stat-card {
+    padding: 0.625rem;
+  }
+
+  .stat-info {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+  }
+
+  .stat-icon {
+    padding: 0.375rem;
+  }
+
+  .stat-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+
 
 /* Search Bar */
 .search-container {
