@@ -3,6 +3,13 @@ import { FaEnvelope, FaSpinner, FaEdit, FaCheck, FaTimes } from 'react-icons/fa'
 import { useUser } from "./userContext";
 import { useProfilePictureUploader } from './utils/profilePictureUploader';
 import './ProfilePage.css';
+import { 
+  FetchUserAttributesOutput, 
+  fetchUserAttributes, 
+  updateUserAttributes 
+} from "aws-amplify/auth";
+import { useUrlCache } from './urlCacheContext';
+
 
 function ProfilePage() {
   const { picture, userId, refreshUserData } = useUser();
@@ -10,7 +17,8 @@ function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
-  const [userAttributes, setUserAttributes] = useState<any>(null);
+  const [userAttributes, setUserAttributes] = useState<FetchUserAttributesOutput | null>(null);
+  const { getStorageUrl } = useUrlCache();
   const {
     uploadProfilePicture,
     loading: uploadLoading,
@@ -19,26 +27,40 @@ function ProfilePage() {
   } = useProfilePictureUploader();
 
   useEffect(() => {
-    const fetchUserAttributes = async () => {
+    const getUserAttributes = async () => {
       try {
         setIsLoading(true);
-        // Simulate fetching user data
-        const attributes = { email: "user@example.com", username: "testuser" };
+        const attributes = await fetchUserAttributes();
         setUserAttributes(attributes);
-        setEditedName(attributes.username);
-      } catch (err) {
-        setError("Failed to load user data.");
+        setEditedName(attributes.preferred_username || attributes.username || "");
+
+      } catch (error) {
+        setError('Failed to fetch user attributes. Please try again.');
       } finally {
         setIsLoading(false);
       }
     };
-    fetchUserAttributes();
-  }, []);
 
-  const handleUpdateName = () => {
-    // Logic to update name
-    console.log(`Updated name: ${editedName}`);
-    setIsEditingName(false);
+    getUserAttributes();
+  }, [getStorageUrl]);
+
+  const handleUpdateName = async () => {
+    try {
+      await updateUserAttributes({
+        userAttributes: {
+          preferred_username: editedName
+        }
+      });
+
+      setUserAttributes(prev => 
+        prev ? {...prev, preferred_username: editedName} : null
+      );
+
+      setIsEditingName(false);
+    } catch (error) {
+      console.error('Error updating name:', error);
+      setError('Failed to update name. Please try again.');
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +120,7 @@ function ProfilePage() {
           ) : (
             <div className="profile-name-display">
               <h1 className="profile-name">
-                {userAttributes?.username || 'User'}
+                {userAttributes?.preferred_username || 'User'}
               </h1>
               <button onClick={() => setIsEditingName(true)} className="profile-name-edit-button">
                 <FaEdit />
