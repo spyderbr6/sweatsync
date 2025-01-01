@@ -4,13 +4,13 @@ import { generateClient } from 'aws-amplify/api';
 import type { Schema } from '../../data/resource';
 import {Amplify} from 'aws-amplify';
 import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime';
-import { env } from '$amplify/env/rotateCreator'; // replace with your function name
-import outputs from "../../../amplify_outputs.json";
+import { env } from '$amplify/env/rotateCreator'; 
+//import outputs from "../amplify_outputs.json";
 
 
 const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env);
-
-Amplify.configure(outputs);
+console.log('resourceConfig', resourceConfig);
+Amplify.configure(resourceConfig, libraryOptions);
 
 const client = generateClient<Schema>();
 
