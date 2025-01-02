@@ -2,14 +2,14 @@
 import { type EventBridgeHandler } from "aws-lambda";
 import { generateClient } from 'aws-amplify/api';
 import type { Schema } from '../../data/resource';
-import {Amplify} from 'aws-amplify';
+import { Amplify } from 'aws-amplify';
 import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime';
-import { env } from '$amplify/env/rotateCreator'; 
+import { env } from '$amplify/env/rotateCreator';
 //import outputs from "../amplify_outputs.json";
 
 
 const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env);
-console.log('resourceConfig', resourceConfig);
+
 Amplify.configure(resourceConfig, libraryOptions);
 
 const client = generateClient<Schema>();
@@ -20,11 +20,11 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
     const challenges = await client.models.Challenge.list({
       filter: {
         and: [
-          { challengeType: { eq: 'GROUP' }},
-          { status: { eq: 'ACTIVE' }},
-          { dailyChallenges: { eq: true }}, // Make sure daily challenges are enabled
+          { challengeType: { eq: 'GROUP' } },
+          { status: { eq: 'ACTIVE' } },
+          { dailyChallenges: { eq: true } }, // Make sure daily challenges are enabled
           // Only get challenges where next rotation is due (before now)
-          { nextRotationDate: { le: new Date().toISOString() }}
+          { nextRotationDate: { le: new Date().toISOString() } }
         ]
       }
     });
@@ -72,6 +72,29 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
             currentCreatorId: nextCreator,
             nextRotationDate: nextRotationDate.toISOString(),
             updatedAt: new Date().toISOString()
+          });
+
+          // Clean up old daily challenges
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          await client.models.Challenge.list({
+            filter: {
+              and: [
+                { challengeType: { eq: 'DAILY' } },
+                { endAt: { le: yesterday.toISOString() } }
+              ]
+            }
+          }).then(async (oldChallenges) => {
+            // Archive old daily challenges
+            await Promise.all(
+              oldChallenges.data.map(challenge =>
+                client.models.Challenge.update({
+                  id: challenge.id,
+                  status: 'ARCHIVED',
+                  updatedAt: new Date().toISOString()
+                })
+              )
+            );
           });
 
           console.log(`Successfully rotated creator for challenge ${challenge.id}`, {
