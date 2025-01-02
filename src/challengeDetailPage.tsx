@@ -95,6 +95,18 @@ export default function ChallengeDetailPage() {
 
         return [
             {
+                label: 'Invite',
+                icon: <UserPlus size={16} />,
+                onClick: () => setIsInviteModalOpen(true),
+                show: isOwner,
+            },
+            {
+                label: 'Share',
+                icon: <Share2 size={16} />,
+                onClick: () => handleShare(challenge),
+                show: true,
+            },
+            {
                 label: 'Delete Challenge',
                 icon: <Trash2 size={16} />,
                 onClick: () => handleDeleteChallenge(challenge.id),
@@ -107,13 +119,7 @@ export default function ChallengeDetailPage() {
                 onClick: () => handleLeaveChallenge(challenge),
                 destructive: true,
                 show: challengeDetails.userParticipation?.userID,
-            },
-            {
-                label: 'Share',
-                icon: <Share2 size={16} />,
-                onClick: () => handleShare(challenge),
-                show: true,
-            },
+            }
         ];
     };
 
@@ -137,15 +143,7 @@ export default function ChallengeDetailPage() {
                         <p className="challenge-description">{challengeDetails.description}</p>
                     </div>
                     <div className="challenge-actions">
-                        <button
-                            className="action-button action-button--invite"
-                            onClick={() => setIsInviteModalOpen(true)}
-                        >
-                            <UserPlus size={16} />
-                            Invite
-                        </button>
                         <ActionMenu actions={getChallengeActions(challengeDetails)} />
-
                         {/* Add the modal */}
                         <InviteFriendsModal
                             isOpen={isInviteModalOpen}
