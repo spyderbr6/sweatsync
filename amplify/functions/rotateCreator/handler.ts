@@ -74,29 +74,6 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
             updatedAt: new Date().toISOString()
           });
 
-          // Clean up old daily challenges
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          await client.models.Challenge.list({
-            filter: {
-              and: [
-                { challengeType: { eq: 'DAILY' } },
-                { endAt: { le: yesterday.toISOString() } }
-              ]
-            }
-          }).then(async (oldChallenges) => {
-            // Archive old daily challenges
-            await Promise.all(
-              oldChallenges.data.map(challenge =>
-                client.models.Challenge.update({
-                  id: challenge.id,
-                  status: 'ARCHIVED',
-                  updatedAt: new Date().toISOString()
-                })
-              )
-            );
-          });
-
           console.log(`Successfully rotated creator for challenge ${challenge.id}`, {
             previousCreator: challenge.currentCreatorId,
             newCreator: nextCreator,
