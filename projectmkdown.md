@@ -6,8 +6,21 @@
         └── backend.ts
         └── 📁data
             └── resource.ts
+        └── 📁function
+            └── 📁sendNotificationFunction
+                └── 📁graphql
+                    └── API.ts
+                    └── mutations.ts
+                    └── queries.ts
+                    └── subscriptions.ts
         └── 📁functions
+            └── 📁challengeCleanup
+                └── handler.ts
+                └── resource.ts
             └── 📁rotateCreator
+                └── handler.ts
+                └── resource.ts
+            └── 📁sendNotificationFunction
                 └── handler.ts
                 └── resource.ts
         └── package.json
@@ -33,7 +46,6 @@
         └── 📁assets
             └── react.svg
         └── backup
-        └── challengeDaily.tsx
         └── challengeDetailPage.tsx
         └── challengeFeedHeader.tsx
         └── challengeOperations.tsx
@@ -47,6 +59,12 @@
             └── 📁cardActionMenu
                 └── cardActionMenu.css
                 └── cardActionMenu.tsx
+            └── 📁challengeActivityItem
+                └── challengeActivityItem.tsx
+                └── challengeActivityStyle.css
+            └── 📁FeedbackModal
+                └── feedbackModal.css
+                └── feedbackModal.tsx
         └── CreateChallengeModal.tsx
         └── CreatePostModal.tsx
         └── dataVersionContext.tsx
@@ -73,10 +91,11 @@
         └── 📁utils
             └── challengeDailyPrompt.css
             └── challengeDailyPrompt.tsx
+            └── githubUtils.ts
             └── imageUploadUtils.ts
             └── postChallenges.css
             └── postChallenges.tsx
-            └── profilePictureUploader.tsx
+            └── profilePictureUploader.ts
             └── promptAction.tsx
             └── shareAction.tsx
         └── vite-env.d.ts
