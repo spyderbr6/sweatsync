@@ -94,7 +94,9 @@ const schema = a.schema({
       completedAt: a.datetime(),
       updatedAt: a.datetime(),
       invitedAt: a.datetime(),
-      invitedBy: a.string()
+      invitedBy: a.string(),
+      dropReason: a.string(), //Reason the user is marked as dropped. could be user, or system, etc.
+      updatedBy: a.string() //User who last updated the record
     }).authorization((allow) => [allow.publicApiKey()]),
 
   PostChallenge: a.model({
