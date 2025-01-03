@@ -14,40 +14,44 @@ export function usePushNotifications(userId: string | null) {
 
   // Check initial permission state
   useEffect(() => {
-    const checkSubscriptionStatus = async () => {
+    const checkCurrentDeviceSubscription = async () => {
       if (!userId) return;
   
       try {
-        // Check browser's push subscription
+        // Get current browser subscription
         const registration = await navigator.serviceWorker.ready;
         const browserSub = await registration.pushManager.getSubscription();
-        console.log('Browser push subscription:', browserSub ? 'Present' : 'None');
   
-        // Check database subscription
-        const dbSubs = await client.models.PushSubscription.list({
-          filter: { userID: { eq: userId } }
-        });
-        console.log('Database subscriptions:', {
-          count: dbSubs.data.length,
-          endpoints: dbSubs.data.map(sub => sub.endpoint)
-        });
-  
-        // Check if they match
+        // If we have a browser subscription, check if it exists in database
         if (browserSub) {
-          const matchingDbSub = dbSubs.data.find(sub => sub.endpoint === browserSub.endpoint);
-          console.log('Subscription match:', {
-            browserEndpoint: browserSub.endpoint,
-            hasMatchingDb: !!matchingDbSub
+          const dbSubs = await client.models.PushSubscription.list({
+            filter: { 
+              userID: { eq: userId },
+              endpoint: { eq: browserSub.endpoint }
+            }
           });
+  
+          // Only set permission to granted if this device's subscription exists
+          if (dbSubs.data.length > 0) {
+            setPermission('granted');
+            setSubscription(browserSub);
+          } else {
+            setPermission('default');
+            setSubscription(null);
+          }
+        } else {
+          setPermission('default');
+          setSubscription(null);
         }
+  
       } catch (error) {
-        console.error('Error checking subscription status:', error);
+        console.error('Error checking device subscription:', error);
+        setError(error instanceof Error ? error.message : 'Failed to check notification status');
       }
     };
   
-    checkSubscriptionStatus();
+    checkCurrentDeviceSubscription();
   }, [userId]);
-
   // Function to convert subscription to database format
   const saveSubscription = async (sub: PushSubscription) => {
     if (!userId) {

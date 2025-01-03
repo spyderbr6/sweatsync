@@ -25,7 +25,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
       console.log('Registering service worker...');
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      const registration = await navigator.serviceWorker.register('/service-worker.js'); 
       console.log('SW registered:', registration);
       
       // Check if we have an active service worker
