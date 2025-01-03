@@ -38,27 +38,15 @@ type AppSyncEvent = {
 
 export const handler: Handler<AppSyncEvent, { success: boolean }> = async (event) => {
   try {
-    
-        // Extract actual notification data from AppSync wrapper
-        const { arguments: args } = event;
-    
-        if (!args?.type || !args?.userID || !args?.title || !args?.body) {
-          console.error('Invalid event payload:', event);
-          return { success: false };
-        }
-    
-        // Parse the data string back to object
-        const data = args.data ? JSON.parse(args.data) : undefined;
-    
-        // Rest of your notification logic here
-        const { userID, title, body, type } = args;
+    const { type, userID, title, body, data: dataString } = event.arguments;
 
-
-    // Input validation
     if (!userID || !title || !body || !type) {
       console.error('Invalid event payload:', event);
       return { success: false };
     }
+
+    // Parse the data string if it exists
+    const data = dataString ? JSON.parse(dataString) : {};
 
     // Get all subscriptions for the user
     const subscriptions = await client.models.PushSubscription.list({
@@ -76,7 +64,7 @@ export const handler: Handler<AppSyncEvent, { success: boolean }> = async (event
       title,
       body,
       type,
-      data: data ? JSON.stringify(data) : undefined,
+      data: dataString,
       status: 'PENDING',
       createdAt: new Date().toISOString()
     });
@@ -105,11 +93,7 @@ export const handler: Handler<AppSyncEvent, { success: boolean }> = async (event
       const pushPayload = JSON.stringify({
         title,
         body,
-        data: {
-          ...data,
-          notificationId,
-          type
-        }
+        data: { ...data, notificationId, type }
       });
 
       try {
