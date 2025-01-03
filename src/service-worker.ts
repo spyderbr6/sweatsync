@@ -90,7 +90,7 @@ self.addEventListener('push', (event: PushEvent) => {
       badge: '/picsoritdidnthappen.webp',
       data: {
         ...data.data,
-        url: window.location.origin + '/challenge/' + data.data.challengeId
+        url: self.registration.scope + 'challenge/' + data.data.challengeId
       },
       requireInteraction: true,
       actions: data.actions || [],
