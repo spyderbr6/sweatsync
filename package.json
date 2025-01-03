@@ -19,7 +19,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.4.0",
-    "react-router-dom": "^7.0.2",
+    "react-router-dom": "^7.1.1",
     "shadcn-ui": "^0.9.3",
     "web-push": "^3.6.7"
   },
