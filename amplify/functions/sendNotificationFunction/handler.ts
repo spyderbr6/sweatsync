@@ -20,22 +20,39 @@ webpush.setVapidDetails(
   env.VAPID_PRIVATE_KEY
 );
 
-type NotificationEvent = {
-  type: 'CHALLENGE_INVITE' | 'COMMENT' | 'DAILY_REMINDER';
-  userID: string;
-  title: string;
-  body: string;
-  data?: {
-    challengeId?: string;
-    commentId?: string;
-    postId?: string;
-    [key: string]: any;
+type AppSyncEvent = {
+  typeName: string;
+  fieldName: string;
+  arguments: {
+    type: 'CHALLENGE_INVITE' | 'COMMENT' | 'DAILY_REMINDER';
+    userID: string;
+    title: string;
+    body: string;
+    data?: string;
   };
+  identity: any;
+  source: any;
+  request: any;
+  prev: { result: any };
 }
 
-export const handler: Handler<NotificationEvent, { success: boolean }> = async (event) => {
+export const handler: Handler<AppSyncEvent, { success: boolean }> = async (event) => {
   try {
-    const { userID, title, body, type, data } = event;
+    
+        // Extract actual notification data from AppSync wrapper
+        const { arguments: args } = event;
+    
+        if (!args?.type || !args?.userID || !args?.title || !args?.body) {
+          console.error('Invalid event payload:', event);
+          return { success: false };
+        }
+    
+        // Parse the data string back to object
+        const data = args.data ? JSON.parse(args.data) : undefined;
+    
+        // Rest of your notification logic here
+        const { userID, title, body, type } = args;
+
 
     // Input validation
     if (!userID || !title || !body || !type) {
