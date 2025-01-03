@@ -57,6 +57,8 @@ export const handler: Handler<AppSyncEvent, { success: boolean }> = async (event
       console.log(`No push subscriptions found for user ${userID}`);
       return { success: false };
     }
+    console.log('Found subscriptions:', JSON.stringify(subscriptions.data, null, 2));
+
 
     // Create notification record
     const notificationResult = await client.models.Notification.create({
@@ -95,9 +97,14 @@ export const handler: Handler<AppSyncEvent, { success: boolean }> = async (event
         body,
         data: { ...data, notificationId, type }
       });
+      console.log('Attempting to send push with payload:', pushPayload);
+
+
 
       try {
         await webpush.sendNotification(pushSubscription, pushPayload);
+        console.log('Successfully sent notification to endpoint:', sub.endpoint);
+
         return true;
       } catch (error) {
         console.error('Error sending push notification:', error);

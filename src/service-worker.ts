@@ -66,28 +66,42 @@ self.addEventListener('activate', (_: ExtendableEvent) => {
 
 // Handle push events
 self.addEventListener('push', (event: PushEvent) => {
+  console.log('Push event received');
+  
   if (!event.data) {
     console.log('Push event but no data');
     return;
   }
 
   try {
+    console.log('Raw push data:', event.data.text());
     const data = event.data.json();
+    console.log('Parsed push data:', data);
     
     const options: CustomNotificationOptions = {
       body: data.body,
-      icon: '/picsoritdidnthappen.webp', // Your app icon
-      badge: '/picsoritdidnthappen.webp', // Small monochrome version
-      data: data.url, // URL to open when notification is clicked
-      requireInteraction: true, // Notification stays until user interacts
-      actions: data.actions || [] // Optional actions
+      icon: '/picsoritdidnthappen.webp',
+      badge: '/picsoritdidnthappen.webp',
+      data: {
+        ...data.data,
+        url: window.location.origin + '/challenge/' + data.data.challengeId
+      },
+      requireInteraction: true,
+      actions: data.actions || []
     };
 
+    console.log('Showing notification with options:', options);
+    
     event.waitUntil(
       self.registration.showNotification(data.title, options)
+        .then(() => console.log('Notification shown successfully'))
+        .catch(error => console.error('Error showing notification:', error))
     );
-  } catch (err) {
-    console.error('Error showing notification:', err);
+  } catch (err: unknown) {
+    console.error('Error processing push event:', err);
+    if (err instanceof Error) {
+      console.error('Stack trace:', err.stack);
+    }
   }
 });
 
