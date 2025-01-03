@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaEnvelope, FaSpinner, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
-import { useUser } from "./userContext";
+import {   Mail,   Loader2,   Edit,     Check,    X } from 'lucide-react';import { useUser } from "./userContext";
 import { useProfilePictureUploader } from './utils/profilePictureUploader';
 import './ProfilePage.css';
 import { 
@@ -9,6 +8,8 @@ import {
   updateUserAttributes 
 } from "aws-amplify/auth";
 import { useUrlCache } from './urlCacheContext';
+import { NotificationPreferences } from "./components/notificationPreferences/notificationPreferences";
+
 
 
 function ProfilePage() {
@@ -72,7 +73,7 @@ function ProfilePage() {
   if (isLoading) {
     return (
       <div className="profile-loading-container">
-        <FaSpinner className="profile-loading-spinner" />
+        <Loader2 className="profile-loading-spinner" />
         <span className="profile-loading-text">Loading profile...</span>
       </div>
     );
@@ -108,13 +109,13 @@ function ProfilePage() {
                 className="profile-name-input"
               />
               <button onClick={handleUpdateName} className="profile-name-confirm-button">
-                <FaCheck />
+                <Check />
               </button>
               <button
                 onClick={() => setIsEditingName(false)}
                 className="profile-name-cancel-button"
               >
-                <FaTimes />
+                <X />
               </button>
             </div>
           ) : (
@@ -123,7 +124,7 @@ function ProfilePage() {
                 {userAttributes?.preferred_username || 'User'}
               </h1>
               <button onClick={() => setIsEditingName(true)} className="profile-name-edit-button">
-                <FaEdit />
+                <Edit />
               </button>
             </div>
           )}
@@ -132,13 +133,16 @@ function ProfilePage() {
 
       <div className="profile-info-section">
         <div className="profile-info-item">
-          <FaEnvelope className="profile-info-icon" />
+          <Mail className="profile-info-icon" />
           <div className="profile-info-text">
             <strong>Email:</strong>
             <span>{userAttributes?.email || 'Not provided'}</span>
           </div>
         </div>
       </div>
+
+      <NotificationPreferences />
+
     </div>
   );
 }

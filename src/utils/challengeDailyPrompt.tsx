@@ -81,6 +81,39 @@ const ChallengeDailyPrompt: React.FC<ChallengeDailyPromptProps> = ({
             })
           )
         );
+
+ // Add notification for all participants
+ try {
+  const notificationPromises = participants.data.map(async (participant) => {
+    if (!participant.userID) return;
+
+    await client.models.Notification.create({
+      userID: participant.userID,
+      title: "New Daily Challenge Available!",
+      body: `${parentTitle}: ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`,
+      type: 'CHALLENGE_INVITE',
+      data: JSON.stringify({
+        challengeId: result.data!.id,
+        challengeType: 'DAILY',
+        parentChallengeId: challengeId
+      }),
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // Trigger push notification
+    await client.queries.sendPushNotificationFunction({
+      challengeId: result.data!.id
+    });
+  });
+
+  await Promise.all(notificationPromises);
+} catch (notificationError) {
+  console.error('Error sending notifications:', notificationError);
+  // We don't throw here to avoid failing the whole challenge creation
+}
+
       }
 
       onSuccess();
