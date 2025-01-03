@@ -20,9 +20,11 @@ export function NotificationPreferences() {
 
   // Handle disabling notifications
   const handleDisable = async () => {
+    console.log('Disabling notifications for userId:', userId);
     await unsubscribe();
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3000);
+    console.log('Notifications disabled for userId:', userId);
   };
 
   return (

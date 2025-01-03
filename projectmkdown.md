@@ -6,13 +6,6 @@
         └── backend.ts
         └── 📁data
             └── resource.ts
-        └── 📁function
-            └── 📁sendNotificationFunction
-                └── 📁graphql
-                    └── API.ts
-                    └── mutations.ts
-                    └── queries.ts
-                    └── subscriptions.ts
         └── 📁functions
             └── 📁challengeCleanup
                 └── handler.ts
@@ -65,6 +58,8 @@
             └── 📁FeedbackModal
                 └── feedbackModal.css
                 └── feedbackModal.tsx
+            └── 📁notificationPreferences
+                └── notificationPreferences.tsx
         └── CreateChallengeModal.tsx
         └── CreatePostModal.tsx
         └── dataVersionContext.tsx
@@ -73,6 +68,8 @@
         └── friendOperations.tsx
         └── friends.css
         └── Header.tsx
+        └── 📁hooks
+            └── usePushNotifications.ts
         └── index.css
         └── inviteFriendsModal.tsx
         └── main.tsx

@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { 
-  Mail,     // for FaEnvelope
-  Loader2,  // for FaSpinner
-  Edit,     // for FaEdit
-  Check,    // for FaCheck
-  X         // for FaTimes
-} from 'lucide-react';import { useUser } from "./userContext";
+import {   Mail,   Loader2,   Edit,     Check,    X } from 'lucide-react';import { useUser } from "./userContext";
 import { useProfilePictureUploader } from './utils/profilePictureUploader';
 import './ProfilePage.css';
 import { 

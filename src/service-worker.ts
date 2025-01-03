@@ -38,3 +38,67 @@
       ]
     })
   );
+
+  // Define the NotificationAction interface
+interface NotificationAction {
+  action: string;
+  title: string;
+  icon?: string;
+}
+
+// Extend the NotificationOptions interface to include actions
+interface CustomNotificationOptions extends NotificationOptions {
+  actions?: NotificationAction[];
+}
+
+const CACHE_NAME = 'sweatsync-cache-v1';
+
+self.addEventListener('install', (event: ExtendableEvent) => {
+  console.log('Service Worker installing.');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+  );
+});
+
+self.addEventListener('activate', (_: ExtendableEvent) => {
+  console.log('Service Worker activating.');
+});
+
+// Handle push events
+self.addEventListener('push', (event: PushEvent) => {
+  if (!event.data) {
+    console.log('Push event but no data');
+    return;
+  }
+
+  try {
+    const data = event.data.json();
+    
+    const options: CustomNotificationOptions = {
+      body: data.body,
+      icon: '/picsoritdidnthappen.webp', // Your app icon
+      badge: '/picsoritdidnthappen.webp', // Small monochrome version
+      data: data.url, // URL to open when notification is clicked
+      requireInteraction: true, // Notification stays until user interacts
+      actions: data.actions || [] // Optional actions
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(data.title, options)
+    );
+  } catch (err) {
+    console.error('Error showing notification:', err);
+  }
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event: NotificationEvent) => {
+  event.notification.close();
+
+  // Handle notification click
+  if (event.notification.data) {
+    event.waitUntil(
+      self.clients.openWindow(event.notification.data as string)
+    );
+  }
+});
