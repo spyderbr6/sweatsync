@@ -13,11 +13,11 @@ Amplify.configure(resourceConfig, libraryOptions);
 
 const client = generateClient<Schema>();
 
-// Configure web push with VAPID details
+// Configure web push with VAPID details from environment
 webpush.setVapidDetails(
-  process.env.VITE_VAPID_EMAIL!,
-  process.env.VITE_VAPID_PUBLIC_KEY!,
-  process.env.VITE_VAPID_PRIVATE_KEY!
+  env.VAPID_EMAIL,
+  env.VAPID_PUBLIC_KEY,
+  env.VAPID_PRIVATE_KEY
 );
 
 type NotificationEvent = {
@@ -33,8 +33,8 @@ type NotificationEvent = {
   };
 }
 
-export const handler: Handler = async (event) => {
-    try {
+export const handler: Handler<NotificationEvent, { success: boolean }> = async (event) => {
+  try {
     const { userID, title, body, type, data } = event;
 
     // Input validation
