@@ -14,28 +14,39 @@ export function usePushNotifications(userId: string | null) {
 
   // Check initial permission state
   useEffect(() => {
-    if ('Notification' in window) {
-      console.log('Current notification permission state:', Notification.permission);
-      navigator.serviceWorker.getRegistration().then(registration => {
-        console.log('Service Worker status:', {
-          registered: !!registration,
-          active: !!registration?.active,
-          state: registration?.active?.state,
-          pushSubscription: 'pending'
+    const checkSubscriptionStatus = async () => {
+      if (!userId) return;
+  
+      try {
+        // Check browser's push subscription
+        const registration = await navigator.serviceWorker.ready;
+        const browserSub = await registration.pushManager.getSubscription();
+        console.log('Browser push subscription:', browserSub ? 'Present' : 'None');
+  
+        // Check database subscription
+        const dbSubs = await client.models.PushSubscription.list({
+          filter: { userID: { eq: userId } }
+        });
+        console.log('Database subscriptions:', {
+          count: dbSubs.data.length,
+          endpoints: dbSubs.data.map(sub => sub.endpoint)
         });
   
-        // Check if we have an active push subscription
-        registration?.pushManager.getSubscription().then(subscription => {
-          console.log('Push subscription status:', {
-            exists: !!subscription,
-            endpoint: subscription?.endpoint,
-            active: subscription?.expirationTime
+        // Check if they match
+        if (browserSub) {
+          const matchingDbSub = dbSubs.data.find(sub => sub.endpoint === browserSub.endpoint);
+          console.log('Subscription match:', {
+            browserEndpoint: browserSub.endpoint,
+            hasMatchingDb: !!matchingDbSub
           });
-        });
-      });
-      setPermission(Notification.permission);
-    }
-  }, []);
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+      }
+    };
+  
+    checkSubscriptionStatus();
+  }, [userId]);
 
   // Function to convert subscription to database format
   const saveSubscription = async (sub: PushSubscription) => {
