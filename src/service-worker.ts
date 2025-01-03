@@ -49,6 +49,9 @@ interface NotificationAction {
 // Extend the NotificationOptions interface to include actions
 interface CustomNotificationOptions extends NotificationOptions {
   actions?: NotificationAction[];
+  vibrate?: number[];
+  tag?: string;
+  data?: any;
 }
 
 const CACHE_NAME = 'sweatsync-cache-v1';
@@ -66,10 +69,12 @@ self.addEventListener('activate', (_: ExtendableEvent) => {
 
 // Handle push events
 self.addEventListener('push', (event: PushEvent) => {
-  console.log('Push event received');
+  console.log('==== PUSH EVENT RECEIVED ====');
+  console.log('Push event timestamp:', new Date().toISOString());
+  console.log('ServiceWorker state:', self.registration.active?.state);
   
   if (!event.data) {
-    console.log('Push event but no data');
+    console.log('Push event received but no data');
     return;
   }
 
@@ -78,6 +83,7 @@ self.addEventListener('push', (event: PushEvent) => {
     const data = event.data.json();
     console.log('Parsed push data:', data);
     
+    // Move notification options into a separate const for debugging
     const options: CustomNotificationOptions = {
       body: data.body,
       icon: '/picsoritdidnthappen.webp',
@@ -87,15 +93,29 @@ self.addEventListener('push', (event: PushEvent) => {
         url: window.location.origin + '/challenge/' + data.data.challengeId
       },
       requireInteraction: true,
-      actions: data.actions || []
+      actions: data.actions || [],
+      // Add these to make notification more noticeable
+      vibrate: [200, 100, 200],
+      tag: 'challenge-notification'
     };
 
-    console.log('Showing notification with options:', options);
-    
+    console.log('About to show notification with:', {
+      title: data.title,
+      options: JSON.stringify(options, null, 2)
+    });
+
     event.waitUntil(
       self.registration.showNotification(data.title, options)
-        .then(() => console.log('Notification shown successfully'))
-        .catch(error => console.error('Error showing notification:', error))
+        .then(() => console.log('✅ Notification shown successfully'))
+        .catch(error => {
+          console.error('❌ Error showing notification:', error);
+          if (error instanceof Error) {
+            console.error('Error details:', {
+              message: error.message,
+              stack: error.stack
+            });
+          }
+        })
     );
   } catch (err: unknown) {
     console.error('Error processing push event:', err);

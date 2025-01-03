@@ -15,7 +15,16 @@ export function usePushNotifications(userId: string | null) {
   // Check initial permission state
   useEffect(() => {
     if ('Notification' in window) {
-      setPermission(Notification.permission);
+      console.log('Current notification permission:', Notification.permission);
+      // Also check service worker
+      navigator.serviceWorker.getRegistration()
+        .then(registration => {
+          console.log('Service Worker registration status:', {
+            registered: !!registration,
+            active: !!registration?.active,
+            state: registration?.active?.state
+          });
+        });
     }
   }, []);
 
@@ -61,6 +70,13 @@ export function usePushNotifications(userId: string | null) {
     }
 
     try {
+
+      console.log('VAPID key check:', {
+        exists: !!import.meta.env.VITE_VAPID_PUBLIC_KEY,
+        length: import.meta.env.VITE_VAPID_PUBLIC_KEY?.length,
+        preview: import.meta.env.VITE_VAPID_PUBLIC_KEY?.substring(0, 10) + '...'
+      });
+      
       const permission = await Notification.requestPermission();
       setPermission(permission);
 
