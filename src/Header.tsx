@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, MessageSquarePlus,  LogOut,   User,   Users,   Trophy } from 'lucide-react';
 import { CreatePostModal } from './CreatePostModal';
 import { useUser } from './userContext';
 import { useUrlCache } from './urlCacheContext';
 import ChallengeFeedHeader from './challengeFeedHeader';
+import FeedbackModal from './components/FeedbackModal/feedbackModal';
+
 
 function Header() {
   const navigate = useNavigate();
@@ -16,6 +18,7 @@ function Header() {
   const { getStorageUrl } = useUrlCache();
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("/profileDefault.png");
   const { pictureUrl } = useUser();  // Add this
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -60,16 +63,27 @@ function Header() {
           <div className="account-icon">
             <div className="dropdown">
               <img
-             src={pictureUrl || "profileDefault.png"} 
+                src={pictureUrl || "profileDefault.png"}
                 alt={userAttributes?.preferred_username || "Account"}
                 className="dropdown-toggle"
                 onClick={() => setShowDropdown(!showDropdown)}
               />
               <div className={`dropdown-menu ${showDropdown ? 'show' : ''}`}>
-                <button className="dropdown-item" onClick={() => {navigate('/profile'); setShowDropdown(false);}}>Profile</button>
-                <button className="dropdown-item" onClick={() => {navigate('/friends');setShowDropdown(false);}}>Friends</button>
-                <button className="dropdown-item" onClick={() => {navigate('/Challenges'); setShowDropdown(false);}}>Challenges</button>
-                <button className="dropdown-item" onClick={signOut}>Logout</button>
+                <button className="dropdown-item" onClick={() => { navigate('/profile'); setShowDropdown(false); }}>   <User size={20} style={{ marginRight: '8px' }} />
+                Profile</button>
+                <button className="dropdown-item" onClick={() => { navigate('/friends'); setShowDropdown(false); }}>  <Users size={20} style={{ marginRight: '8px' }} />
+                Friends</button>
+                <button className="dropdown-item" onClick={() => { navigate('/Challenges'); setShowDropdown(false); }}>  <Trophy size={20} style={{ marginRight: '8px' }} />
+                Challenges</button>
+                <button
+                  onClick={() => setShowFeedbackModal(true)}
+                  className="dropdown-item"
+                >
+                  <MessageSquarePlus size={20} style={{ marginRight: '8px' }} />
+                  Send Feedback
+                </button>
+                <button className="dropdown-item" onClick={signOut}>  <LogOut size={20} style={{ marginRight: '8px' }} />
+                Logout</button>
               </div>
             </div>
           </div>
@@ -91,7 +105,12 @@ function Header() {
         isOpen={isPostModalOpen}
         onClose={() => setIsPostModalOpen(false)}
       />
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+      />
     </>
+
   );
 }
 

@@ -2,6 +2,7 @@
 
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { rotateCreator } from "../functions/rotateCreator/resource";
+import {challengeCleanup } from "../functions/challengeCleanup/resource";
 
 const schema = a.schema({
   PostforWorkout: a.model({
@@ -49,7 +50,7 @@ const schema = a.schema({
     title: a.string().required(),
     description: a.string().required(),
     reward: a.string(),
-    challengeType: a.enum(['none', 'PUBLIC', 'GROUP', 'PERSONAL', 'FRIENDS','DAILY']), 
+    challengeType: a.enum(['none', 'PUBLIC', 'GROUP', 'PERSONAL', 'FRIENDS', 'DAILY']),
     status: a.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED', 'DRAFT', 'CANCELLED']),
     startAt: a.datetime().required(),
     endAt: a.datetime().required(),
@@ -75,7 +76,8 @@ const schema = a.schema({
 
     // Timestamps
     createdAt: a.datetime(),
-    updatedAt: a.datetime()
+    updatedAt: a.datetime(), 
+    updatedBy: a.string()
   }).authorization((allow) => [allow.publicApiKey()])
     .secondaryIndexes
     ((index) => [
@@ -85,17 +87,19 @@ const schema = a.schema({
     ]),
 
   ChallengeParticipant: a.model({
-      challengeID: a.string().required(), //reference to Challenge model
-      userID: a.string().required(),
-      status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED', 'PENDING']),
-      points: a.integer().default(0),
-      workoutsCompleted: a.integer().default(0),
-      joinedAt: a.datetime(),
-      completedAt: a.datetime(),
-      updatedAt: a.datetime(),
-      invitedAt: a.datetime(),
-      invitedBy: a.string()
-    }).authorization((allow) => [allow.publicApiKey()]),
+    challengeID: a.string().required(), //reference to Challenge model
+    userID: a.string().required(),
+    status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED', 'PENDING']),
+    points: a.integer().default(0),
+    workoutsCompleted: a.integer().default(0),
+    joinedAt: a.datetime(),
+    completedAt: a.datetime(),
+    updatedAt: a.datetime(),
+    invitedAt: a.datetime(),
+    invitedBy: a.string(),
+    dropReason: a.string(), //Reason the user is marked as dropped. could be user, or system, etc.
+    updatedBy: a.string() //User who last updated the record
+  }).authorization((allow) => [allow.publicApiKey()]),
 
   PostChallenge: a.model({
     postId: a.string(),
@@ -103,8 +107,8 @@ const schema = a.schema({
     userId: a.string(),
     timestamp: a.datetime(),
     validated: a.boolean().default(false),
-    validationComment: a.string(), 
-    points:a.integer().default(0)
+    validationComment: a.string(),
+    points: a.integer().default(0)
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Comment: a.model({
@@ -131,23 +135,30 @@ const schema = a.schema({
   }).authorization((allow) => [allow.publicApiKey()]),
 
   rotateCreator: a
-  .query()
-  .arguments({
-    challengeId: a.string().required()
-  })  
-  .returns(a.boolean())
-  .handler(a.handler.function(rotateCreator))
-  .authorization((allow) => [allow.publicApiKey()]),
- // allow query and subscription operations but not mutations
+    .query()
+    .arguments({
+      challengeId: a.string().required()
+    })
+    .returns(a.boolean())
+    .handler(a.handler.function(rotateCreator))
+    .authorization((allow) => [allow.publicApiKey()]),
 
+  challengeCleanup: a
+    .query()
+    .arguments({ challengeId: a.string().required() }
+    )
+    .returns(a.boolean())
+    .handler(a.handler.function(challengeCleanup))
+    .authorization((allow) => [allow.publicApiKey()])
 
-})  .authorization((allow) => [
+}).authorization((allow) => [
   /**
    * 1) Let the function be invoked if you actually want to call it
    *    as a query from a client. If you *only* run it on a schedule
    *    and never from a client, you could remove or minimize these.
    */
-  allow.resource(rotateCreator).to(["query", "listen", "mutate"])
+  allow.resource(rotateCreator).to(["query", "listen", "mutate"]),
+  allow.resource(challengeCleanup).to(["query", "listen", "mutate"])
 ]);
 
 

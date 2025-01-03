@@ -257,8 +257,10 @@
   }
   
   .challenge-actions {
-    display: flex;
-    gap: 0.5rem;
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 10;
   }
   
   .challenge-button {
@@ -710,6 +712,7 @@
 
 .challenge-header {
   display: flex;
+  position: relative;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
