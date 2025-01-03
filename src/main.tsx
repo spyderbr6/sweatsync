@@ -22,14 +22,23 @@ Amplify.configure(outputs);
 
 // Register service worker
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('SW registered:', registration);
-      })
-      .catch(error => {
-        console.log('SW registration failed:', error);
-      });
+  window.addEventListener('load', async () => {
+    try {
+      console.log('Registering service worker...');
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      console.log('SW registered:', registration);
+      
+      // Check if we have an active service worker
+      if (registration.active) {
+        console.log('Active service worker found');
+        const subscription = await registration.pushManager.getSubscription();
+        console.log('Current push subscription:', subscription ? 'exists' : 'none');
+      } else {
+        console.log('No active service worker found');
+      }
+    } catch (error) {
+      console.log('SW registration failed:', error);
+    }
   });
 }
 

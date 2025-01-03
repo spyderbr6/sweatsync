@@ -15,16 +15,25 @@ export function usePushNotifications(userId: string | null) {
   // Check initial permission state
   useEffect(() => {
     if ('Notification' in window) {
-      console.log('Current notification permission:', Notification.permission);
-      // Also check service worker
-      navigator.serviceWorker.getRegistration()
-        .then(registration => {
-          console.log('Service Worker registration status:', {
-            registered: !!registration,
-            active: !!registration?.active,
-            state: registration?.active?.state
+      console.log('Current notification permission state:', Notification.permission);
+      navigator.serviceWorker.getRegistration().then(registration => {
+        console.log('Service Worker status:', {
+          registered: !!registration,
+          active: !!registration?.active,
+          state: registration?.active?.state,
+          pushSubscription: 'pending'
+        });
+  
+        // Check if we have an active push subscription
+        registration?.pushManager.getSubscription().then(subscription => {
+          console.log('Push subscription status:', {
+            exists: !!subscription,
+            endpoint: subscription?.endpoint,
+            active: subscription?.expirationTime
           });
         });
+      });
+      setPermission(Notification.permission);
     }
   }, []);
 
@@ -76,7 +85,7 @@ export function usePushNotifications(userId: string | null) {
         length: import.meta.env.VITE_VAPID_PUBLIC_KEY?.length,
         preview: import.meta.env.VITE_VAPID_PUBLIC_KEY?.substring(0, 10) + '...'
       });
-      
+
       const permission = await Notification.requestPermission();
       setPermission(permission);
 
