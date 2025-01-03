@@ -33,7 +33,7 @@ type NotificationEvent = {
   };
 }
 
-export const handler: Handler<NotificationEvent, { success: boolean }> = async (event) => {
+export const handler: Handler = async (event) => {
     try {
     const { userID, title, body, type, data } = event;
 
