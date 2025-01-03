@@ -39,6 +39,7 @@ type AppSyncEvent = {
 
 export const handler: Handler<AppSyncEvent, { success: boolean }> = async (event) => {
   try {
+    console.log('Received event:', JSON.stringify(event, null, 2));
     const { type, userID, title, body, data: dataString } = event.arguments;
 
     if (!userID || !title || !body || !type) {
