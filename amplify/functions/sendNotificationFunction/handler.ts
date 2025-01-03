@@ -19,6 +19,7 @@ webpush.setVapidDetails(
   env.VAPID_PUBLIC_KEY,
   env.VAPID_PRIVATE_KEY
 );
+console.log(env.VAPID_EMAIL, env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
 
 type AppSyncEvent = {
   typeName: string;
@@ -52,6 +53,7 @@ export const handler: Handler<AppSyncEvent, { success: boolean }> = async (event
     const subscriptions = await client.models.PushSubscription.list({
       filter: { userID: { eq: userID } }
     });
+    console.log('All subscriptions for user:', JSON.stringify(subscriptions.data, null, 2));
 
     if (!subscriptions.data.length) {
       console.log(`No push subscriptions found for user ${userID}`);
@@ -102,6 +104,8 @@ export const handler: Handler<AppSyncEvent, { success: boolean }> = async (event
 
 
       try {
+        console.log('Push subscription being used:', JSON.stringify(pushSubscription, null, 2));
+        console.log('Push payload being sent:', pushPayload);
         await webpush.sendNotification(pushSubscription, pushPayload);
         console.log('Successfully sent notification to endpoint:', sub.endpoint);
 
