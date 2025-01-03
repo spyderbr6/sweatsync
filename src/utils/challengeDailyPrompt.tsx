@@ -101,10 +101,18 @@ const ChallengeDailyPrompt: React.FC<ChallengeDailyPromptProps> = ({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
-
-    // Trigger push notification
+  
+    // Then trigger push notification with correct payload
     await client.queries.sendPushNotificationFunction({
-      challengeId: result.data!.id
+      type: 'CHALLENGE_INVITE',
+      userID: participant.userID,
+      title: "New Daily Challenge Available!",
+      body: `${parentTitle}: ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`,
+      data: JSON.stringify({
+        challengeId: result.data!.id,
+        challengeType: 'DAILY',
+        parentChallengeId: challengeId
+      })
     });
   });
 

@@ -179,7 +179,11 @@ Notification: a.model({
     sendPushNotificationFunction: a
     .query()
     .arguments({
-      challengeId: a.string().required()
+      type: a.string().required(),
+      userID: a.string().required(),
+      title: a.string().required(),
+      body: a.string().required(),
+      data: a.string()
     })
     .returns(a.boolean())
     .handler(a.handler.function(sendPushNotificationFunction))
