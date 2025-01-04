@@ -52,6 +52,7 @@ interface CustomNotificationOptions extends NotificationOptions {
   vibrate?: number[];
   tag?: string;
   data?: any;
+  renotify?: boolean; 
 }
 
 const CACHE_NAME = 'sweatsync-cache-v1';
@@ -90,13 +91,13 @@ self.addEventListener('push', (event: PushEvent) => {
       badge: '/picsoritdidnthappen.webp',
       data: {
         ...data.data,
-        url: self.registration.scope + 'challenge/' + data.data.challengeId
+        url: '/challenge/' + data.data.challengeId
       },
-      requireInteraction: true,
+      requireInteraction: false,
       actions: data.actions || [],
-      // Add these to make notification more noticeable
       vibrate: [200, 100, 200],
-      tag: 'challenge-notification'
+      tag: 'challenge-notification',
+      renotify: true
     };
 
     console.log('About to show notification with:', {

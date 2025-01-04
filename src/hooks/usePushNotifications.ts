@@ -83,7 +83,7 @@ export function usePushNotifications(userId: string | null) {
 
   // Request permission and subscribe to push notifications
   const requestPermission = async () => {
-    if (!('Notification' in window)) {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
       setError('This browser does not support notifications');
       return;
     }
@@ -95,19 +95,13 @@ export function usePushNotifications(userId: string | null) {
 
     try {
 
-      console.log('VAPID key check:', {
-        exists: !!import.meta.env.VITE_VAPID_PUBLIC_KEY,
-        length: import.meta.env.VITE_VAPID_PUBLIC_KEY?.length,
-        preview: import.meta.env.VITE_VAPID_PUBLIC_KEY?.substring(0, 10) + '...'
-      });
-
+      // Register service worker if not already registered
+      const registration = await navigator.serviceWorker.ready;
       const permission = await Notification.requestPermission();
       setPermission(permission);
 
       if (permission === 'granted') {
-        // Register service worker if not already registered
-        const registration = await navigator.serviceWorker.ready;
-
+        
         // Get push subscription
         let sub = await registration.pushManager.getSubscription();
         
