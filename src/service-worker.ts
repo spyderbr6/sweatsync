@@ -70,9 +70,6 @@ self.addEventListener('activate', (_: ExtendableEvent) => {
 
 // Handle push events
 self.addEventListener('push', (event: PushEvent) => {
-  console.log('==== PUSH EVENT RECEIVED ====');
-  console.log('Push event timestamp:', new Date().toISOString());
-  console.log('ServiceWorker state:', self.registration.active?.state);
   
   if (!event.data) {
     console.log('Push event received but no data');
@@ -80,14 +77,12 @@ self.addEventListener('push', (event: PushEvent) => {
   }
 
   try {
-    console.log('Raw push data:', event.data.text());
     const data = event.data.json();
-    console.log('Parsed push data:', data);
     
     // Move notification options into a separate const for debugging
     const options: CustomNotificationOptions = {
       body: data.body,
-      icon: '/picsoritdidnthappen.webp',
+      icon: '/icons/icon-192.png',
       badge: '/picsoritdidnthappen.webp',
       data: {
         ...data.data,
@@ -99,11 +94,6 @@ self.addEventListener('push', (event: PushEvent) => {
       tag: 'challenge-notification',
       renotify: true
     };
-
-    console.log('About to show notification with:', {
-      title: data.title,
-      options: JSON.stringify(options, null, 2)
-    });
 
     event.waitUntil(
       self.registration.showNotification(data.title, options)

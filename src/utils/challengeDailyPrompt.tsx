@@ -87,21 +87,7 @@ const ChallengeDailyPrompt: React.FC<ChallengeDailyPromptProps> = ({
   const notificationPromises = participants.data.map(async (participant) => {
     if (!participant.userID) return;
 
-    await client.models.Notification.create({
-      userID: participant.userID,
-      title: "New Daily Challenge Available!",
-      body: `${parentTitle}: ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`,
-      type: 'CHALLENGE_INVITE',
-      data: JSON.stringify({
-        challengeId: result.data!.id,
-        challengeType: 'DAILY',
-        parentChallengeId: challengeId
-      }),
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-  
+
     // Then trigger push notification with correct payload
     await client.queries.sendPushNotificationFunction({
       type: 'CHALLENGE_INVITE',

@@ -101,7 +101,7 @@ export function usePushNotifications(userId: string | null) {
       setPermission(permission);
 
       if (permission === 'granted') {
-        
+
         // Get push subscription
         let sub = await registration.pushManager.getSubscription();
         
@@ -124,7 +124,6 @@ export function usePushNotifications(userId: string | null) {
 
   // Unsubscribe from push notifications
   const unsubscribe = async () => {
-    console.log('Unsubscribing from push notifications');
     if (!userId) {
       setError('User must be logged in to manage notifications');
       return;
@@ -132,11 +131,8 @@ export function usePushNotifications(userId: string | null) {
 
     try {
       // Get current subscription
-      console.log('Getting current subscription');
       const registration = await navigator.serviceWorker.ready;
-      console.log('Registration:', registration);
       const sub = await registration.pushManager.getSubscription();
-console.log('Subscription:', sub);
       if (sub) {
         // Unsubscribe from push manager
         await sub.unsubscribe();
