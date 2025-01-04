@@ -55,7 +55,8 @@ interface CustomNotificationOptions extends NotificationOptions {
   renotify?: boolean; 
 }
 
-const CACHE_NAME = 'sweatsync-cache-v1';
+const CACHE_VERSION = '1.0.0';
+const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
 
 self.addEventListener('install', (event: ExtendableEvent) => {
   console.log('Service Worker installing.');
@@ -64,8 +65,20 @@ self.addEventListener('install', (event: ExtendableEvent) => {
   );
 });
 
-self.addEventListener('activate', (_: ExtendableEvent) => {
+self.addEventListener('activate', (event: ExtendableEvent) => {
   console.log('Service Worker activating.');
+  
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
 });
 
 // Handle push events
