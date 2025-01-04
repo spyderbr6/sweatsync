@@ -38,3 +38,92 @@
       ]
     })
   );
+
+  // Define the NotificationAction interface
+interface NotificationAction {
+  action: string;
+  title: string;
+  icon?: string;
+}
+
+// Extend the NotificationOptions interface to include actions
+interface CustomNotificationOptions extends NotificationOptions {
+  actions?: NotificationAction[];
+  vibrate?: number[];
+  tag?: string;
+  data?: any;
+  renotify?: boolean; 
+}
+
+const CACHE_NAME = 'sweatsync-cache-v1';
+
+self.addEventListener('install', (event: ExtendableEvent) => {
+  console.log('Service Worker installing.');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+  );
+});
+
+self.addEventListener('activate', (_: ExtendableEvent) => {
+  console.log('Service Worker activating.');
+});
+
+// Handle push events
+self.addEventListener('push', (event: PushEvent) => {
+  
+  if (!event.data) {
+    console.log('Push event received but no data');
+    return;
+  }
+
+  try {
+    const data = event.data.json();
+    
+    // Move notification options into a separate const for debugging
+    const options: CustomNotificationOptions = {
+      body: data.body,
+      icon: '/icons/icon-192.png',
+      badge: '/picsoritdidnthappen.webp',
+      data: {
+        ...data.data,
+        url: '/challenge/' + data.data.challengeId
+      },
+      requireInteraction: false,
+      actions: data.actions || [],
+      vibrate: [200, 100, 200],
+      tag: 'challenge-notification',
+      renotify: true
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(data.title, options)
+        .then(() => console.log('✅ Notification shown successfully'))
+        .catch(error => {
+          console.error('❌ Error showing notification:', error);
+          if (error instanceof Error) {
+            console.error('Error details:', {
+              message: error.message,
+              stack: error.stack
+            });
+          }
+        })
+    );
+  } catch (err: unknown) {
+    console.error('Error processing push event:', err);
+    if (err instanceof Error) {
+      console.error('Stack trace:', err.stack);
+    }
+  }
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event: NotificationEvent) => {
+  event.notification.close();
+
+  // Handle notification click
+  if (event.notification.data) {
+    event.waitUntil(
+      self.clients.openWindow(event.notification.data as string)
+    );
+  }
+});

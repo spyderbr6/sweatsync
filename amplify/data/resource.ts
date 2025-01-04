@@ -3,7 +3,7 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { rotateCreator } from "../functions/rotateCreator/resource";
 import {challengeCleanup } from "../functions/challengeCleanup/resource";
-
+import { sendPushNotificationFunction } from "../functions/sendNotificationFunction/resource";
 const schema = a.schema({
   PostforWorkout: a.model({
     content: a.string(),
@@ -134,6 +134,31 @@ const schema = a.schema({
     updatedAt: a.datetime().required(),
   }).authorization((allow) => [allow.publicApiKey()]),
 
+//PUSH NOTIFICATION SETUP
+PushSubscription: a.model({
+  userID: a.string().required(),
+  endpoint: a.string().required(),
+  p256dh: a.string().required(),  // Public key for encryption
+  auth: a.string().required(),    // Auth secret
+  platform: a.string(),           // Optional - to track different devices/browsers
+  createdAt: a.datetime().required(),
+  updatedAt: a.datetime().required()
+}).authorization((allow) => [allow.publicApiKey()]),
+
+Notification: a.model({
+  userID: a.string().required(),
+  title: a.string().required(),
+  body: a.string().required(),
+  type: a.string().required(), // 'CHALLENGE_INVITE', 'COMMENT', 'DAILY_REMINDER'
+  data: a.string(), // JSON string for additional data
+  status: a.string().required(), // 'PENDING', 'SENT', 'FAILED'
+  sentAt: a.datetime(),
+  createdAt: a.datetime().required(),
+  readAt: a.datetime(), // Optional, when the notification was read
+  updatedAt: a.datetime()
+}).authorization((allow) => [allow.publicApiKey()]),
+
+
   rotateCreator: a
     .query()
     .arguments({
@@ -149,6 +174,19 @@ const schema = a.schema({
     )
     .returns(a.boolean())
     .handler(a.handler.function(challengeCleanup))
+    .authorization((allow) => [allow.publicApiKey()]),
+
+    sendPushNotificationFunction: a
+    .query()
+    .arguments({
+      type: a.string().required(),
+      userID: a.string().required(),
+      title: a.string().required(),
+      body: a.string().required(),
+      data: a.string()
+    })
+    .returns(a.boolean())
+    .handler(a.handler.function(sendPushNotificationFunction))
     .authorization((allow) => [allow.publicApiKey()])
 
 }).authorization((allow) => [
@@ -158,7 +196,8 @@ const schema = a.schema({
    *    and never from a client, you could remove or minimize these.
    */
   allow.resource(rotateCreator).to(["query", "listen", "mutate"]),
-  allow.resource(challengeCleanup).to(["query", "listen", "mutate"])
+  allow.resource(challengeCleanup).to(["query", "listen", "mutate"]),
+  allow.resource(sendPushNotificationFunction).to(["query", "listen", "mutate"])
 ]);
 
 

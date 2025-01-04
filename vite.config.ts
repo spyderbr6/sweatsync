@@ -1,14 +1,19 @@
+// vite.config.ts
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
-  // vite.config.ts
-  import { defineConfig } from 'vite';
-  import react from '@vitejs/plugin-react';
-  import { VitePWA } from 'vite-plugin-pwa';
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
   
-  export default defineConfig({
+  return {
     plugins: [
       react(),
       VitePWA({
         registerType: 'autoUpdate',
+        strategies: 'injectManifest', 
+        srcDir: 'src',                 
+        filename: 'service-worker.ts', 
         includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png'],
         manifest: {
           name: 'SweatSync',
@@ -45,5 +50,13 @@
           ]
         }
       })
-    ]
-  });
+    ],
+    // Make env variables available to the app
+    define: {
+      'process.env.VITE_VAPID_PUBLIC_KEY': JSON.stringify(env.VITE_VAPID_PUBLIC_KEY),
+      'process.env.VITE_VAPID_EMAIL': JSON.stringify(env.VITE_VAPID_EMAIL),
+      // Note: Never expose private keys in client-side code
+      // VAPID_PRIVATE_KEY should only be used in server-side code
+    }
+  };
+});
