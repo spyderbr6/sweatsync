@@ -36,6 +36,8 @@ if ('serviceWorker' in navigator) {
       } else {
         console.log('No active service worker found');
       }
+      registration.update();
+
     } catch (error) {
       console.log('SW registration failed:', error);
     }
