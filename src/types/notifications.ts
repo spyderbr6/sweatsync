@@ -21,8 +21,8 @@ export function generateUrl(pattern: string, data: Record<string, any>): string 
 
 export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
   CHALLENGE_INVITE: {
-    icon: '/icons/challenge-invite.png',
-    badge: '/icons/badge-challenge.png',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/trophy-96.png',
     urlPattern: '/challenge/{challengeId}',
     actions: [
       { 
@@ -39,7 +39,7 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     vibrate: [200, 100, 200]
   },
   COMMENT: {
-    icon: '/icons/comment.png',
+    icon: '/icons/icon-192.png',
     badge: '/icons/badge-comment.png',
     urlPattern: '/post/{postId}#comment-{commentId}',
     actions: [
@@ -57,8 +57,8 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     vibrate: [100, 50, 100]
   },
   FRIEND_REQUEST: {
-    icon: '/icons/friend-request.png',
-    badge: '/icons/badge-friend.png',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/userplus-96.png',
     urlPattern: '/friends/requests/{userId}',
     actions: [
       { 
@@ -77,7 +77,7 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
   },
   CHALLENGE_DAILY_ADDED: {
     icon: '/icons/icon-192.png',
-    badge: '/icons/globe-badge-96.png',
+    badge: '/icons/flame-96.png',
     urlPattern: '/challenge/{challengeId}',
     actions: [
       { 
