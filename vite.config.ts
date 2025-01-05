@@ -11,6 +11,9 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
+        strategies: 'injectManifest', 
+        srcDir: 'src',                 
+        filename: 'service-worker.ts', 
         includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png'],
         manifest: {
           name: 'SweatSync',
