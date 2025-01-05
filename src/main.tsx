@@ -23,6 +23,55 @@ Amplify.configure(outputs);
 
 let newWorker: ServiceWorker | null = null;
 
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').then(registration => {
+      console.log('SW registered:', registration);
+
+      // Check if there's a waiting worker
+      if (registration.waiting) {
+        console.log('New version waiting to activate');
+        newWorker = registration.waiting;
+        window.dispatchEvent(new Event('swUpdateAvailable'));
+      }
+
+      registration.addEventListener('updatefound', () => {
+        console.log('Update found for service worker');
+        const installingWorker = registration.installing;
+        
+        if (installingWorker) {
+          newWorker = installingWorker;
+          installingWorker.addEventListener('statechange', () => {
+            console.log('Service worker state changed:', installingWorker.state);
+            if (installingWorker.state === 'installed') {
+              if (navigator.serviceWorker.controller) {
+                console.log('New content available, showing update notification');
+                window.dispatchEvent(new Event('swUpdateAvailable'));
+              } else {
+                console.log('Content is cached for offline use');
+              }
+            }
+          });
+        }
+      });
+    }).catch(error => {
+      console.log('SW registration failed:', error);
+    });
+
+    // Add reload control
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        console.log('New service worker activated, reloading page');
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+  });
+}
+
 function AuthenticatedApp() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
@@ -136,36 +185,6 @@ function AppWrapper() {
 }
 
 
-// Register service worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').then(registration => {
-      console.log('SW registered:', registration);
-
-      registration.addEventListener('updatefound', () => {
-        console.log('Update found for service worker');
-        const installingWorker = registration.installing;
-        
-        if (installingWorker) {
-          newWorker = installingWorker; // Set the global newWorker
-          installingWorker.addEventListener('statechange', () => {
-            console.log('Service worker state changed:', installingWorker.state);
-            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              window.dispatchEvent(new Event('swUpdateAvailable'));
-            }
-          });
-        }
-      });
-
-      if (registration.active) {
-        console.log('Active service worker found');
-        registration.update();
-      }
-    }).catch(error => {
-      console.log('SW registration failed:', error);
-    });
-  });
-}
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

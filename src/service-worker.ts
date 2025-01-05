@@ -9,7 +9,7 @@
   
   declare const self: ServiceWorkerGlobalScope;
   
-  const CACHE_VERSION = '1.0.3';
+  const CACHE_VERSION = '1.0.4';
   const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
 
   // Precache all assets marked by your build tool
@@ -62,7 +62,9 @@ interface CustomNotificationOptions extends NotificationOptions {
 self.addEventListener('install', (event: ExtendableEvent) => {
   console.log('Service Worker installing.');
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches.open(CACHE_NAME).then(() => {
+      console.log('Opened cache');
+    })
   );
 });
 
@@ -70,16 +72,29 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
   console.log('Service Worker activating.');
   
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      // Clean up old caches
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Ensure the new service worker takes control immediately
+      self.clients.claim()
+    ])
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('Skip waiting message received');
+    self.skipWaiting();
+  }
 });
 
 // Handle push events
