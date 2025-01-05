@@ -4,7 +4,6 @@ import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { listChallenges } from './challengeOperations';
 import { getChallengeStyle, getChallengeIcon, type ChallengeState } from './styles/challengeStyles';
-import { ChallengeType } from './challengeTypes';
 import { updateChallengePoints, validateChallengePost } from './challengeRules';
 import { useUser } from './userContext';
 import './postCreator.css';
@@ -46,17 +45,6 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [challengeSelectability, setChallengeSelectability] = useState<Record<string, ChallengeSelectability>>({});
   const { pictureUrl } = useUser();
-
-
-  // Define challenge colors mapping
-  const challengeColors: { [key: string]: string } = {
-    'GROUP': '#10B981',
-    'PERSONAL': '#8B5CF6',
-    'PUBLIC': '#EF4444',
-    'FRIENDS': '#3B82F6',
-    'general': '#F59E0B',
-    'DAILY': '#Ff0000'
-  };
 
   // Fetch challenges and user data on component mount
   useEffect(() => {
