@@ -78,6 +78,8 @@
   display: flex;
   gap: 1rem;
   margin: 2rem 0;
+  padding-left: .5rem;
+  padding-right: .5rem;
 }
 
 .feature-item {

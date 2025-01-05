@@ -149,7 +149,7 @@ Notification: a.model({
   userID: a.string().required(),
   title: a.string().required(),
   body: a.string().required(),
-  type: a.string().required(), // 'CHALLENGE_INVITE', 'COMMENT', 'DAILY_REMINDER'
+  type: a.string().required(), // REFER TO TYPES\notifications.ts for type reference and logic 
   data: a.string(), // JSON string for additional data
   status: a.string().required(), // 'PENDING', 'SENT', 'FAILED'
   sentAt: a.datetime(),

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trophy, Flame, Users } from 'lucide-react';
+import { Trophy, Flame, Users,Globe, Target } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { useUser } from './userContext';
@@ -151,13 +151,23 @@ const ChallengeFeedHeader = () => {
               case 'personal':
                 return {
                   className: `challenge-alert--personal ${baseStyle}`,
-                  icon: <Flame className="w-4 h-4 text-orange-500" />
+                  icon: <Target className="w-4 h-4 text-purple-500" />
                 };
               case 'group':
                 return {
                   className: `challenge-alert--group ${baseStyle}`,
                   icon: <Users className="w-4 h-4 text-blue-500" />
                 };
+                case 'daily':
+                  return {
+                    className: `challenge-alert--daily ${baseStyle}`,
+                    icon: <Flame className="w-4 h-4 text-red-500" />
+                  };
+                  case 'public':
+                    return {
+                      className: `challenge-alert--public ${baseStyle}`,
+                      icon: <Globe className="w-4 h-4 text-blue-500" />
+                    };  
               default:
                 return {
                   className: `challenge-alert--weekly ${baseStyle}`,

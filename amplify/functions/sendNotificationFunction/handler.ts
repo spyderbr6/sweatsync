@@ -25,7 +25,7 @@ type AppSyncEvent = {
   typeName: string;
   fieldName: string;
   arguments: {
-    type: 'CHALLENGE_INVITE' | 'COMMENT' | 'DAILY_REMINDER';
+    type: 'CHALLENGE_INVITE' | 'COMMENT' | 'DAILY_REMINDER' | 'CHALLENGE_DAILY_ADDED' | 'FRIEND_REQUEST';
     userID: string;
     title: string;
     body: string;
@@ -94,7 +94,11 @@ export const handler: Handler<AppSyncEvent, { success: boolean }> = async (event
       const pushPayload = JSON.stringify({
         title,
         body,
-        data: { ...data, notificationId, type }
+        type, // This will be used by service worker to determine icon/badge
+        data: {
+          ...data,
+          notificationId: notificationResult.data?.id
+        }
       });
 
       try {

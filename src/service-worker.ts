@@ -1,10 +1,11 @@
  
-  // service-worker.ts
+  // src/service-worker.ts
   /// <reference lib="webworker" />
   import { precacheAndRoute } from 'workbox-precaching';
   import { registerRoute } from 'workbox-routing';
   import { CacheFirst, NetworkFirst } from 'workbox-strategies';
   import { ExpirationPlugin } from 'workbox-expiration';
+  import { NOTIFICATION_CONFIGS, NotificationConfig } from './types/notifications';
   
   declare const self: ServiceWorkerGlobalScope;
   
@@ -49,13 +50,13 @@ interface NotificationAction {
 // Extend the NotificationOptions interface to include actions
 interface CustomNotificationOptions extends NotificationOptions {
   actions?: NotificationAction[];
+  data?: any;
   vibrate?: number[];
   tag?: string;
-  data?: any;
-  renotify?: boolean; 
+  renotify?: boolean;
 }
 
-const CACHE_VERSION = '1.0.1';
+const CACHE_VERSION = '1.0.2';
 const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
 
 self.addEventListener('install', (event: ExtendableEvent) => {
@@ -83,7 +84,6 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
 
 // Handle push events
 self.addEventListener('push', (event: PushEvent) => {
-  
   if (!event.data) {
     console.log('Push event received but no data');
     return;
@@ -91,20 +91,25 @@ self.addEventListener('push', (event: PushEvent) => {
 
   try {
     const data = event.data.json();
+    console.log('Parsed push data:', data);
     
-    // Move notification options into a separate const for debugging
+    // Get notification config for this type
+    const config: NotificationConfig = NOTIFICATION_CONFIGS[data.type] || NOTIFICATION_CONFIGS['DEFAULT'];
+
     const options: CustomNotificationOptions = {
       body: data.body,
-      icon: '/icons/icon-192.png',
-      badge: '/picsoritdidnthappen.webp',
+      icon: config.icon,
+      badge: config.badge,
       data: {
         ...data.data,
-        url: '/challenge/' + data.data.challengeId
+        type: data.type,
+        url: config.urlPattern(data.data),
+        config // Pass the full config to use in click handler
       },
-      requireInteraction: false,
-      actions: data.actions || [],
-      vibrate: [200, 100, 200],
-      tag: 'challenge-notification',
+      requireInteraction: config.requireInteraction,
+      actions: config.actions,
+      vibrate: config.vibrate,
+      tag: `${data.type}-notification`,
       renotify: true
     };
 
@@ -113,30 +118,48 @@ self.addEventListener('push', (event: PushEvent) => {
         .then(() => console.log('✅ Notification shown successfully'))
         .catch(error => {
           console.error('❌ Error showing notification:', error);
-          if (error instanceof Error) {
-            console.error('Error details:', {
-              message: error.message,
-              stack: error.stack
-            });
-          }
+          console.error('Error details:', error);
         })
     );
-  } catch (err: unknown) {
+  } catch (err) {
     console.error('Error processing push event:', err);
-    if (err instanceof Error) {
-      console.error('Stack trace:', err.stack);
-    }
   }
 });
+
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.notification.close();
 
-  // Handle notification click
-  if (event.notification.data) {
-    event.waitUntil(
-      self.clients.openWindow(event.notification.data as string)
-    );
+  // Get the notification data and config
+  const notificationData = event.notification.data;
+  const config = notificationData.config;
+
+  // Determine which URL to use based on whether an action was clicked
+  let targetUrl: string;
+  
+  if (event.action && config.actions) {
+    // Add proper type for the action parameter
+    const actionConfig = config.actions.find((a: NotificationAction) => a.action === event.action);
+    targetUrl = actionConfig?.urlPattern 
+      ? actionConfig.urlPattern(notificationData)
+      : config.urlPattern(notificationData);
+  } else {
+    targetUrl = config.urlPattern(notificationData);
   }
+
+  // Handle the navigation using self.clients instead of clients
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' })
+      .then(windowClients => {
+        // Check if there's already a window open
+        for (const client of windowClients) {
+          if (client.url === targetUrl && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // If no window is open, open a new one
+        return self.clients.openWindow(targetUrl);
+      })
+  );
 });

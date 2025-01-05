@@ -20,6 +20,11 @@ const LandingPage = () => {
             className="landing-logo"
           />
         </div>
+        <div className="landing-cta">
+            <Link to="/login" className="landing-button">
+              Get Started
+            </Link>
+          </div>
 
         <div className="landing-main">
           <h1>Transform Your Fitness Journey with Friends</h1>
@@ -39,12 +44,6 @@ const LandingPage = () => {
               <span>✓</span>
               <p>Get motivated with community support</p>
             </div>
-          </div>
-
-          <div className="landing-cta">
-            <Link to="/login" className="landing-button">
-              Get Started
-            </Link>
           </div>
         </div>
 
