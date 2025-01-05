@@ -5,52 +5,62 @@
   import { registerRoute } from 'workbox-routing';
   import { CacheFirst, NetworkFirst } from 'workbox-strategies';
   import { ExpirationPlugin } from 'workbox-expiration';
-  import { NOTIFICATION_CONFIGS, NotificationConfig } from './types/notifications';
+  import { NOTIFICATION_CONFIGS} from './types/notifications';
   
   declare const self: ServiceWorkerGlobalScope;
-  
-  const CACHE_VERSION = '1.0.4';
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  const CACHE_VERSION = '1.0.4'; //IF THIS ISNT UPDATED YOU GONNA HAVE A BAD TIME
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
 
   // Precache all assets marked by your build tool
   precacheAndRoute(self.__WB_MANIFEST);
   
   // Cache the AWS Amplify API responses
-  registerRoute(
-    ({ url }) => url.href.includes('amazonaws.com'),
-    new NetworkFirst({
-      cacheName: 'api-cache',
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 // 1 hour
-        })
-      ]
-    })
-  );
-  
-  // Cache images
-  registerRoute(
-    ({ request }) => request.destination === 'image',
-    new CacheFirst({
-      cacheName: 'images',
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 60,
-          maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
-        })
-      ]
-    })
-  );
+registerRoute(
+  ({ url }) => url.href.includes('amazonaws.com'),
+  new NetworkFirst({
+    cacheName: 'api-cache',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 50,
+        maxAgeSeconds: 60 * 60 // 1 hour
+      })
+    ]
+  })
+);
 
-  // Define the NotificationAction interface
+// Cache images
+registerRoute(
+  ({ request }) => request.destination === 'image',
+  new CacheFirst({
+    cacheName: 'images',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+      })
+    ]
+  })
+);
+
+// Helper function to generate URLs (same as in notifications.ts)
+function generateUrl(pattern: string, data: Record<string, any>): string {
+  return pattern.replace(/\{(\w+)\}/g, (_, key) => data[key] || '');
+}
+interface CustomNotification extends Notification {
+  actions?: {
+    action: string;
+    title: string;
+    url?: string;
+  }[];
+}
 interface NotificationAction {
   action: string;
   title: string;
   icon?: string;
 }
 
-// Extend the NotificationOptions interface to include actions
 interface CustomNotificationOptions extends NotificationOptions {
   actions?: NotificationAction[];
   data?: any;
@@ -73,7 +83,6 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
   
   event.waitUntil(
     Promise.all([
-      // Clean up old caches
       caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames.map(cacheName => {
@@ -84,17 +93,9 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
           })
         );
       }),
-      // Ensure the new service worker takes control immediately
       self.clients.claim()
     ])
   );
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('Skip waiting message received');
-    self.skipWaiting();
-  }
 });
 
 // Handle push events
@@ -109,7 +110,14 @@ self.addEventListener('push', (event: PushEvent) => {
     console.log('Parsed push data:', data);
     
     // Get notification config for this type
-    const config: NotificationConfig = NOTIFICATION_CONFIGS[data.type] || NOTIFICATION_CONFIGS['DEFAULT'];
+    const config = NOTIFICATION_CONFIGS[data.type];
+    if (!config) {
+      console.error('No config found for notification type:', data.type);
+      return;
+    }
+
+    // Generate the target URL using the pattern
+    const targetUrl = generateUrl(config.urlPattern, data.data || {});
 
     const options: CustomNotificationOptions = {
       body: data.body,
@@ -118,11 +126,14 @@ self.addEventListener('push', (event: PushEvent) => {
       data: {
         ...data.data,
         type: data.type,
-        url: config.urlPattern(data.data),
-        config // Pass the full config to use in click handler
+        url: targetUrl
       },
       requireInteraction: config.requireInteraction,
-      actions: config.actions,
+      actions: config.actions?.map(action => ({
+        ...action,
+        // Generate action URLs if they exist
+        url: action.urlPattern ? generateUrl(action.urlPattern, data.data || {}) : targetUrl
+      })),
       vibrate: config.vibrate,
       tag: `${data.type}-notification`,
       renotify: true
@@ -141,29 +152,24 @@ self.addEventListener('push', (event: PushEvent) => {
   }
 });
 
-
 // Handle notification clicks
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.notification.close();
 
-  // Get the notification data and config
   const notificationData = event.notification.data;
-  const config = notificationData.config;
-
-  // Determine which URL to use based on whether an action was clicked
-  let targetUrl: string;
   
-  if (event.action && config.actions) {
-    // Add proper type for the action parameter
-    const actionConfig = config.actions.find((a: NotificationAction) => a.action === event.action);
-    targetUrl = actionConfig?.urlPattern 
-      ? actionConfig.urlPattern(notificationData)
-      : config.urlPattern(notificationData);
-  } else {
-    targetUrl = config.urlPattern(notificationData);
+  // Determine which URL to use
+  let targetUrl = notificationData.url;
+  
+  if (event.action) {
+    // Cast notification to our custom type
+    const notification = event.notification as CustomNotification;
+    const actionConfig = notification.actions?.find(a => a.action === event.action);
+    if (actionConfig?.url) {
+      targetUrl = actionConfig.url;
+    }
   }
 
-  // Handle the navigation using self.clients instead of clients
   event.waitUntil(
     self.clients.matchAll({ type: 'window' })
       .then(windowClients => {
