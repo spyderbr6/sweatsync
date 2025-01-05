@@ -55,7 +55,7 @@ interface CustomNotificationOptions extends NotificationOptions {
   renotify?: boolean; 
 }
 
-const CACHE_VERSION = '1.0.0';
+const CACHE_VERSION = '1.0.1';
 const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
 
 self.addEventListener('install', (event: ExtendableEvent) => {

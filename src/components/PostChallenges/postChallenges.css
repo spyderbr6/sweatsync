@@ -1,0 +1,133 @@
+.post-challenges {
+  background-color: white;
+  border-radius: 0.5rem;
+  width: 100%;
+}
+
+.post-challenges__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.post-challenges__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(17 24 39);
+}
+
+.post-challenges__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.post-challenges__loading {
+  padding: 1rem;
+}
+
+.post-challenges__error {
+  color: rgb(239 68 68);
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.challenge-tag {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  min-width: 150px;
+  text-align: left;
+  background: none;
+  width: 100%;
+  min-width: unset;
+}
+
+
+.challenge-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.challenge-tag__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.challenge-tag__title {
+  font-weight: 500;
+}
+
+.challenge-tag__type {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  text-transform: capitalize;
+}
+
+/* Challenge type variations */
+.challenge-tag--group {
+  background-color: rgb(236 253 245);
+  border-color: rgb(209 250 229);
+  color: rgb(6 95 70);
+}
+
+.challenge-tag--personal {
+  background-color: rgb(237 233 254);
+  border-color: rgb(221 214 254);
+  color: rgb(76 29 149);
+}
+
+.challenge-tag--friends {
+  background-color: rgb(219 234 254);
+  border-color: rgb(191 219 254);
+  color: rgb(30 64 175);
+}
+.challenge-tag--daily {
+  background-color: rgb(254, 219, 219);
+  border-color: rgb(254, 191, 191);
+  color: rgb(175, 30, 30);
+}
+
+.challenge-tag--default {
+  background-color: rgb(243 244 246);
+  border-color: rgb(229 231 235);
+  color: rgb(55 65 81);
+}
+
+/* Loading animation */
+.loading-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.loading-bar {
+  height: 1rem;
+  background-color: rgb(229 231 235);
+  border-radius: 0.25rem;
+}
+
+.loading-bar--wide {
+  width: 75%;
+  margin-bottom: 0.75rem;
+}
+
+.loading-bar--full {
+  width: 100%;
+  height: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+

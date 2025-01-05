@@ -9,7 +9,7 @@ import { useUser } from './userContext';
 import { shareContent } from './utils/shareAction';
 import { promptAction } from './utils/promptAction';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
-import { PostChallenges } from './utils/postChallenges';
+import { PostChallenges } from './components/PostChallenges/postChallenges';
 
 const useSpoofData = false;
 const client = generateClient<Schema>();
@@ -162,6 +162,31 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
   };
 
   const [visibleCommentsPostId, setVisibleCommentsPostId] = useState<string | null>(null);
+  const timerRef = useRef<number | null>(null);
+  const isHovered = useRef(false);
+
+  // Function to clear the existing timer
+  const clearReactionTimer = () => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  // Function to start the hide timer
+  const startReactionTimer = () => {
+    clearReactionTimer();
+    timerRef.current = window.setTimeout(() => {
+      if (isHovered.current) {
+        onHover(post.id, false);
+      }
+    }, 2000);
+  };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => clearReactionTimer();
+  }, []);
 
   const toggleCommentSection = (postId: string) => {
     setVisibleCommentsPostId((prev) => (prev === postId ? null : postId));
@@ -201,8 +226,22 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
       <div className="post__content">
         <div
           className="post__image-container"
-          onMouseEnter={() => onHover(post.id, true)}
-          onMouseLeave={() => onHover(post.id, false)}
+          onMouseEnter={() => {
+            isHovered.current = true;
+            clearReactionTimer();
+            onHover(post.id, true);
+          }}
+          onMouseLeave={() => {
+            isHovered.current = false;
+            clearReactionTimer();
+            onHover(post.id, false);
+          }}
+          onMouseMove={() => {
+            if (post.showReactions) {
+              clearReactionTimer();
+              startReactionTimer();
+            }
+          }}
         >
           <img
             src={imageUrl}
@@ -225,54 +264,58 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
         </div>
 
         <div className="post__actions">
-          <div className="post__buttons">
-            <div className="post__action-buttons">
-              <button
-                onClick={() => onReaction(post.id, "👍")}
-                className="post__heart-button"
-                aria-label="Like Button"
-              >
-                <Heart className="w-6 h-6" />
-                {
-                  <span className="post__heart-count">
-                    {post.thumbsUp}
-                  </span>
-                }
-              </button>
-              <button
-                className="post__button"
-                onClick={() => toggleCommentSection(post.id)}
-                aria-label="Toggle comments"
-              >
-                <MessageCircle className="w-6 h-6" />
-              </button>
-              <button
-                className="post__button"
-                aria-label="Share Button"
-                onClick={() => {
-                  shareContent(post.content ?? 'I worked Out', 'Join me on SweatSync', `${import.meta.env.BASE_URL}post/${post.id}`)
-                }}
-              >
-                <Share2 className="w-6 h-6" />
-              </button>
-              <button
-                className="post__challenge-button relative"
-                onClick={() => setShowChallenges(!showChallenges)}
-              >
-                <Trophy className="post__challenge-icon w-5 h-5" />
-                <span className="post__challenge-text">Challenge</span>
-                <span className="post__challenge-count">
-                  {post.smiley}
-                </span>
-                {showChallenges && (
-                  <PostChallenges
-                    postId={post.id}
-                    className="absolute top-full right-0 mt-2 w-72"
-                  />
-                )}
-              </button>
-            </div>
-          </div>
+  <div className="post__buttons">
+    <div className="post__action-buttons">
+      <button
+        onClick={() => onReaction(post.id, "👍")}
+        className="post__heart-button"
+        aria-label="Like Button"
+      >
+        <Heart className="w-6 h-6" />
+        {<span className="post__heart-count">{post.thumbsUp}</span>}
+      </button>
+      <button
+        className="post__button"
+        onClick={() => toggleCommentSection(post.id)}
+        aria-label="Toggle comments"
+      >
+        <MessageCircle className="w-6 h-6" />
+      </button>
+      <button
+        className="post__button"
+        aria-label="Share Button"
+        onClick={() => {
+          shareContent(post.content ?? 'I worked Out', 'Join me on SweatSync', `${import.meta.env.BASE_URL}post/${post.id}`)
+        }}
+      >
+        <Share2 className="w-6 h-6" />
+      </button>
+      <button
+        className="post__challenge-button"
+        onClick={() => setShowChallenges(!showChallenges)}
+      >
+        <Trophy className="post__challenge-icon w-5 h-5" />
+        <span className="post__challenge-text">Challenge</span>
+        <span className="post__challenge-count">
+          {post.smiley}
+        </span>
+      </button>
+    </div>
+  </div>
+
+  {/* Add the challenges section here, after buttons but before details */}
+  {showChallenges && (
+    <div className="post__challenges-container">
+      <PostChallenges 
+        postId={post.id}
+        className="mt-4"
+        onChallengeClick={(challengeId) => {
+          navigate(`/challenge/${challengeId}`);
+          setShowChallenges(false); // Optionally hide challenges after selection
+        }}
+      />
+    </div>
+  )}
 
           <div className="post__details">
             <p className="post__caption">
