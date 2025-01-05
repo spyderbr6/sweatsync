@@ -27,47 +27,69 @@ let newWorker: ServiceWorker | null = null;
 // Register service worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').then(registration => {
-      console.log('SW registered:', registration);
-
-      // Check if there's a waiting worker
-      if (registration.waiting) {
-        console.log('New version waiting to activate');
-        newWorker = registration.waiting;
-        window.dispatchEvent(new Event('swUpdateAvailable'));
-      }
-
-      registration.addEventListener('updatefound', () => {
-        console.log('Update found for service worker');
-        const installingWorker = registration.installing;
+    // First check if there's an existing registration
+    navigator.serviceWorker.getRegistration().then(existingRegistration => {
+      if (existingRegistration) {
+        console.log('Found existing service worker:', existingRegistration);
         
-        if (installingWorker) {
-          newWorker = installingWorker;
-          installingWorker.addEventListener('statechange', () => {
-            console.log('Service worker state changed:', installingWorker.state);
-            if (installingWorker.state === 'installed') {
-              if (navigator.serviceWorker.controller) {
+        // Check if there's a waiting worker
+        if (existingRegistration.waiting) {
+          console.log('New version waiting to activate');
+          newWorker = existingRegistration.waiting;
+          window.dispatchEvent(new Event('swUpdateAvailable'));
+        }
+
+        existingRegistration.addEventListener('updatefound', () => {
+          console.log('Update found for service worker');
+          const installingWorker = existingRegistration.installing;
+          
+          if (installingWorker) {
+            newWorker = installingWorker;
+            installingWorker.addEventListener('statechange', () => {
+              console.log('Service worker state changed:', installingWorker.state);
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 console.log('New content available, showing update notification');
                 window.dispatchEvent(new Event('swUpdateAvailable'));
-              } else {
-                console.log('Content is cached for offline use');
               }
+            });
+          }
+        });
+
+      } else {
+        // Only register if there's no existing registration
+        navigator.serviceWorker.register('/service-worker.js').then(registration => {
+          console.log('SW registered:', registration);
+          
+          registration.addEventListener('updatefound', () => {
+            // Same update found logic as above
+            console.log('Update found for service worker');
+            const installingWorker = registration.installing;
+            
+            if (installingWorker) {
+              newWorker = installingWorker;
+              installingWorker.addEventListener('statechange', () => {
+                console.log('Service worker state changed:', installingWorker.state);
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('New content available, showing update notification');
+                  window.dispatchEvent(new Event('swUpdateAvailable'));
+                }
+              });
             }
           });
+        }).catch(error => {
+          console.error('SW registration failed:', error);
+        });
+      }
+
+      // Add reload control (outside the if/else since we want this either way)
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          console.log('New service worker activated, reloading page');
+          refreshing = true;
+          window.location.reload();
         }
       });
-    }).catch(error => {
-      console.log('SW registration failed:', error);
-    });
-
-    // Add reload control
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
-        console.log('New service worker activated, reloading page');
-        refreshing = true;
-        window.location.reload();
-      }
     });
   });
 }
