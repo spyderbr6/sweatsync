@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Trophy, Flame, Users,Globe, Target } from 'lucide-react';
+import { Trophy} from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { useUser } from './userContext';
 import { useNavigate } from 'react-router-dom';
 //import { useDataVersion } from './dataVersionContext';
 import { ChallengeType } from './challengeTypes';
+import { getChallengeStyle, getChallengeIcon } from './styles/challengeStyles';
+
 
 const client = generateClient<Schema>();
 
@@ -142,61 +144,43 @@ const ChallengeFeedHeader = () => {
 
   return (
     <div className="feed__header">
-      <div className="feed__challenges">
-        {activeChallenges.map((challenge) => {
-          const getChallengeStyle = (type: string | null) => {
-            const baseStyle = challenge.hasPostedToday ? 'posted' : '';
-            
-            switch (type?.toLowerCase()) {
-              case 'personal':
-                return {
-                  className: `challenge-alert--personal ${baseStyle}`,
-                  icon: <Target className="w-4 h-4 text-purple-500" />
-                };
-              case 'group':
-                return {
-                  className: `challenge-alert--group ${baseStyle}`,
-                  icon: <Users className="w-4 h-4 text-blue-500" />
-                };
-                case 'daily':
-                  return {
-                    className: `challenge-alert--daily ${baseStyle}`,
-                    icon: <Flame className="w-4 h-4 text-red-500" />
-                  };
-                  case 'public':
-                    return {
-                      className: `challenge-alert--public ${baseStyle}`,
-                      icon: <Globe className="w-4 h-4 text-blue-500" />
-                    };  
-              default:
-                return {
-                  className: `challenge-alert--weekly ${baseStyle}`,
-                  icon: <Trophy className="w-4 h-4 text-green-500" />
-                };
-            }
-          };
+    <div className="feed__challenges">
+      {activeChallenges.map((challenge) => {
+        const style = getChallengeStyle(
+          challenge.challengeType, 
+          challenge.hasPostedToday ? 'completed' : 'default'
+        );
+        
+        const Icon = getChallengeIcon(challenge.challengeType, {
+          className: "w-4 h-4",
+          style: { color: style.mainColor }
+        });
 
-          const style = getChallengeStyle(challenge.challengeType);
-
-          return (
-            <div 
-              key={challenge.id}
-              className={`challenge-alert ${style.className}`}
-              onClick={() => navigate(`/challenge/${challenge.id}`)}
-              style={{ cursor: 'pointer' }}
-            >
-              {style.icon}
-              <span className="text-sm">
+        return (
+          <div 
+            key={challenge.id}
+            className={`challenge-alert`}
+            onClick={() => navigate(`/challenge/${challenge.id}`)}
+            style={{
+              backgroundColor: style.bgColor,
+              borderColor: style.borderColor,
+              color: style.textColor,
+              cursor: 'pointer',
+              opacity: style.opacity,
+            }}
+          >
+            {Icon}
+            <span className="text-sm">
               {challenge.hasPostedToday && 
-                  <span className="ml-2">✓ </span>
-                }
-                {challenge.title}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+                <span className="ml-2">✓ </span>
+              }
+              {challenge.title}
+            </span>
+          </div>
+        );
+      })}
     </div>
+  </div>
   );
 };
 
