@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { generateClient } from "aws-amplify/data";
 import { useNavigate } from 'react-router-dom';
 import type { Schema } from "../../../amplify/data/resource";
-import './PostChallenges.css';
+import './postChallenges.css';
 
 const client = generateClient<Schema>();
 
