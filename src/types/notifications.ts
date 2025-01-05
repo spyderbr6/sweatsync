@@ -77,8 +77,8 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
   },
   // This is a daily challenge notification. There is no call to action as you must accept daily challenges from your group challenge.
   CHALLENGE_DAILY_ADDED: {
-    icon: '/icons/daily-challenge.png',
-    badge: '/icons/badge-daily.png',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/globe-badge-96.png',
     urlPattern: (data) => `/challenge/${data.challengeId}`,
     actions: [
       { 

@@ -9,6 +9,9 @@
   
   declare const self: ServiceWorkerGlobalScope;
   
+  const CACHE_VERSION = '1.0.3';
+  const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
+
   // Precache all assets marked by your build tool
   precacheAndRoute(self.__WB_MANIFEST);
   
@@ -55,9 +58,6 @@ interface CustomNotificationOptions extends NotificationOptions {
   tag?: string;
   renotify?: boolean;
 }
-
-const CACHE_VERSION = '1.0.2';
-const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
 
 self.addEventListener('install', (event: ExtendableEvent) => {
   console.log('Service Worker installing.');
