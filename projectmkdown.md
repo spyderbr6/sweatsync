@@ -22,6 +22,7 @@
         └── tsconfig.json
     └── 📁public
         └── 📁icons
+            └── globe-badge-96.png
             └── icon-192.png
             └── icon-512.png
             └── icon.png
@@ -34,6 +35,7 @@
         └── sweatsync_logo.gif
         └── upload_icon.png
         └── vite.svg
+        └── workout-background.jpg
     └── 📁src
         └── App.tsx
         └── 📁assets
@@ -60,6 +62,12 @@
                 └── feedbackModal.tsx
             └── 📁notificationPreferences
                 └── notificationPreferences.tsx
+            └── 📁PostChallenges
+                └── postChallenges.css
+                └── postChallenges.tsx
+            └── 📁UpdateNotification
+                └── UpdateNotification.css
+                └── UpdateNotification.tsx
         └── CreateChallengeModal.tsx
         └── CreatePostModal.tsx
         └── dataVersionContext.tsx
@@ -72,6 +80,8 @@
             └── usePushNotifications.ts
         └── index.css
         └── inviteFriendsModal.tsx
+        └── LandingPage.css
+        └── LandingPage.tsx
         └── main.tsx
         └── postCreator.css
         └── postCreator.tsx
@@ -82,6 +92,8 @@
         └── SinglePagePost.tsx
         └── 📁styles
             └── promptAction.css
+        └── 📁types
+            └── notifications.ts
         └── urlCacheContext.tsx
         └── useChallengeDetail.ts
         └── userContext.tsx
@@ -90,8 +102,6 @@
             └── challengeDailyPrompt.tsx
             └── githubUtils.ts
             └── imageUploadUtils.ts
-            └── postChallenges.css
-            └── postChallenges.tsx
             └── profilePictureUploader.ts
             └── promptAction.tsx
             └── shareAction.tsx

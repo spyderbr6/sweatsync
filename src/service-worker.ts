@@ -1,67 +1,80 @@
  
-  // service-worker.ts
+  // src/service-worker.ts
   /// <reference lib="webworker" />
   import { precacheAndRoute } from 'workbox-precaching';
   import { registerRoute } from 'workbox-routing';
   import { CacheFirst, NetworkFirst } from 'workbox-strategies';
   import { ExpirationPlugin } from 'workbox-expiration';
+  import { NOTIFICATION_CONFIGS} from './types/notifications';
   
   declare const self: ServiceWorkerGlobalScope;
-  
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  const CACHE_VERSION = '1.0.5'; //IF THIS ISNT UPDATED YOU GONNA HAVE A BAD TIME
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
+
   // Precache all assets marked by your build tool
   precacheAndRoute(self.__WB_MANIFEST);
   
   // Cache the AWS Amplify API responses
-  registerRoute(
-    ({ url }) => url.href.includes('amazonaws.com'),
-    new NetworkFirst({
-      cacheName: 'api-cache',
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 // 1 hour
-        })
-      ]
-    })
-  );
-  
-  // Cache images
-  registerRoute(
-    ({ request }) => request.destination === 'image',
-    new CacheFirst({
-      cacheName: 'images',
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 60,
-          maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
-        })
-      ]
-    })
-  );
+registerRoute(
+  ({ url }) => url.href.includes('amazonaws.com'),
+  new NetworkFirst({
+    cacheName: 'api-cache',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 50,
+        maxAgeSeconds: 60 * 60 // 1 hour
+      })
+    ]
+  })
+);
 
-  // Define the NotificationAction interface
+// Cache images
+registerRoute(
+  ({ request }) => request.destination === 'image',
+  new CacheFirst({
+    cacheName: 'images',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+      })
+    ]
+  })
+);
+
+// Helper function to generate URLs (same as in notifications.ts)
+function generateUrl(pattern: string, data: Record<string, any>): string {
+  return pattern.replace(/\{(\w+)\}/g, (_, key) => data[key] || '');
+}
+interface CustomNotification extends Notification {
+  actions?: {
+    action: string;
+    title: string;
+    url?: string;
+  }[];
+}
 interface NotificationAction {
   action: string;
   title: string;
   icon?: string;
 }
 
-// Extend the NotificationOptions interface to include actions
 interface CustomNotificationOptions extends NotificationOptions {
   actions?: NotificationAction[];
+  data?: any;
   vibrate?: number[];
   tag?: string;
-  data?: any;
-  renotify?: boolean; 
+  renotify?: boolean;
 }
-
-const CACHE_VERSION = '1.0.0';
-const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
 
 self.addEventListener('install', (event: ExtendableEvent) => {
   console.log('Service Worker installing.');
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches.open(CACHE_NAME).then(() => {
+      console.log('Opened cache');
+    })
   );
 });
 
@@ -69,21 +82,24 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
   console.log('Service Worker activating.');
   
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      self.clients.claim()
+    ])
   );
 });
 
 // Handle push events
 self.addEventListener('push', (event: PushEvent) => {
-  
   if (!event.data) {
     console.log('Push event received but no data');
     return;
@@ -91,20 +107,35 @@ self.addEventListener('push', (event: PushEvent) => {
 
   try {
     const data = event.data.json();
+    console.log('Parsed push data:', data);
     
-    // Move notification options into a separate const for debugging
+    // Get notification config for this type
+    const config = NOTIFICATION_CONFIGS[data.type];
+    if (!config) {
+      console.error('No config found for notification type:', data.type);
+      return;
+    }
+
+    // Generate the target URL using the pattern
+    const targetUrl = generateUrl(config.urlPattern, data.data || {});
+
     const options: CustomNotificationOptions = {
       body: data.body,
-      icon: '/icons/icon-192.png',
-      badge: '/picsoritdidnthappen.webp',
+      icon: config.icon,
+      badge: config.badge,
       data: {
         ...data.data,
-        url: '/challenge/' + data.data.challengeId
+        type: data.type,
+        url: targetUrl
       },
-      requireInteraction: false,
-      actions: data.actions || [],
-      vibrate: [200, 100, 200],
-      tag: 'challenge-notification',
+      requireInteraction: config.requireInteraction,
+      actions: config.actions?.map(action => ({
+        ...action,
+        // Generate action URLs if they exist
+        url: action.urlPattern ? generateUrl(action.urlPattern, data.data || {}) : targetUrl
+      })),
+      vibrate: config.vibrate,
+      tag: `${data.type}-notification`,
       renotify: true
     };
 
@@ -113,19 +144,11 @@ self.addEventListener('push', (event: PushEvent) => {
         .then(() => console.log('✅ Notification shown successfully'))
         .catch(error => {
           console.error('❌ Error showing notification:', error);
-          if (error instanceof Error) {
-            console.error('Error details:', {
-              message: error.message,
-              stack: error.stack
-            });
-          }
+          console.error('Error details:', error);
         })
     );
-  } catch (err: unknown) {
+  } catch (err) {
     console.error('Error processing push event:', err);
-    if (err instanceof Error) {
-      console.error('Stack trace:', err.stack);
-    }
   }
 });
 
@@ -133,10 +156,31 @@ self.addEventListener('push', (event: PushEvent) => {
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.notification.close();
 
-  // Handle notification click
-  if (event.notification.data) {
-    event.waitUntil(
-      self.clients.openWindow(event.notification.data as string)
-    );
+  const notificationData = event.notification.data;
+  
+  // Determine which URL to use
+  let targetUrl = notificationData.url;
+  
+  if (event.action) {
+    // Cast notification to our custom type
+    const notification = event.notification as CustomNotification;
+    const actionConfig = notification.actions?.find(a => a.action === event.action);
+    if (actionConfig?.url) {
+      targetUrl = actionConfig.url;
+    }
   }
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' })
+      .then(windowClients => {
+        // Check if there's already a window open
+        for (const client of windowClients) {
+          if (client.url === targetUrl && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // If no window is open, open a new one
+        return self.clients.openWindow(targetUrl);
+      })
+  );
 });

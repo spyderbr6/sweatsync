@@ -5,6 +5,7 @@ import type { Schema } from "../amplify/data/resource";
 import { Heart, MessageCircle, Share2, Trophy } from 'lucide-react';
 import { CommentSection } from './CommentSection';
 import { useUrlCache } from './urlCacheContext';
+import {PostChallenges} from './components/PostChallenges/postChallenges';
 
 const client = generateClient<Schema>();
 
@@ -101,6 +102,7 @@ const SinglePostPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [profilePictureUrl, setProfilePictureUrl] = useState<string>("/profileDefault.png");
+    const [showChallenges, setShowChallenges] = useState(false);
 
     
     // Fetch post data
@@ -370,7 +372,10 @@ const SinglePostPage: React.FC = () => {
                                 >
                                     <Share2 className="w-6 h-6" />
                                 </button>
-                                <button className="post__challenge-button">
+                                <button
+                                    className="post__challenge-button"
+                                    onClick={() => setShowChallenges(!showChallenges)}
+                                >
                                     <Trophy className="post__challenge-icon w-5 h-5" />
                                     <span className="post__challenge-text">Challenge</span>
                                     <span className="post__challenge-count">
@@ -379,6 +384,20 @@ const SinglePostPage: React.FC = () => {
                                 </button>
                             </div>
                         </div>
+
+                                                {/* Add PostChallenges component */}
+                                                {showChallenges && post?.id && (
+                            <div className="post__challenges-container">
+                                <PostChallenges 
+                                    postId={post.id}
+                                    className="mt-4"
+                                    onChallengeClick={(challengeId) => {
+                                        navigate(`/challenge/${challengeId}`);
+                                        setShowChallenges(false);
+                                    }}
+                                />
+                            </div>
+                        )}
 
                         <div className="post__details">
                             <p className="post__caption">
