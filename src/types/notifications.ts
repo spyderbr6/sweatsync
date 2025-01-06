@@ -59,17 +59,11 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
   FRIEND_REQUEST: {
     icon: '/icons/icon-192.png',
     badge: '/icons/userplus-96.png',
-    urlPattern: '/friends/requests/{userId}',
+    urlPattern: '/friends',
     actions: [
       { 
-        title: 'View Profile', 
-        action: 'view',
-        urlPattern: '/profile/{userId}'
-      },
-      { 
-        title: 'Accept', 
-        action: 'accept',
-        urlPattern: '/friends/accept/{userId}'
+        title: 'View', 
+        action: 'view'
       }
     ],
     requireInteraction: true,
