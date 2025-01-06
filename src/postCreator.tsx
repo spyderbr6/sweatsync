@@ -3,6 +3,7 @@ import { Camera, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { listChallenges } from './challengeOperations';
+import { getChallengeStyle, getChallengeIcon, type ChallengeState } from './styles/challengeStyles';
 import { updateChallengePoints, validateChallengePost } from './challengeRules';
 import { useUser } from './userContext';
 import './postCreator.css';
@@ -45,59 +46,48 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const [challengeSelectability, setChallengeSelectability] = useState<Record<string, ChallengeSelectability>>({});
   const { pictureUrl } = useUser();
 
-
-  // Define challenge colors mapping
-  const challengeColors: { [key: string]: string } = {
-    'GROUP': '#10B981',
-    'PERSONAL': '#8B5CF6',
-    'PUBLIC': '#EF4444',
-    'FRIENDS': '#3B82F6',
-    'general': '#F59E0B', 
-    'DAILY': '#Ff0000'
-  };
-
   // Fetch challenges and user data on component mount
   useEffect(() => {
     const loadAndValidateChallenges = async () => {
       try {
         if (!userId) return;
-    
+
         // Fetch both regular challenges and daily challenges
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
         // Get all active challenges
         const [activeChallenges] = await Promise.all([
           listChallenges(userId),
         ]);
-    
+
         // Combine regular and daily challenges
         const allChallenges = [
           ...activeChallenges
         ];
-    
+
         setAvailableChallenges(allChallenges);
-    
+
         // Get group challenges
         const groupChallenges = activeChallenges.filter(c => c.challengeType === 'GROUP');
         const personalChallenges = activeChallenges.filter(c => c.challengeType === 'PERSONAL');
         const dailyTypeChallenges = activeChallenges.filter(c => c.challengeType === 'DAILY');
-    
+
         // Initialize selectability map
         const selectabilityMap: Record<string, ChallengeSelectability> = {};
-    
+
         // Handle personal challenges
         personalChallenges.forEach(challenge => {
           selectabilityMap[challenge.id] = {
             id: challenge.id,
             canSelect: challenge.createdBy === userId,
-            reason: challenge.createdBy !== userId ? 
+            reason: challenge.createdBy !== userId ?
               "Only the creator can post to personal challenges" : undefined
           };
         });
-    
+
         // Validate group challenges
         if (groupChallenges.length > 0) {
           await Promise.all(groupChallenges.map(async (challenge) => {
@@ -108,7 +98,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
                 postId: 'pending',
                 timestamp: new Date().toISOString()
               });
-    
+
               selectabilityMap[challenge.id] = {
                 id: challenge.id,
                 canSelect: validationResult.isValid,
@@ -124,7 +114,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             }
           }));
         }
-    
+
         // Validate daily challenges
         if (dailyTypeChallenges.length > 0) {
           await Promise.all(dailyTypeChallenges.map(async (challenge) => {
@@ -136,7 +126,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
                 timestamp: new Date().toISOString(),
                 isDailyChallenge: true
               });
-    
+
               selectabilityMap[challenge.id] = {
                 id: challenge.id,
                 canSelect: validationResult.isValid,
@@ -152,7 +142,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             }
           }));
         }
-    
+
         // Make sure public challenges are always selectable
         activeChallenges
           .filter(c => c.challengeType === 'PUBLIC')
@@ -162,7 +152,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
               canSelect: true
             };
           });
-    
+
         setChallengeSelectability(selectabilityMap);
       } catch (error) {
         console.error("Error loading and validating challenges:", error);
@@ -346,16 +336,18 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
                   const challenge = availableChallenges.find(c => c.id === challengeId);
                   if (!challenge?.title) return null;
 
+                  const style = getChallengeStyle(challenge.challengeType, 'selected');
                   const top = 20 + (Math.floor(index / 2) * 50);
                   const left = 10 + ((index % 2) * 50);
-                  const color = challengeColors[challenge.challengeType || 'general'];
 
                   return (
                     <div
                       key={challengeId}
                       className="post-creator__selected-tag"
                       style={{
-                        backgroundColor: `${color}dd`,
+                        backgroundColor: style.bgColor,
+                        borderColor: style.borderColor,
+                        color: style.textColor,
                         top: `${top}px`,
                         left: `${left}%`
                       }}
@@ -393,24 +385,37 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             <div className="post-creator__challenge-tags">
               {availableChallenges.map(challenge => {
                 const selectability = challengeSelectability[challenge.id];
-                const isDisabled = !selectability?.canSelect;
+                const isSelected = selectedChallenges.includes(challenge.id);
+                const state: ChallengeState =
+                  isSelected ? 'selected' :
+                    !selectability?.canSelect ? 'disabled' :
+                      'default';
+
+                const style = getChallengeStyle(challenge.challengeType, state);
+                const Icon = getChallengeIcon(challenge.challengeType, {
+                  size: 16,
+                  style: { color: isSelected ? style.textColor : style.mainColor }
+                });
 
                 return (
                   <div key={challenge.id} className="challenge-tag-container">
                     <button
                       onClick={() => toggleChallenge(challenge.id)}
-                      className={`post-creator__challenge-tag 
-                    ${selectedChallenges.includes(challenge.id) ? 'post-creator__challenge-tag--selected' : ''} 
-                    ${isDisabled ? 'post-creator__challenge-tag--disabled' : ''}`}
-                      disabled={isDisabled}
+                      className={`post-creator__challenge-tag`}
+                      disabled={!selectability?.canSelect}
                       style={{
-                        '--tag-color': challengeColors[challenge.challengeType || 'general']
-                      } as React.CSSProperties}
-                      title={selectability?.reason}
+                        backgroundColor: style.bgColor,
+                        borderColor: style.borderColor,
+                        color: style.textColor,
+                        opacity: style.opacity
+                      }}
                     >
-                      {challenge.title}
+                      <span className="challenge-tag__content">
+                        {Icon}
+                        <span>{challenge.title}</span>
+                      </span>
                     </button>
-                    {isDisabled && selectability?.reason && (
+                    {!selectability?.canSelect && selectability?.reason && (
                       <div className="challenge-tag-tooltip">
                         {selectability.reason}
                       </div>

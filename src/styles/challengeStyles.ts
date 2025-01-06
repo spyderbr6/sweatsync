@@ -1,4 +1,5 @@
 // src/styles/challengeStyles.ts
+import React from 'react';  // Add this at the top of the file
 import { ChallengeType } from '../challengeTypes';
 import { Users, Globe, Target, UserPlus, Flame } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -284,4 +285,20 @@ export const getChallengeInlineStyles = (
     color: style.states[state].textColor,
     opacity: style.states[state].opacity,
   };
+};
+
+export const getChallengeIcon = (
+  type: ChallengeType | string | null | undefined,
+  props?: React.ComponentProps<LucideIcon>
+): JSX.Element => {  // Changed return type to JSX.Element
+  let challengeType: ChallengeType;
+  
+  if (type && Object.values(ChallengeType).includes(type as ChallengeType)) {
+    challengeType = type as ChallengeType;
+  } else {
+    challengeType = ChallengeType.NONE;
+  }
+  
+  const Icon = challengeStyles[challengeType].icon;
+  return React.createElement(Icon, props);  // Use createElement instead of JSX
 };

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { generateClient } from "aws-amplify/data";
 import { useNavigate } from 'react-router-dom';
 import type { Schema } from "../../../amplify/data/resource";
+import { getChallengeStyle, getChallengeIcon } from '../../styles/challengeStyles';
 import './postChallenges.css';
 
 const client = generateClient<Schema>();
@@ -121,23 +122,6 @@ export const PostChallenges: React.FC<PostChallengesProps> = ({
     }
   };
 
-  const getChallengeTypeClass = (type: string | null): string => {
-    if (!type) return 'challenge-tag--default';
-
-    switch (type.toLowerCase()) {
-      case 'group':
-        return 'challenge-tag--group';
-      case 'personal':
-        return 'challenge-tag--personal';
-      case 'friends':
-        return 'challenge-tag--friends';
-      case 'daily':
-        return 'challenge-tag--daily';
-      default:
-        return 'challenge-tag--default';
-    }
-  };
-
   if (isLoading) {
     if (loadingComponent) {
       return <div className={`post-challenges ${className}`}>{loadingComponent}</div>;
@@ -175,24 +159,42 @@ export const PostChallenges: React.FC<PostChallengesProps> = ({
   return (
     <div className={`post-challenges ${className}`}>
       <div className="post-challenges__list">
-        {challenges.map(challenge => (
-          <button
-            key={challenge.id}
-            onClick={() => handleChallengeClick(challenge.id)}
-            className={`challenge-tag ${getChallengeTypeClass(challenge.type)}`}
-          >
-            <span className="challenge-tag__content">
-              <span className="challenge-tag__title">
-                {challenge.title ?? 'Unnamed Challenge'}
-              </span>
-              {challenge.type && (
-                <span className="challenge-tag__type">
-                  {challenge.type.toLowerCase()}
+        {challenges.map(challenge => {
+          const style = getChallengeStyle(challenge.type);
+          const Icon = getChallengeIcon(challenge.type, {
+            size: 16,
+            style: { color: style.mainColor }
+          });
+
+          return (
+            <button
+              key={challenge.id}
+              onClick={() => handleChallengeClick(challenge.id)}
+              className="challenge-tag"
+              style={{
+                backgroundColor: style.bgColor,
+                borderColor: style.borderColor,
+                color: style.textColor
+              }}
+            >
+              <span className="challenge-tag__content">
+                <span className="challenge-tag__title">
+                  {challenge.title ?? 'Unnamed Challenge'}
                 </span>
-              )}
-            </span>
-          </button>
-        ))}
+                {challenge.type && (
+                  <span className="challenge-tag__type">
+                    <span className="challenge-tag__icon">
+                      {Icon}
+                    </span>
+                    <span className="challenge-tag__type-text">
+                      {style.name}
+                    </span>
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

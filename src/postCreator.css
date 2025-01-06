@@ -171,14 +171,17 @@
 }
 
 .post-creator__challenge-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 1rem;
   border-radius: 9999px;
   font-size: 0.875rem;
-  border: 1px solid var(--tag-color, #e5e7eb);
-  background: transparent;
-  color: var(--tag-color, #374151);
+  border: 1px solid;
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%;
+  background: none;
 }
 
 .post-creator__challenge-tag:hover {
@@ -249,9 +252,13 @@
   display: inline-block;
 }
 
-.post-creator__challenge-tag--disabled {
-  opacity: 0.5;
+.post-creator__challenge-tag:disabled {
   cursor: not-allowed;
+}
+
+.post-creator__challenge-tag:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .challenge-tag-tooltip {
@@ -268,6 +275,14 @@
   white-space: nowrap;
   z-index: 10;
   margin-bottom: 0.5rem;
+}
+
+.challenge-tag__content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .challenge-tag-container:hover .challenge-tag-tooltip {

@@ -395,47 +395,11 @@ a:hover {
   gap: 0.5rem;
 }
 
-.challenge-alert--personal {
-  background-color: rgb(255 237 213);
-  border: 1px solid rgb(254 215 170);
+.challenge-alert:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.challenge-alert--personal:hover {
-  background-color: rgb(254 215 170);
-}
-
-.challenge-alert--group {
-  background-color: rgb(219 234 254);
-  border: 1px solid rgb(191 219 254);
-}
-
-.challenge-alert--group:hover {
-  background-color: rgb(191 219 254);
-}
-
-.challenge-alert--weekly {
-  background-color: rgb(220 252 231);
-  border: 1px solid rgb(187 247 208);
-}
-
-.challenge-alert--weekly:hover {
-  background-color: rgb(187 247 208);
-}
-.challenge-alert.posted {
-  opacity: 0.6;
-}
-
-.challenge-alert--personal.posted {
-  background-color: rgb(254 215 170 / 0.5);
-}
-
-.challenge-alert--group.posted {
-  background-color: rgb(191 219 254 / 0.5);
-}
-
-.challenge-alert--weekly.posted {
-  background-color: rgb(187 247 208 / 0.5);
-}
 
 .feed__content {
   padding: 1rem;

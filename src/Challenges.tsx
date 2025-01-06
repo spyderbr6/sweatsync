@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, UserPlus, Target, Globe, Plus, Trash2, UserMinus, Share2 } from 'lucide-react';
+import { Plus, Trash2, UserMinus, Share2, LucideIcon } from 'lucide-react';
 import { CreateChallengeModal } from './CreateChallengeModal';
 import { listChallenges, checkChallengeParticipation, addParticipantToChallenge, archiveChallenge, removeParticipantFromChallenge } from './challengeOperations';
 import type { Schema } from "../amplify/data/resource";
@@ -12,8 +12,15 @@ import ActionMenu from './components/cardActionMenu/cardActionMenu';
 import { shareContent } from './utils/shareAction';
 import { ChallengeType } from './challengeTypes';
 import { promptAction } from './utils/promptAction';
+import { getChallengeStyle, getChallengeIcon,challengeStyles } from './styles/challengeStyles';
 
-
+type StatItem = {
+  category: ChallengeCategory;
+  label: string;
+  IconComponent: LucideIcon;  // Changed to store the component type
+  count: number;
+  style: ReturnType<typeof getChallengeStyle>;
+};
 type ChallengeCategory = 'all' | ChallengeType;
 type Challenge = Schema["Challenge"]["type"];
 
@@ -34,8 +41,6 @@ function ChallengesPage() {
   const [joiningChallenge, setJoiningChallenge] = useState<string | null>(null);
   const { incrementVersion } = useDataVersion();
   const navigate = useNavigate();
-
-
 
   useEffect(() => {
     loadChallenges();
@@ -125,54 +130,23 @@ function ChallengesPage() {
     }
   };
 
-  const stats = [
-    {
-      category: 'PUBLIC' as ChallengeCategory,
-      label: 'Public Challenges',
-      icon: Globe,
-      count: challenges.filter(c => c.challengeType === 'PUBLIC').length,
-      iconClass: 'stat-icon--public'
-    },
-    {
-      category: 'FRIENDS' as ChallengeCategory,
-      label: 'Friend Challenges',
-      icon: UserPlus,
-      count: challenges.filter(c => c.challengeType === 'FRIENDS').length,
-      iconClass: 'stat-icon--friend'
-    },
-    {
-      category: 'GROUP' as ChallengeCategory,
-      label: 'Group Challenges',
-      icon: Users,
-      count: challenges.filter(c => c.challengeType === 'GROUP').length,
-      iconClass: 'stat-icon--group'
-    },
-    {
-      category: 'PERSONAL' as ChallengeCategory,
-      label: 'Personal Goals',
-      icon: Target,
-      count: challenges.filter(c => c.challengeType === 'PERSONAL').length,
-      iconClass: 'stat-icon--personal'
-    },
-  ];
 
-  const getChallengeIcon = (type: string | null | undefined) => {
-    // Convert string to enum value
-    const challengeType = type as ChallengeType;
+  const stats: StatItem[] = Object.values(ChallengeType)
+  .filter(type => type !== ChallengeType.NONE && type !== ChallengeType.DAILY)
+  .map(challengeType => {
+    const style = getChallengeStyle(challengeType);
+    
+    // Get the icon component directly from challengeStyles
+    const IconComponent = challengeStyles[challengeType].icon;
 
-    switch (challengeType) {
-      case ChallengeType.PUBLIC:
-        return <Globe size={20} />;
-      case ChallengeType.FRIENDS:
-        return <UserPlus size={20} />;
-      case ChallengeType.GROUP:
-        return <Users size={20} />;
-      case ChallengeType.PERSONAL:
-        return <Target size={20} />;
-      default:
-        return <Globe size={20} />; // Fallback to Globe
-    }
-  };
+    return {
+      category: challengeType as ChallengeCategory,
+      label: style.name,
+      IconComponent,  // Store the component itself
+      count: challenges.filter(c => c.challengeType === challengeType).length,
+      style: style
+    };
+  });
 
   const filteredChallenges = challenges.filter(challenge =>
     activeFilter === 'all' || (challenge.challengeType && challenge.challengeType === activeFilter)
@@ -300,31 +274,37 @@ function ChallengesPage() {
 
         {/* Stats Row */}
         <div className="stats-row">
-          {stats.map(({ category, label, icon: Icon, count, iconClass }) => (
-            <div
-              key={category}
-              className={`stat-card ${activeFilter === category ? 'stat-card--active' : ''}`}
-              onClick={() => handleCategoryClick(category)}
-              role="button"
-              tabIndex={0}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  handleCategoryClick(category);
-                }
-              }}
-            >
-              <div className="stat-card-content">
-                <div className={`stat-icon ${iconClass}`}>
-                  <Icon size={24} />
-                </div>
-                <div className="stat-text">
-                  <span className="stat-label">{label}</span>
-                  <span className="stat-value">{count}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+  {stats.map(({ category, label, IconComponent, count, style }) => (
+    <div
+      key={category}
+      className={`stat-card ${activeFilter === category ? 'stat-card--active' : ''}`}
+      onClick={() => handleCategoryClick(category)}
+      role="button"
+      tabIndex={0}
+      onKeyPress={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          handleCategoryClick(category);
+        }
+      }}
+    >
+      <div className="stat-card-content">
+        <div 
+          className="stat-icon"
+          style={{
+            backgroundColor: `${style.mainColor}15`,
+            color: style.mainColor
+          }}
+        >
+          <IconComponent size={24} />
         </div>
+        <div className="stat-text">
+          <span className="stat-label">{label}</span>
+          <span className="stat-value">{count}</span>
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
 
 
 
@@ -337,11 +317,17 @@ function ChallengesPage() {
           <div>Loading challenges...</div>
         ) : (
           filteredChallenges.map(challenge => {
-            if (!challenge) return null; // Defensive check to skip any null values
+            if (!challenge) return null;
 
-            // Calculate progress based on workouts completed
             const isParticipant = participations[challenge.id];
             const progress = challenge.totalWorkouts ? 0 : 0; // This needs to be calculated from actual data
+
+            // Get styles for the current state
+            const style = getChallengeStyle(challenge.challengeType, isParticipant ? 'active' : 'default');
+            const Icon = getChallengeIcon(challenge.challengeType, {
+              size: 20,
+              style: { color: style.mainColor }
+            });
 
             return (
               <div
@@ -349,11 +335,22 @@ function ChallengesPage() {
                 className="challenge-card"
               >
                 <div className="challenge-card-header">
-                  <div className={`challenge-icon-wrapper challenge-icon-wrapper--${challenge.challengeType}`}>
-                    {getChallengeIcon(challenge.challengeType || ChallengeType.NONE)}
+                  <div
+                    className="challenge-icon-wrapper"
+                    style={{
+                      backgroundColor: style.bgColor,
+                      color: style.textColor
+                    }}
+                  >
+                    {Icon}
                   </div>
                   <div className="challenge-info">
-                    <h3 className="challenge-title" onClick={() => handleNavigateToChallenge(challenge.id)}>{challenge.title}</h3>
+                    <h3
+                      className="challenge-title"
+                      onClick={() => handleNavigateToChallenge(challenge.id)}
+                    >
+                      {challenge.title}
+                    </h3>
                     <p className="challenge-meta">
                       {challenge.description}
                     </p>
@@ -371,22 +368,28 @@ function ChallengesPage() {
                     </div>
                     <div className="progress-bar">
                       <div
-                        className={`progress-bar-fill progress-bar-fill--${challenge.challengeType}`}
-                        style={{ width: `${progress}%` }}
+                        className="progress-bar-fill"
+                        style={{
+                          width: `${progress}%`,
+                          backgroundColor: style.mainColor
+                        }}
                       />
                     </div>
                   </div>
                 )}
 
-
                 {!isParticipant && (
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevent card click
+                      e.stopPropagation();
                       handleJoinChallenge(challenge.id);
                     }}
                     disabled={joiningChallenge === challenge.id}
                     className="btn btn-primary"
+                    style={{
+                      backgroundColor: style.mainColor,
+                      borderColor: style.mainColor
+                    }}
                   >
                     {joiningChallenge === challenge.id ? 'Joining...' : 'Join Challenge'}
                   </button>
