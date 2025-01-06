@@ -264,58 +264,57 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
         </div>
 
         <div className="post__actions">
-  <div className="post__buttons">
-    <div className="post__action-buttons">
-      <button
-        onClick={() => onReaction(post.id, "👍")}
-        className="post__heart-button"
-        aria-label="Like Button"
-      >
-        <Heart className="w-6 h-6" />
-        {<span className="post__heart-count">{post.thumbsUp}</span>}
-      </button>
-      <button
-        className="post__button"
-        onClick={() => toggleCommentSection(post.id)}
-        aria-label="Toggle comments"
-      >
-        <MessageCircle className="w-6 h-6" />
-      </button>
-      <button
-        className="post__button"
-        aria-label="Share Button"
-        onClick={() => {
-          shareContent(post.content ?? 'I worked Out', 'Join me on SweatSync', `${import.meta.env.BASE_URL}post/${post.id}`)
-        }}
-      >
-        <Share2 className="w-6 h-6" />
-      </button>
-      <button
-        className="post__challenge-button"
-        onClick={() => setShowChallenges(!showChallenges)}
-      >
-        <Trophy className="post__challenge-icon w-5 h-5" />
-        <span className="post__challenge-text">Challenge</span>
-        <span className="post__challenge-count">
-          {post.smiley}
-        </span>
-      </button>
-    </div>
-  </div>
+          <div className="post__buttons">
+            <div className="post__action-buttons">
+              <button
+                onClick={() => onReaction(post.id, "👍")}
+                className="post__heart-button"
+                aria-label="Like Button"
+              >
+                <Heart className="w-6 h-6" />
+                {<span className="post__heart-count">{post.thumbsUp}</span>}
+              </button>
+              <button
+                className="post__button"
+                onClick={() => toggleCommentSection(post.id)}
+                aria-label="Toggle comments"
+              >
+                <MessageCircle className="w-6 h-6" />
+              </button>
+              <button
+                className="post__button"
+                aria-label="Share Button"
+                onClick={() => {
+                  shareContent(post.content ?? 'I worked Out', 'Join me on SweatSync', `${import.meta.env.BASE_URL}post/${post.id}`)
+                }}
+              >
+                <Share2 className="w-6 h-6" />
+              </button>
+              <button
+                className="post__challenge-button"
+                onClick={() => setShowChallenges(!showChallenges)}
+              >
+                <Trophy className="post__challenge-icon w-5 h-5" />
+                <span className="post__challenge-text">Challenge</span>
+                <span className="post__challenge-count">
+                  {post.smiley}
+                </span>
+              </button>
+            </div>
+          </div>
 
-  {/* Add the challenges section here, after buttons but before details */}
-  {showChallenges && (
-    <div className="post__challenges-container">
-      <PostChallenges 
-        postId={post.id}
-        className="mt-4"
-        onChallengeClick={(challengeId) => {
-          navigate(`/challenge/${challengeId}`);
-          setShowChallenges(false); // Optionally hide challenges after selection
-        }}
-      />
-    </div>
-  )}
+          {showChallenges && (
+            <div className="post__challenges-container">
+              <PostChallenges
+                postId={post.id}
+                className="mt-4"
+                onChallengeClick={(challengeId) => {
+                  navigate(`/challenge/${challengeId}`);
+                  setShowChallenges(false); // Optionally hide challenges after selection
+                }}
+              />
+            </div>
+          )}
 
           <div className="post__details">
             <p className="post__caption">

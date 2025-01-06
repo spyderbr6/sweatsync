@@ -379,7 +379,7 @@ const SinglePostPage: React.FC = () => {
                                     <Trophy className="post__challenge-icon w-5 h-5" />
                                     <span className="post__challenge-text">Challenge</span>
                                     <span className="post__challenge-count">
-                                        {post.trophy}
+                                        {post.smiley}
                                     </span>
                                 </button>
                             </div>
