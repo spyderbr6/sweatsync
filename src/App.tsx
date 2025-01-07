@@ -354,6 +354,7 @@ function App() {
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
   
+        // Batch user queries
         const uniqueUserIds = [...new Set(
           sortedItems
             .map(post => post.userID)
@@ -361,15 +362,9 @@ function App() {
         )];
   
         const userMap = new Map();
-        
-        // Batch users in chunks of 25
         for (const chunk of _.chunk(uniqueUserIds, 25)) {
           const userResults = await client.models.User.list({
-            filter: {
-              or: chunk.map(userId => ({
-                id: { eq: userId }
-              }))
-            }
+            filter: { or: chunk.map(userId => ({ id: { eq: userId } })) }
           });
           userResults.data.forEach(user => userMap.set(user.id, user));
         }
@@ -386,35 +381,34 @@ function App() {
           }
         }));
   
-        const postsWithData = await Promise.all(sortedItems.map(async post => {
-          const imageUrl = post.url ? 
-            await getStorageUrl(post.url) : 
-            "/picsoritdidnthappen.webp";
-  
-          return {
-            ...post,
-            activeReactions: getActiveReactions(post),
-            imageUrl,
-            profileUrl: profileUrls.get(post.userID) || "/profileDefault.png"
-          };
-        }));
-  
-        // Preserve previous state
-        setworkoutposts(prevPosts => {
-          const prevMap = new Map(prevPosts.map(p => [p.id, p]));
-          return postsWithData.map(newPost => {
-            const oldPost = prevMap.get(newPost.id);
-            return {
-              ...newPost,
-              showReactions: oldPost?.showReactions ?? false,
-              // Keep existing activeReactions and add the ones from server
-              activeReactions: [
-                ...(oldPost?.activeReactions || []),
-                ...getActiveReactions(newPost)
-              ]
-            };
-          });
-        });
+        // Process posts
+      // In the subscription, modify the posts processing:
+const postsWithData = await Promise.all(sortedItems.map(async post => {
+  const imageUrl = post.url ? 
+    await getStorageUrl(post.url) : 
+    "/picsoritdidnthappen.webp";
+
+  return {
+    ...post,
+    imageUrl,
+    profileUrl: profileUrls.get(post.userID) || "/profileDefault.png",
+    showReactions: false,
+    activeReactions: getActiveReactions(post)  // Initialize with current reaction state
+  } satisfies Post;
+}));
+
+// When updating state, merge old and new reactions
+setworkoutposts(prevPosts => {
+  const prevMap = new Map(prevPosts.map(p => [p.id, p]));
+  return postsWithData.map(newPost => {
+    const oldPost = prevMap.get(newPost.id);
+    return {
+      ...newPost,
+      showReactions: oldPost?.showReactions ?? false,
+      activeReactions: [...(oldPost?.activeReactions || []), ...newPost.activeReactions]
+    };
+  });
+});
       }
     });
   
@@ -497,67 +491,61 @@ function App() {
   };
 
 
-  async function reactToPost(id: string, emojiType: string | null, reactionId?: string) {
-    // Handle animation cleanup
-    if (!emojiType && reactionId) {
-      setworkoutposts(posts =>
-        posts.map(p => p.id === id ? {
+// Return to original efficient reaction handling
+async function reactToPost(id: string, emojiType: string | null, reactionId?: string) {
+  if (!emojiType && reactionId) {
+    setworkoutposts(posts =>
+      posts.map(p =>
+        p.id === id ? {
           ...p,
-          activeReactions: p.activeReactions.filter(r => r.id !== reactionId),
-          showReactions: p.showReactions // Preserve hover state
-        } : p)
-      );
-      return;
-    }
-  
-    if (!emojiType) return;
-  
-    const emojiToField: EmojiMapping = {
-      "💪": "strong", "🔥": "fire", "⚡": "zap",
-      "👊": "fist", "🎯": "target", "⭐": "star",
-      "🚀": "rocket", "👏": "clap", "🏆": "trophy",
-      "👍": "thumbsUp"
-    };
-  
-    const fieldName = emojiToField[emojiType];
-    if (!fieldName) return;
-  
-    const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  
-    try {
-      // Optimistic update
-      setworkoutposts(posts =>
-        posts.map(p => p.id === id ? {
-          ...p,
-          [fieldName]: (p[fieldName] || 0) + 1,
-          activeReactions: [...p.activeReactions, { id: uniqueId, emoji: emojiType }],
-          showReactions: p.showReactions // Preserve hover state
-        } : p)
-      );
-  
-      const currentPost = workoutposts.find(p => p.id === id);
-      if (!currentPost) {
-        throw new Error('Post not found');
-      }
-  
-      // Server update
-      await client.models.PostforWorkout.update({
-        id,
-        [fieldName]: (currentPost[fieldName as keyof typeof currentPost] as number || 0) + 1
-      });
-    } catch (error) {
-      console.error("Error reacting to post:", error);
-      // Rollback on error
-      setworkoutposts(posts =>
-        posts.map(p => p.id === id ? {
-          ...p,
-          [fieldName]: (p[fieldName] || 0) - 1,
-          activeReactions: p.activeReactions.filter(r => r.id !== uniqueId),
-          showReactions: p.showReactions // Preserve hover state
-        } : p)
-      );
-    }
+          activeReactions: p.activeReactions.filter(r => r.id !== reactionId)
+        } : p
+      )
+    );
+    return;
   }
+
+  try {
+    const response = await client.models.PostforWorkout.get({ id });
+    const post = response?.data;
+
+    if (post && emojiType) {
+      const emojiToField: EmojiMapping = {
+        "💪": "strong", "🔥": "fire", "⚡": "zap",
+        "👊": "fist", "🎯": "target", "⭐": "star",
+        "🚀": "rocket", "👏": "clap", "🏆": "trophy",
+        "👍": "thumbsUp"
+      };
+
+      const fieldName = emojiToField[emojiType];
+      if (fieldName) {
+        const updatedValue = (post[fieldName] || 0) + 1;
+
+        await client.models.PostforWorkout.update({
+          id,
+          [fieldName]: updatedValue
+        });
+
+        const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        setworkoutposts(posts =>
+          posts.map(p =>
+            p.id === id ? {
+              ...p,
+              [fieldName]: updatedValue,
+              activeReactions: [...p.activeReactions, {
+                id: uniqueId,
+                emoji: emojiType
+              }]
+            } : p
+          )
+        );
+      }
+    }
+  } catch (error) {
+    console.error("Error reacting to post:", error);
+  }
+}
 
   return (
     <div className="feed">
