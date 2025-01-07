@@ -353,14 +353,14 @@ function App() {
         const sortedItems = [...data.items].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-  
+
         // Batch user queries
         const uniqueUserIds = [...new Set(
           sortedItems
             .map(post => post.userID)
             .filter((id): id is string => id !== null)
         )];
-  
+
         const userMap = new Map();
         for (const chunk of _.chunk(uniqueUserIds, 25)) {
           const userResults = await client.models.User.list({
@@ -368,7 +368,7 @@ function App() {
           });
           userResults.data.forEach(user => userMap.set(user.id, user));
         }
-  
+
         const profileUrls = new Map();
         await Promise.all([...userMap.values()].map(async user => {
           if (user.pictureUrl) {
@@ -380,38 +380,38 @@ function App() {
             }
           }
         }));
-  
+
         // Process posts
-      // In the subscription, modify the posts processing:
-const postsWithData = await Promise.all(sortedItems.map(async post => {
-  const imageUrl = post.url ? 
-    await getStorageUrl(post.url) : 
-    "/picsoritdidnthappen.webp";
+        // In the subscription, modify the posts processing:
+        const postsWithData = await Promise.all(sortedItems.map(async post => {
+          const imageUrl = post.url ?
+            await getStorageUrl(post.url) :
+            "/picsoritdidnthappen.webp";
 
-  return {
-    ...post,
-    imageUrl,
-    profileUrl: profileUrls.get(post.userID) || "/profileDefault.png",
-    showReactions: false,
-    activeReactions: getActiveReactions(post)  // Initialize with current reaction state
-  } satisfies Post;
-}));
+          return {
+            ...post,
+            imageUrl,
+            profileUrl: profileUrls.get(post.userID) || "/profileDefault.png",
+            showReactions: false,
+            activeReactions: getActiveReactions(post)  // Initialize with current reaction state
+          } satisfies Post;
+        }));
 
-// When updating state, merge old and new reactions
-setworkoutposts(prevPosts => {
-  const prevMap = new Map(prevPosts.map(p => [p.id, p]));
-  return postsWithData.map(newPost => {
-    const oldPost = prevMap.get(newPost.id);
-    return {
-      ...newPost,
-      showReactions: oldPost?.showReactions ?? false,
-      activeReactions: [...(oldPost?.activeReactions || []), ...newPost.activeReactions]
-    };
-  });
-});
+        // When updating state, merge old and new reactions
+        setworkoutposts(prevPosts => {
+          const prevMap = new Map(prevPosts.map(p => [p.id, p]));
+          return postsWithData.map(newPost => {
+            const oldPost = prevMap.get(newPost.id);
+            return {
+              ...newPost,
+              showReactions: oldPost?.showReactions ?? false,
+              activeReactions: [...(oldPost?.activeReactions || []), ...newPost.activeReactions]
+            };
+          });
+        });
       }
     });
-  
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -491,61 +491,61 @@ setworkoutposts(prevPosts => {
   };
 
 
-// Return to original efficient reaction handling
-async function reactToPost(id: string, emojiType: string | null, reactionId?: string) {
-  if (!emojiType && reactionId) {
-    setworkoutposts(posts =>
-      posts.map(p =>
-        p.id === id ? {
-          ...p,
-          activeReactions: p.activeReactions.filter(r => r.id !== reactionId)
-        } : p
-      )
-    );
-    return;
-  }
-
-  try {
-    const response = await client.models.PostforWorkout.get({ id });
-    const post = response?.data;
-
-    if (post && emojiType) {
-      const emojiToField: EmojiMapping = {
-        "💪": "strong", "🔥": "fire", "⚡": "zap",
-        "👊": "fist", "🎯": "target", "⭐": "star",
-        "🚀": "rocket", "👏": "clap", "🏆": "trophy",
-        "👍": "thumbsUp"
-      };
-
-      const fieldName = emojiToField[emojiType];
-      if (fieldName) {
-        const updatedValue = (post[fieldName] || 0) + 1;
-
-        await client.models.PostforWorkout.update({
-          id,
-          [fieldName]: updatedValue
-        });
-
-        const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-        setworkoutposts(posts =>
-          posts.map(p =>
-            p.id === id ? {
-              ...p,
-              [fieldName]: updatedValue,
-              activeReactions: [...p.activeReactions, {
-                id: uniqueId,
-                emoji: emojiType
-              }]
-            } : p
-          )
-        );
-      }
+  // Return to original efficient reaction handling
+  async function reactToPost(id: string, emojiType: string | null, reactionId?: string) {
+    if (!emojiType && reactionId) {
+      setworkoutposts(posts =>
+        posts.map(p =>
+          p.id === id ? {
+            ...p,
+            activeReactions: p.activeReactions.filter(r => r.id !== reactionId)
+          } : p
+        )
+      );
+      return;
     }
-  } catch (error) {
-    console.error("Error reacting to post:", error);
+
+    try {
+      const response = await client.models.PostforWorkout.get({ id });
+      const post = response?.data;
+
+      if (post && emojiType) {
+        const emojiToField: EmojiMapping = {
+          "💪": "strong", "🔥": "fire", "⚡": "zap",
+          "👊": "fist", "🎯": "target", "⭐": "star",
+          "🚀": "rocket", "👏": "clap", "🏆": "trophy",
+          "👍": "thumbsUp"
+        };
+
+        const fieldName = emojiToField[emojiType];
+        if (fieldName) {
+          const updatedValue = (post[fieldName] || 0) + 1;
+
+          await client.models.PostforWorkout.update({
+            id,
+            [fieldName]: updatedValue
+          });
+
+          const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+          setworkoutposts(posts =>
+            posts.map(p =>
+              p.id === id ? {
+                ...p,
+                [fieldName]: updatedValue,
+                activeReactions: [...p.activeReactions, {
+                  id: uniqueId,
+                  emoji: emojiType
+                }]
+              } : p
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error reacting to post:", error);
+    }
   }
-}
 
   return (
     <div className="feed">
