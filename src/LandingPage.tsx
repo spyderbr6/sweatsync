@@ -30,6 +30,7 @@ const LandingPage = () => {
           <h1>Transform Your Fitness Journey with Friends</h1>
           <p>Join SweatSync to track workouts, challenge friends, and build a 
             community that keeps you motivated, all with the power of AI</p>
+            <p>"Challenge Friends. Push Limits. Win Together."</p>
           
           <div className="landing-features">
             <div className="feature-item">
