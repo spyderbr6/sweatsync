@@ -350,15 +350,19 @@ function App() {
   useEffect(() => {
     const subscription = client.models.PostforWorkout.observeQuery().subscribe({
       next: async (data) => {
+        const sortedItems = [...data.items].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+  
         const uniqueUserIds = [...new Set(
-          data.items
+          sortedItems
             .map(post => post.userID)
             .filter((id): id is string => id !== null)
         )];
-
+  
         const userMap = new Map();
-
-        // Batch users in chunks of 25 for efficient querying
+        
+        // Batch users in chunks of 25
         for (const chunk of _.chunk(uniqueUserIds, 25)) {
           const userResults = await client.models.User.list({
             filter: {
@@ -369,7 +373,7 @@ function App() {
           });
           userResults.data.forEach(user => userMap.set(user.id, user));
         }
-
+  
         const profileUrls = new Map();
         await Promise.all([...userMap.values()].map(async user => {
           if (user.pictureUrl) {
@@ -381,29 +385,39 @@ function App() {
             }
           }
         }));
-
-        const sortedItems = [...data.items].sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-
+  
         const postsWithData = await Promise.all(sortedItems.map(async post => {
-          const imageUrl = post.url ?
-            await getStorageUrl(post.url) :
+          const imageUrl = post.url ? 
+            await getStorageUrl(post.url) : 
             "/picsoritdidnthappen.webp";
-
+  
           return {
             ...post,
-            showReactions: false,
             activeReactions: getActiveReactions(post),
             imageUrl,
             profileUrl: profileUrls.get(post.userID) || "/profileDefault.png"
-          } satisfies Post;
+          };
         }));
-
-        setworkoutposts(postsWithData);
+  
+        // Preserve previous state
+        setworkoutposts(prevPosts => {
+          const prevMap = new Map(prevPosts.map(p => [p.id, p]));
+          return postsWithData.map(newPost => {
+            const oldPost = prevMap.get(newPost.id);
+            return {
+              ...newPost,
+              showReactions: oldPost?.showReactions ?? false,
+              // Keep existing activeReactions and add the ones from server
+              activeReactions: [
+                ...(oldPost?.activeReactions || []),
+                ...getActiveReactions(newPost)
+              ]
+            };
+          });
+        });
       }
     });
-
+  
     return () => subscription.unsubscribe();
   }, []);
 
@@ -487,66 +501,61 @@ function App() {
     // Handle animation cleanup
     if (!emojiType && reactionId) {
       setworkoutposts(posts =>
-        posts.map(p =>
-          p.id === id
-            ? {
-              ...p,
-              activeReactions: p.activeReactions.filter(r => r.id !== reactionId)
-            }
-            : p
-        )
+        posts.map(p => p.id === id ? {
+          ...p,
+          activeReactions: p.activeReactions.filter(r => r.id !== reactionId),
+          showReactions: p.showReactions // Preserve hover state
+        } : p)
       );
       return;
     }
-
+  
+    if (!emojiType) return;
+  
+    const emojiToField: EmojiMapping = {
+      "💪": "strong", "🔥": "fire", "⚡": "zap",
+      "👊": "fist", "🎯": "target", "⭐": "star",
+      "🚀": "rocket", "👏": "clap", "🏆": "trophy",
+      "👍": "thumbsUp"
+    };
+  
+    const fieldName = emojiToField[emojiType];
+    if (!fieldName) return;
+  
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  
     try {
-      const response = await client.models.PostforWorkout.get({ id });
-      const post = response?.data;
-
-      if (post && emojiType) {
-        const emojiToField: EmojiMapping = {
-          "💪": "strong",
-          "🔥": "fire",
-          "⚡": "zap",
-          "👊": "fist",
-          "🎯": "target",
-          "⭐": "star",
-          "🚀": "rocket",
-          "👏": "clap",
-          "🏆": "trophy",
-          "👍": "thumbsUp"
-        };
-
-        const fieldName = emojiToField[emojiType];
-        if (fieldName) {
-          const updatedValue = (post[fieldName] || 0) + 1;
-
-          await client.models.PostforWorkout.update({
-            id,
-            [fieldName]: updatedValue
-          });
-
-          const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-          // Add floating reaction animation
-          setworkoutposts(posts =>
-            posts.map(p =>
-              p.id === id
-                ? {
-                  ...p,
-                  [fieldName]: updatedValue,
-                  activeReactions: [...p.activeReactions, {
-                    id: uniqueId,
-                    emoji: emojiType
-                  }]
-                }
-                : p
-            )
-          );
-        }
+      // Optimistic update
+      setworkoutposts(posts =>
+        posts.map(p => p.id === id ? {
+          ...p,
+          [fieldName]: (p[fieldName] || 0) + 1,
+          activeReactions: [...p.activeReactions, { id: uniqueId, emoji: emojiType }],
+          showReactions: p.showReactions // Preserve hover state
+        } : p)
+      );
+  
+      const currentPost = workoutposts.find(p => p.id === id);
+      if (!currentPost) {
+        throw new Error('Post not found');
       }
+  
+      // Server update
+      await client.models.PostforWorkout.update({
+        id,
+        [fieldName]: (currentPost[fieldName as keyof typeof currentPost] as number || 0) + 1
+      });
     } catch (error) {
-      console.error("Error reacting to post", error);
+      console.error("Error reacting to post:", error);
+      // Rollback on error
+      setworkoutposts(posts =>
+        posts.map(p => p.id === id ? {
+          ...p,
+          [fieldName]: (p[fieldName] || 0) - 1,
+          activeReactions: p.activeReactions.filter(r => r.id !== uniqueId),
+          showReactions: p.showReactions // Preserve hover state
+        } : p)
+      );
     }
   }
 
