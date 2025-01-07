@@ -10,13 +10,16 @@ import { shareContent } from './utils/shareAction';
 import { promptAction } from './utils/promptAction';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
 import { PostChallenges } from './components/PostChallenges/postChallenges';
+import _ from 'lodash';
 
-const useSpoofData = false;
+
 const client = generateClient<Schema>();
 
 type Post = Schema["PostforWorkout"]["type"] & {
   showReactions: boolean;
   activeReactions: Array<{ id: string; emoji: string }>;
+  imageUrl: string;
+  profileUrl: string;
 };
 
 type FloatingReactionProps = {
@@ -337,137 +340,68 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
 
 function App() {
   const [workoutposts, setworkoutposts] = useState<Array<Post>>([]);
-  const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({});
-  const [profilePictureUrls, setProfilePictureUrls] = useState<{ [key: string]: string }>({});
   const [visibleCount, setVisibleCount] = useState<number>(4); // number of posts to show initially
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const BATCH_SIZE = 4; // number of posts to load each time
   const { getStorageUrl } = useUrlCache();
   const { userId } = useUser();  // Move this to component level
 
+
   useEffect(() => {
     const subscription = client.models.PostforWorkout.observeQuery().subscribe({
       next: async (data) => {
-        const sortedPosts = [...data.items].sort(
+        const uniqueUserIds = [...new Set(
+          data.items
+            .map(post => post.userID)
+            .filter((id): id is string => id !== null)
+        )];
+
+        const userMap = new Map();
+
+        // Batch users in chunks of 25 for efficient querying
+        for (const chunk of _.chunk(uniqueUserIds, 25)) {
+          const userResults = await client.models.User.list({
+            filter: {
+              or: chunk.map(userId => ({
+                id: { eq: userId }
+              }))
+            }
+          });
+          userResults.data.forEach(user => userMap.set(user.id, user));
+        }
+
+        const profileUrls = new Map();
+        await Promise.all([...userMap.values()].map(async user => {
+          if (user.pictureUrl) {
+            try {
+              profileUrls.set(user.id, await getStorageUrl(user.pictureUrl));
+            } catch (error) {
+              console.error('Error fetching profile URL:', error);
+              profileUrls.set(user.id, "/profileDefault.png");
+            }
+          }
+        }));
+
+        const sortedItems = [...data.items].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
 
-        // Get unique user IDs and ensure they're not null
-        const uniqueUserIds = Array.from(
-          new Set(
-            sortedPosts
-              .map(post => post.userID)
-              .filter((id): id is string => id !== null && id !== undefined)
-          )
-        );
+        const postsWithData = await Promise.all(sortedItems.map(async post => {
+          const imageUrl = post.url ?
+            await getStorageUrl(post.url) :
+            "/picsoritdidnthappen.webp";
 
-        const profileUrls: { [userId: string]: string } = {};
-
-        try {
-          // Fetch users with multiple queries in parallel
-          const userPromises = uniqueUserIds.map(userId =>
-            client.models.User.get({ id: userId })
-          );
-
-          const userResults = await Promise.all(userPromises);
-
-          // Process all profile pictures in parallel
-          const userProfilePromises = userResults.map(async (result) => {
-            const user = result.data;
-            if (user && user.id) {  // Ensure user and user.id exist
-              if (user.pictureUrl) {
-                try {
-                  const url = await getStorageUrl(user.pictureUrl);
-                  profileUrls[user.id] = url;
-                } catch (error) {
-                  console.error(`Error fetching profile URL for user ${user.id}:`, error);
-                  profileUrls[user.id] = "/profileDefault.png";
-                }
-              } else {
-                profileUrls[user.id] = "/profileDefault.png";
-              }
-            }
-          });
-
-          await Promise.all(userProfilePromises);
-        } catch (error) {
-          console.error('Error fetching user profiles:', error);
-          uniqueUserIds.forEach(userId => {
-            profileUrls[userId] = "/profileDefault.png";
-          });
-        }
-
-        setProfilePictureUrls(profileUrls); // Store profile picture URLs in state
-
-        // Map incoming posts to UI state
-        const fieldToEmoji: { [key: string]: string } = {
-          strong: "💪",
-          fire: "🔥",
-          zap: "⚡",
-          fist: "👊",
-          target: "🎯",
-          star: "⭐",
-          rocket: "🚀",
-          clap: "👏",
-          trophy: "🏆",
-          thumbsUp: "👍",
-        };
-
-        const postsWithUIState = sortedPosts.map(post => {
-          const activeReactions: Array<{ id: string; emoji: string }> = [];
-          for (const [field, emoji] of Object.entries(fieldToEmoji)) {
-            const count = (post as any)[field] || 0;
-            for (let i = 0; i < count; i++) {
-              activeReactions.push({
-                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                emoji
-              });
-            }
-          }
           return {
             ...post,
             showReactions: false,
-            activeReactions,
-          };
-        });
+            activeReactions: getActiveReactions(post),
+            imageUrl,
+            profileUrl: profileUrls.get(post.userID) || "/profileDefault.png"
+          } satisfies Post;
+        }));
 
-        setworkoutposts(prevPosts => {
-          // Map previous posts by ID to easily find old states
-          const prevMap = new Map(prevPosts.map(p => [p.id, p]));
-
-          return postsWithUIState.map(newPost => {
-            const oldPost = prevMap.get(newPost.id);
-            return {
-              ...newPost,
-              // Preserve showReactions if it was previously set
-              showReactions: oldPost?.showReactions ?? newPost.showReactions,
-            };
-          });
-        });
-
-        if (useSpoofData) {
-          const spoofedUrls: { [key: string]: string } = {};
-          for (const item of data.items) {
-            spoofedUrls[item.id] = "/picsoritdidnthappen.webp";
-          }
-          setImageUrls(spoofedUrls);
-        } else {
-          // New cached URL fetching
-          const urls: { [key: string]: string } = {};
-          for (const item of data.items) {
-            if (item.url) {
-              try {
-                const url = await getStorageUrl(item.url);
-                urls[item.id] = url;
-              } catch (error) {
-                console.error('Error fetching image URL:', error);
-                urls[item.id] = "/picsoritdidnthappen.webp";
-              }
-            }
-          }
-          setImageUrls(urls);
-        }
-      },
+        setworkoutposts(postsWithData);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -500,6 +434,23 @@ function App() {
       if (loadMoreRef.current) observer.unobserve(loadMoreRef.current);
     };
   }, [workoutposts, visibleCount]);
+
+  const getActiveReactions = (post: any) => {
+    const fieldToEmoji: { [key: string]: string } = {
+      strong: "💪", fire: "🔥", zap: "⚡", fist: "👊",
+      target: "🎯", star: "⭐", rocket: "🚀", clap: "👏",
+      trophy: "🏆", thumbsUp: "👍"
+    };
+
+    return Object.entries(fieldToEmoji)
+      .flatMap(([field, emoji]) => {
+        const count = post[field] || 0;
+        return Array(count).fill(null).map(() => ({
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          emoji
+        }));
+      });
+  };
 
   const deletePost = async (id: string) => {
     // Now use the userId from above instead of calling useUser() here
@@ -607,8 +558,8 @@ function App() {
           <WorkoutPost
             key={post.id}
             post={post}
-            imageUrl={imageUrls[post.id] || "/picsoritdidnthappen.webp"}
-            profileImageUrl={post.userID ? profilePictureUrls[post.userID] || "/profileDefault.png" : "/profileDefault.png"}
+            imageUrl={post.imageUrl}  // Changed from imageUrls[post.id]
+            profileImageUrl={post.profileUrl}  // Changed from profilePictureUrls
             onReaction={reactToPost}
             onDelete={deletePost}
             onHover={(postId, isHovering) => {
