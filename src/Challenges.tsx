@@ -12,7 +12,7 @@ import ActionMenu from './components/cardActionMenu/cardActionMenu';
 import { shareContent } from './utils/shareAction';
 import { ChallengeType } from './challengeTypes';
 import { promptAction } from './utils/promptAction';
-import { getChallengeStyle, getChallengeIcon,challengeStyles } from './styles/challengeStyles';
+import { getChallengeStyle, getChallengeIcon, challengeStyles } from './styles/challengeStyles';
 
 type StatItem = {
   category: ChallengeCategory;
@@ -132,21 +132,21 @@ function ChallengesPage() {
 
 
   const stats: StatItem[] = Object.values(ChallengeType)
-  .filter(type => type !== ChallengeType.NONE && type !== ChallengeType.DAILY)
-  .map(challengeType => {
-    const style = getChallengeStyle(challengeType);
-    
-    // Get the icon component directly from challengeStyles
-    const IconComponent = challengeStyles[challengeType].icon;
+    .filter(type => type !== ChallengeType.NONE && type !== ChallengeType.DAILY)
+    .map(challengeType => {
+      const style = getChallengeStyle(challengeType);
 
-    return {
-      category: challengeType as ChallengeCategory,
-      label: style.name,
-      IconComponent,  // Store the component itself
-      count: challenges.filter(c => c.challengeType === challengeType).length,
-      style: style
-    };
-  });
+      // Get the icon component directly from challengeStyles
+      const IconComponent = challengeStyles[challengeType].icon;
+
+      return {
+        category: challengeType as ChallengeCategory,
+        label: style.name,
+        IconComponent,  // Store the component itself
+        count: challenges.filter(c => c.challengeType === challengeType).length,
+        style: style
+      };
+    });
 
   const filteredChallenges = challenges.filter(challenge =>
     activeFilter === 'all' || (challenge.challengeType && challenge.challengeType === activeFilter)
@@ -274,37 +274,37 @@ function ChallengesPage() {
 
         {/* Stats Row */}
         <div className="stats-row">
-  {stats.map(({ category, label, IconComponent, count, style }) => (
-    <div
-      key={category}
-      className={`stat-card ${activeFilter === category ? 'stat-card--active' : ''}`}
-      onClick={() => handleCategoryClick(category)}
-      role="button"
-      tabIndex={0}
-      onKeyPress={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          handleCategoryClick(category);
-        }
-      }}
-    >
-      <div className="stat-card-content">
-        <div 
-          className="stat-icon"
-          style={{
-            backgroundColor: `${style.mainColor}15`,
-            color: style.mainColor
-          }}
-        >
-          <IconComponent size={24} />
+          {stats.map(({ category, label, IconComponent, count, style }) => (
+            <div
+              key={category}
+              className={`stat-card ${activeFilter === category ? 'stat-card--active' : ''}`}
+              onClick={() => handleCategoryClick(category)}
+              role="button"
+              tabIndex={0}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleCategoryClick(category);
+                }
+              }}
+            >
+              <div className="stat-card-content">
+                <div
+                  className="stat-icon"
+                  style={{
+                    backgroundColor: `${style.mainColor}15`,
+                    color: style.mainColor
+                  }}
+                >
+                  <IconComponent size={24} />
+                </div>
+                <div className="stat-text">
+                  <span className="stat-label">{label}</span>
+                  <span className="stat-value">{count}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="stat-text">
-          <span className="stat-label">{label}</span>
-          <span className="stat-value">{count}</span>
-        </div>
-      </div>
-    </div>
-  ))}
-</div>
 
 
 

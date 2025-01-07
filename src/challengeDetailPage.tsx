@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useState } from 'react';
 import {
     Share2, UserPlus, Trophy, Calendar, Users, Dumbbell,
-    Crown,Trash2, UserMinus
+    Crown, Trash2, UserMinus
 } from 'lucide-react';
 import { useChallengeDetail } from './useChallengeDetail';
 import InviteFriendsModal from './inviteFriendsModal';
@@ -17,6 +17,7 @@ import ActionMenu from './components/cardActionMenu/cardActionMenu';
 import { ActivityItem } from './components/challengeActivityItem/challengeActivityItem';
 import ChallengeDailyPrompt from './utils/challengeDailyPrompt';
 import { useNavigate } from 'react-router-dom';
+import { getChallengeStyle, getChallengeIcon } from './styles/challengeStyles';
 
 type RouteParams = {
     challengeId: string;
@@ -122,6 +123,7 @@ export default function ChallengeDetailPage() {
             }
         ];
     };
+    const headerStyle = getChallengeStyle(challengeDetails?.challengeType);
 
     return (
         <div className="challenge-container">
@@ -139,12 +141,22 @@ export default function ChallengeDetailPage() {
             <div className="challenge-hero">
                 <div className="challenge-header">
                     <div>
-                        <h1 className="challenge-title">{challengeDetails.title}</h1>
+
+                        <h1 className="challenge-title">{challengeDetails.title}                        <div
+                            className="challenge-type-badge"
+                            style={{
+                                backgroundColor: headerStyle.bgColor,
+                                color: headerStyle.textColor,
+                                borderColor: headerStyle.borderColor
+                            }}
+                        >
+                            {getChallengeIcon(challengeDetails?.challengeType, { size: 20 })}
+                            <span>{headerStyle.name}</span>
+                        </div></h1>
                         <p className="challenge-description">{challengeDetails.description}</p>
                     </div>
                     <div className="challenge-actions">
                         <ActionMenu actions={getChallengeActions(challengeDetails)} />
-                        {/* Add the modal */}
                         <InviteFriendsModal
                             isOpen={isInviteModalOpen}
                             onClose={() => setIsInviteModalOpen(false)}

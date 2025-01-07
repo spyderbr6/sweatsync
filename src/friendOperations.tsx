@@ -42,6 +42,27 @@ export async function sendFriendRequest(senderId: string, recipientId: string) {
       createdAt: new Date().toISOString()
     });
 
+    // Get sender's username for the notification
+    const senderResult = await client.models.User.get({ id: senderId });
+    const senderName = senderResult.data?.preferred_username || senderResult.data?.username || 'Someone';
+
+    // Send push notification without waiting
+
+    client.queries.sendPushNotificationFunction({
+      type: 'FRIEND_REQUEST',
+      userID: recipientId,
+      title: 'New Friend Request',
+      body: `${senderName} sent you a friend request`,
+      data: JSON.stringify({
+        userId: senderId,
+        type: 'FRIEND_REQUEST'
+      })
+    }).catch(err => {
+      // Log error but don't affect the main flow
+      console.error('Failed to send push notification:', err);
+    });
+
+
     return result;
   } catch (error) {
     console.error('Error in sendFriendRequest:', error);
