@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
-import './notificationBell.css';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../../amplify/data/resource";
 import { useNavigate } from 'react-router-dom';
