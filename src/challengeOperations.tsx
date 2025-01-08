@@ -151,7 +151,7 @@ export async function getPendingChallenges(userId: string) {
   try {
     // Calculate the cutoff time for expired invitations (48 hours ago)
     const cutoffTime = new Date();
-    cutoffTime.setHours(cutoffTime.getHours() - 48);
+    cutoffTime.setHours(cutoffTime.getHours() - 168);
     
     // Get pending challenge participations
     const pendingParticipations = await client.models.ChallengeParticipant.list({
