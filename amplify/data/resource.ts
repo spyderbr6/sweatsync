@@ -2,7 +2,7 @@
 
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { rotateCreator } from "../functions/rotateCreator/resource";
-import {challengeCleanup } from "../functions/challengeCleanup/resource";
+import { challengeCleanup } from "../functions/challengeCleanup/resource";
 import { sendPushNotificationFunction } from "../functions/sendNotificationFunction/resource";
 const schema = a.schema({
   PostforWorkout: a.model({
@@ -21,7 +21,8 @@ const schema = a.schema({
     star: a.integer().default(0),      // ⭐
     rocket: a.integer().default(0),    // 🚀
     clap: a.integer().default(0),      // 👏
-    trophy: a.integer().default(0)  //trophy
+    trophy: a.integer().default(0),  //trophy
+    challengeIds: a.string().array() // Store as JSON array of IDs
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Reaction: a.model({
@@ -76,7 +77,7 @@ const schema = a.schema({
 
     // Timestamps
     createdAt: a.datetime(),
-    updatedAt: a.datetime(), 
+    updatedAt: a.datetime(),
     updatedBy: a.string()
   }).authorization((allow) => [allow.publicApiKey()])
     .secondaryIndexes
@@ -134,29 +135,29 @@ const schema = a.schema({
     updatedAt: a.datetime().required(),
   }).authorization((allow) => [allow.publicApiKey()]),
 
-//PUSH NOTIFICATION SETUP
-PushSubscription: a.model({
-  userID: a.string().required(),
-  endpoint: a.string().required(),
-  p256dh: a.string().required(),  // Public key for encryption
-  auth: a.string().required(),    // Auth secret
-  platform: a.string(),           // Optional - to track different devices/browsers
-  createdAt: a.datetime().required(),
-  updatedAt: a.datetime().required()
-}).authorization((allow) => [allow.publicApiKey()]),
+  //PUSH NOTIFICATION SETUP
+  PushSubscription: a.model({
+    userID: a.string().required(),
+    endpoint: a.string().required(),
+    p256dh: a.string().required(),  // Public key for encryption
+    auth: a.string().required(),    // Auth secret
+    platform: a.string(),           // Optional - to track different devices/browsers
+    createdAt: a.datetime().required(),
+    updatedAt: a.datetime().required()
+  }).authorization((allow) => [allow.publicApiKey()]),
 
-Notification: a.model({
-  userID: a.string().required(),
-  title: a.string().required(),
-  body: a.string().required(),
-  type: a.string().required(), // REFER TO TYPES\notifications.ts for type reference and logic 
-  data: a.string(), // JSON string for additional data
-  status: a.string().required(), // 'PENDING', 'SENT', 'FAILED'
-  sentAt: a.datetime(),
-  createdAt: a.datetime().required(),
-  readAt: a.datetime(), // Optional, when the notification was read
-  updatedAt: a.datetime()
-}).authorization((allow) => [allow.publicApiKey()]),
+  Notification: a.model({
+    userID: a.string().required(),
+    title: a.string().required(),
+    body: a.string().required(),
+    type: a.string().required(), // REFER TO TYPES\notifications.ts for type reference and logic 
+    data: a.string(), // JSON string for additional data
+    status: a.string().required(), // 'PENDING', 'SENT', 'FAILED'
+    sentAt: a.datetime(),
+    createdAt: a.datetime().required(),
+    readAt: a.datetime(), // Optional, when the notification was read
+    updatedAt: a.datetime()
+  }).authorization((allow) => [allow.publicApiKey()]),
 
 
   rotateCreator: a
@@ -176,7 +177,7 @@ Notification: a.model({
     .handler(a.handler.function(challengeCleanup))
     .authorization((allow) => [allow.publicApiKey()]),
 
-    sendPushNotificationFunction: a
+  sendPushNotificationFunction: a
     .query()
     .arguments({
       type: a.string().required(),
