@@ -147,6 +147,67 @@ export async function listChallenges(userId?: string): Promise<Schema["Challenge
   }
 }
 
+export async function listAvailableChallenges(userId: string): Promise<Schema["Challenge"]["type"][]> {
+  const client = generateClient<Schema>();
+
+  try {
+      // First get all challenges
+      const allChallenges = await client.models.Challenge.list({
+          filter: {
+              status: { eq: 'ACTIVE' }
+          }
+      });
+
+      // Get user's current participations to exclude
+      const userParticipations = await client.models.ChallengeParticipant.list({
+          filter: {
+              userID: { eq: userId },
+              status: { eq: 'ACTIVE' }
+          }
+      });
+
+      // Create set of challenges user is already in
+      const participatingChallengeIds = new Set(
+          userParticipations.data.map(p => p.challengeID)
+      );
+
+      // Get user's friends to check group challenges
+      const friendships = await client.models.Friend.list({
+          filter: { user: { eq: userId } }
+      });
+      const friendIds = new Set(friendships.data.map(f => f.friendUser));
+
+      // Filter challenges
+      const availableChallenges = allChallenges.data.filter(challenge => {
+          // Exclude if user is already participating
+          if (participatingChallengeIds.has(challenge.id)) {
+              return false;
+          }
+
+          switch (challenge.challengeType) {
+              case 'PUBLIC':
+                  // Show all public challenges
+                  return true;
+              case 'GROUP':
+              case 'DAILY':
+                  // Show only if friends with creator
+                  return challenge.createdBy && friendIds.has(challenge.createdBy);
+              case 'PERSONAL':
+                  // Show only if user created it
+                  return challenge.createdBy === userId;
+              default:
+                  return false;
+          }
+      });
+
+      return availableChallenges;
+
+  } catch (error) {
+      console.error('Error fetching available challenges:', error);
+      throw error;
+  }
+}
+
 export async function getPendingChallenges(userId: string) {
   try {
     // Calculate the cutoff time for expired invitations (48 hours ago)
@@ -160,7 +221,7 @@ export async function getPendingChallenges(userId: string) {
           { userID: { eq: userId } },
           { status: { eq: 'PENDING' } },
           // Only get invitations newer than cutoff time
-          { invitedAt: { ge: cutoffTime.toISOString() } }
+          //{ invitedAt: { ge: cutoffTime.toISOString() } }
         ]
       }
     });
@@ -544,7 +605,7 @@ export async function inviteFriendToChallenge(params: {
   try {
     // 1. Verify challenge exists and inviter is the owner
     const challengeResult = await client.models.Challenge.get({ 
-      id: params.challengeId 
+      id: params.challengeId, 
     });
 
     if (!challengeResult.data) {
@@ -615,6 +676,20 @@ export async function inviteFriendToChallenge(params: {
       invitedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
+
+        // Then trigger push notification with correct payload
+        await client.queries.sendPushNotificationFunction({
+          type: 'CHALLENGE_INVITE',
+          userID: params.friendId,
+          title: "Someone Invited You to a Challenge!",
+          body: `${challengeResult.data.title}: ${challengeResult.data.description.substring(0, 100)}${challengeResult.data.description.length > 100 ? '...' : ''}`,
+          data: JSON.stringify({
+            challengeId: params.challengeId,
+            challengeType: 'DAILY',
+            description: challengeResult.data.description.substring(0, 100), // Added for action handling
+            creatorId: params.inviterId // Added to track who created the challenge
+          })
+        });
 
     return {
       success: true,
