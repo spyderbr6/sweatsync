@@ -10,9 +10,8 @@ import { shareContent } from './utils/shareAction';
 import { promptAction } from './utils/promptAction';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
 import { PostChallenges } from './components/PostChallenges/postChallenges';
-import _ from 'lodash';
 
-
+const useSpoofData = false;
 const client = generateClient<Schema>();
 
 type Post = Schema["PostforWorkout"]["type"] & {
@@ -352,7 +351,7 @@ function App() {
         const sortedPosts = [...data.items].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-  
+
         // Get unique user IDs and ensure they're not null
         const uniqueUserIds = Array.from(
           new Set(
@@ -361,68 +360,116 @@ function App() {
               .filter((id): id is string => id !== null && id !== undefined)
           )
         );
-  
-        // Get existing URLs to avoid re-fetching
-        const existingImageUrls = imageUrls;
-        const existingProfileUrls = profilePictureUrls;
-  
-        // Batch user queries
-        const profileUrls: { [userId: string]: string } = {...existingProfileUrls};
-        if (uniqueUserIds.length > 0) {
-          for (const chunk of _.chunk(uniqueUserIds, 25)) {
-            const userResults = await client.models.User.list({
-              filter: { or: chunk.map(userId => ({ id: { eq: userId } })) }
-            });
-            
-            await Promise.all(userResults.data.map(async user => {
-              if (user && user.id && !existingProfileUrls[user.id]) {  
-                if (user.pictureUrl) {
-                  try {
-                    profileUrls[user.id] = await getStorageUrl(user.pictureUrl);
-                  } catch (error) {
-                    console.error(`Error fetching profile URL for user ${user.id}:`, error);
-                    profileUrls[user.id] = "/profileDefault.png";
-                  }
-                } else {
+
+        const profileUrls: { [userId: string]: string } = {};
+
+        try {
+          // Fetch users with multiple queries in parallel
+          const userPromises = uniqueUserIds.map(userId =>
+            client.models.User.get({ id: userId })
+          );
+
+          const userResults = await Promise.all(userPromises);
+
+          // Process all profile pictures in parallel
+          const userProfilePromises = userResults.map(async (result) => {
+            const user = result.data;
+            if (user && user.id) {  // Ensure user and user.id exist
+              if (user.pictureUrl) {
+                try {
+                  const url = await getStorageUrl(user.pictureUrl);
+                  profileUrls[user.id] = url;
+                } catch (error) {
+                  console.error(`Error fetching profile URL for user ${user.id}:`, error);
                   profileUrls[user.id] = "/profileDefault.png";
                 }
+              } else {
+                profileUrls[user.id] = "/profileDefault.png";
               }
-            }));
-          }
-          setProfilePictureUrls(profileUrls);
+            }
+          });
+
+          await Promise.all(userProfilePromises);
+        } catch (error) {
+          console.error('Error fetching user profiles:', error);
+          uniqueUserIds.forEach(userId => {
+            profileUrls[userId] = "/profileDefault.png";
+          });
         }
-  
-        // Only fetch new image URLs
-        const urls: { [key: string]: string } = {...existingImageUrls};
-        await Promise.all(sortedPosts.map(async item => {
-          if (item.url && !existingImageUrls[item.id]) {
-            try {
-              urls[item.id] = await getStorageUrl(item.url);
-            } catch (error) {
-              console.error('Error fetching image URL:', error);
-              urls[item.id] = "/picsoritdidnthappen.webp";
+
+        setProfilePictureUrls(profileUrls); // Store profile picture URLs in state
+
+        // Map incoming posts to UI state
+        const fieldToEmoji: { [key: string]: string } = {
+          strong: "💪",
+          fire: "🔥",
+          zap: "⚡",
+          fist: "👊",
+          target: "🎯",
+          star: "⭐",
+          rocket: "🚀",
+          clap: "👏",
+          trophy: "🏆",
+          thumbsUp: "👍",
+        };
+
+        const postsWithUIState = sortedPosts.map(post => {
+          const activeReactions: Array<{ id: string; emoji: string }> = [];
+          for (const [field, emoji] of Object.entries(fieldToEmoji)) {
+            const count = (post as any)[field] || 0;
+            for (let i = 0; i < count; i++) {
+              activeReactions.push({
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                emoji
+              });
             }
           }
-        }));
-        setImageUrls(urls);
-  
-        // Keep existing post state handling
+          return {
+            ...post,
+            showReactions: false,
+            activeReactions,
+          };
+        });
+
         setworkoutposts(prevPosts => {
           // Map previous posts by ID to easily find old states
           const prevMap = new Map(prevPosts.map(p => [p.id, p]));
-  
-          return sortedPosts.map(newPost => {
+
+          return postsWithUIState.map(newPost => {
             const oldPost = prevMap.get(newPost.id);
             return {
               ...newPost,
-              showReactions: oldPost?.showReactions ?? false,
-              activeReactions: oldPost?.activeReactions ?? []
+              // Preserve showReactions if it was previously set
+              showReactions: oldPost?.showReactions ?? newPost.showReactions,
             };
           });
         });
-      }
+
+        if (useSpoofData) {
+          const spoofedUrls: { [key: string]: string } = {};
+          for (const item of data.items) {
+            spoofedUrls[item.id] = "/picsoritdidnthappen.webp";
+          }
+          setImageUrls(spoofedUrls);
+        } else {
+          // New cached URL fetching
+          const urls: { [key: string]: string } = {};
+          for (const item of data.items) {
+            if (item.url) {
+              try {
+                const url = await getStorageUrl(item.url);
+                urls[item.id] = url;
+              } catch (error) {
+                console.error('Error fetching image URL:', error);
+                urls[item.id] = "/picsoritdidnthappen.webp";
+              }
+            }
+          }
+          setImageUrls(urls);
+        }
+      },
     });
-  
+
     return () => subscription.unsubscribe();
   }, []);
 
