@@ -56,26 +56,26 @@ export const PostChallenges: React.FC<PostChallengesProps> = ({
         setError(null);
 
         // Get post challenges with validation status
-        const postChallenges = await client.models.PostChallenge.list({
-          filter: {
-            postId: { eq: postId },
-            validated: { eq: true }
-          }
-        });
-
-        if (!isMounted) return;
-
-        if (!postChallenges.data.length) {
+        const postResult = await client.models.PostforWorkout.get({ id: postId });
+        if (!postResult.data || !postResult.data.challengeIds) {
           setIsLoading(false);
           return;
         }
 
+        const challengeIds = postResult.data.challengeIds;
+        if (challengeIds.length === 0) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Filter out any null or undefined IDs and get challenges
+        const validChallengeIds = challengeIds.filter((id): id is string =>
+          id !== null && id !== undefined);
+
         // Get challenge details for each post challenge
-        const challengePromises = postChallenges.data
-          .filter(pc => pc.challengeId)
-          .map(pc => client.models.Challenge.get({
-            id: pc.challengeId!
-          }));
+        const challengePromises = validChallengeIds.map(id =>
+          client.models.Challenge.get({ id })
+        );
 
         const challengeResults = await Promise.all(challengePromises);
 
