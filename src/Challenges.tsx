@@ -25,7 +25,6 @@ type Challenge = Schema["Challenge"]["type"];
 
 function ChallengesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<ChallengeCategory>('all');
   const [activeAvailableFilter, setActiveAvailableFilter] = useState<ChallengeCategory>('all');
   const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
   const [activeMyFilter, setActiveMyFilter] = useState<ChallengeCategory>('all');
@@ -314,7 +313,7 @@ function ChallengesPage() {
       <div className="challenges-section">
         <h2 className="section-title">My Challenges</h2>
         <div className="stats-row">
-          {stats.map(({ category, label, IconComponent, count, style }) => (
+          {stats.map(({ category, label, IconComponent, style }) => (
             <div
               key={category}
               className={`stat-card ${activeMyFilter === category ? 'stat-card--active' : ''}`}
@@ -344,46 +343,48 @@ function ChallengesPage() {
         </div>
 
         <div className="challenges-grid">
-          {filteredMyChallenges.map(challenge => {
-            if (!challenge) return null;
+          {isLoading ? (<div>Loading challenges...</div>) : (
+            filteredMyChallenges.map(challenge => {
+              if (!challenge) return null;
 
-            const isParticipant = participations[challenge.id];
-            const style = getChallengeStyle(challenge.challengeType, isParticipant ? 'active' : 'default');
-            const Icon = getChallengeIcon(challenge.challengeType, {
-              size: 20,
-              style: { color: style.mainColor }
-            });
+              const isParticipant = participations[challenge.id];
+              const style = getChallengeStyle(challenge.challengeType, isParticipant ? 'active' : 'default');
+              const Icon = getChallengeIcon(challenge.challengeType, {
+                size: 20,
+                style: { color: style.mainColor }
+              });
 
-            return (
-              <div key={challenge.id} className="challenge-card">
-                <div className="challenge-card-header">
-                  <div
-                    className="challenge-icon-wrapper"
-                    style={{
-                      backgroundColor: style.bgColor,
-                      color: style.textColor
-                    }}
-                  >
-                    {Icon}
-                  </div>
-                  <div className="challenge-info">
-                    <h3
-                      className="challenge-title"
-                      onClick={() => handleNavigateToChallenge(challenge.id)}
+              return (
+                <div key={challenge.id} className="challenge-card">
+                  <div className="challenge-card-header">
+                    <div
+                      className="challenge-icon-wrapper"
+                      style={{
+                        backgroundColor: style.bgColor,
+                        color: style.textColor
+                      }}
                     >
-                      {challenge.title}
-                    </h3>
-                    <p className="challenge-meta">
-                      {challenge.description}
-                    </p>
-                  </div>
-                  <div className="challenge-card-header-menu">
-                    <ActionMenu actions={getChallengeActions(challenge)} />
+                      {Icon}
+                    </div>
+                    <div className="challenge-info">
+                      <h3
+                        className="challenge-title"
+                        onClick={() => handleNavigateToChallenge(challenge.id)}
+                      >
+                        {challenge.title}
+                      </h3>
+                      <p className="challenge-meta">
+                        {challenge.description}
+                      </p>
+                    </div>
+                    <div className="challenge-card-header-menu">
+                      <ActionMenu actions={getChallengeActions(challenge)} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -391,7 +392,7 @@ function ChallengesPage() {
       <div className="challenges-section">
         <h2 className="section-title">Available Challenges</h2>
         <div className="stats-row">
-          {stats.map(({ category, label, IconComponent, count, style }) => (
+          {stats.map(({ category, label, IconComponent, style }) => (
             <div
               key={category}
               className={`stat-card ${activeAvailableFilter === category ? 'stat-card--active' : ''}`}
