@@ -41,6 +41,23 @@ body {
 .no-shadow {
   box-shadow: none;
 }
+.header-notifications {
+  display: flex;
+  align-items: center;
+  margin-right: 1rem;
+}
+
+/* Ensure the notification panel appears above other content */
+.notification-bell-container {
+  position: relative;
+  z-index: 1000;
+}
+
+@media (max-width: 768px) {
+  .header-notifications {
+    margin-right: 0.5rem;
+  }
+}
 
 /* Input Container Styles */
 .input-container {
