@@ -209,30 +209,41 @@ export default function ChallengeDetailPage() {
                 {/* Left Column - Your Stats & Leaderboard */}
                 <div>
                     {/* Leaderboard */}
+                    {/* Leaderboard */}
                     <div className="leaderboard">
                         <div className="leaderboard-header">
                             <h3 className="leaderboard-title">Top Performers</h3>
                         </div>
                         <div className="leaderboard-list">
-                            {leaderboard.slice(0, 10).map((user, index) => (
-                                <div key={user.id} className="leaderboard-item">
-                                    <div className="leaderboard-user">
-                                        <span className="leaderboard-rank">
-                                            {index === 0 && <Crown size={20} />}
-                                            {index === 1 && <Trophy size={20} />}
-                                            {index === 2 && <Trophy size={20} />}
-                                            {index > 2 && index + 1}
-                                        </span>
-                                        <img
-                                            src={profileUrls[user.id] || '../../profileDefault.png'}
-                                            alt={user.name}
-                                            className="leaderboard-avatar"
-                                        />
-                                        <span className="leaderboard-name">{user.name}</span>
+                            {leaderboard.slice(0, 10).map((user, index) => {
+                                const isCreator = challengeDetails.currentCreatorId === user.id;
+                                return (
+                                    <div key={user.id} className="leaderboard-item">
+                                        <div className="leaderboard-user">
+                                            <span className="leaderboard-rank">
+                                                {index === 0 && <Crown size={20} />}
+                                                {index === 1 && <Trophy size={20} />}
+                                                {index === 2 && <Trophy size={20} />}
+                                                {index > 2 && index + 1}
+                                            </span>
+                                            <img
+                                                src={profileUrls[user.id] || '../../profileDefault.png'}
+                                                alt={user.name}
+                                                className="leaderboard-avatar"
+                                            />
+                                            <div className="leaderboard-user-info">
+                                                <span className="leaderboard-name">{user.name}</span>
+                                                {isCreator && (
+                                                    <span className="creator-badge">
+                                                        Current Creator
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="leaderboard-points">{user.points} pts</div>
                                     </div>
-                                    <div className="leaderboard-points">{user.points} pts</div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

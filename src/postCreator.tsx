@@ -220,6 +220,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       // Upload image
       const { originalPath } = await uploadImageWithThumbnails(file, 'picture-submissions', 1200);
 
+      //Create the workout post
       const result = await client.models.PostforWorkout.create({
         content,
         url: originalPath,
@@ -227,7 +228,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         userID: userId,
         thumbsUp: 0,
         smiley: selectedChallenges.length,
-        trophy: 0
+        trophy: 0, 
+        challengeIds: selectedChallenges // Add the array of challenge IDs
       });
 
       if (!result.data) {

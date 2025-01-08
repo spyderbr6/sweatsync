@@ -246,7 +246,7 @@ export async function searchUsers(
     } else {
       filter = {
         or: [
-          { username: { contains: searchTerm.toLowerCase() } },
+          { lowercasename: { contains: searchTerm.toLowerCase() } },
           { preferred_username: { contains: searchTerm.toLowerCase() } }
         ]
       };
