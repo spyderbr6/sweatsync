@@ -137,6 +137,7 @@ async function syncUserToDatabase(cognitoUser: {
       email: cognitoUser.attributes.email || '',
       username: cognitoUser.username,
       preferred_username: cognitoUser.attributes.preferred_username || '',
+      lowercasename: (cognitoUser.attributes.preferred_username || '').toLowerCase(),
       updatedAt: new Date().toISOString(),
     };
 

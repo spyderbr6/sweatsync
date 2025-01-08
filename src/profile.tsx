@@ -9,7 +9,8 @@ import {
 } from "aws-amplify/auth";
 import { useUrlCache } from './urlCacheContext';
 import { NotificationPreferences } from "./components/notificationPreferences/notificationPreferences";
-
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "../amplify/data/resource";
 
 
 function ProfilePage() {
@@ -52,6 +53,15 @@ function ProfilePage() {
           preferred_username: editedName
         }
       });
+
+          // Update our database
+    const client = generateClient<Schema>();
+    await client.models.User.update({
+      id: userId!,
+      preferred_username: editedName,
+      lowercasename: editedName.toLowerCase(),
+      updatedAt: new Date().toISOString()
+    });
 
       setUserAttributes(prev => 
         prev ? {...prev, preferred_username: editedName} : null
