@@ -18,8 +18,6 @@ const client = generateClient<Schema>();
 type Post = Schema["PostforWorkout"]["type"] & {
   showReactions: boolean;
   activeReactions: Array<{ id: string; emoji: string }>;
-  imageUrl: string;
-  profileUrl: string;
 };
 
 type FloatingReactionProps = {
@@ -340,78 +338,91 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
 
 function App() {
   const [workoutposts, setworkoutposts] = useState<Array<Post>>([]);
+  const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({});
+  const [profilePictureUrls, setProfilePictureUrls] = useState<{ [key: string]: string }>({});
   const [visibleCount, setVisibleCount] = useState<number>(4); // number of posts to show initially
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const BATCH_SIZE = 4; // number of posts to load each time
   const { getStorageUrl } = useUrlCache();
   const { userId } = useUser();  // Move this to component level
 
-
   useEffect(() => {
     const subscription = client.models.PostforWorkout.observeQuery().subscribe({
       next: async (data) => {
-        const sortedItems = [...data.items].sort(
+        const sortedPosts = [...data.items].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-
+  
+        // Get unique user IDs and ensure they're not null
+        const uniqueUserIds = Array.from(
+          new Set(
+            sortedPosts
+              .map(post => post.userID)
+              .filter((id): id is string => id !== null && id !== undefined)
+          )
+        );
+  
+        // Get existing URLs to avoid re-fetching
+        const existingImageUrls = imageUrls;
+        const existingProfileUrls = profilePictureUrls;
+  
         // Batch user queries
-        const uniqueUserIds = [...new Set(
-          sortedItems
-            .map(post => post.userID)
-            .filter((id): id is string => id !== null)
-        )];
-
-        const userMap = new Map();
-        for (const chunk of _.chunk(uniqueUserIds, 25)) {
-          const userResults = await client.models.User.list({
-            filter: { or: chunk.map(userId => ({ id: { eq: userId } })) }
-          });
-          userResults.data.forEach(user => userMap.set(user.id, user));
+        const profileUrls: { [userId: string]: string } = {...existingProfileUrls};
+        if (uniqueUserIds.length > 0) {
+          for (const chunk of _.chunk(uniqueUserIds, 25)) {
+            const userResults = await client.models.User.list({
+              filter: { or: chunk.map(userId => ({ id: { eq: userId } })) }
+            });
+            
+            await Promise.all(userResults.data.map(async user => {
+              if (user && user.id && !existingProfileUrls[user.id]) {  
+                if (user.pictureUrl) {
+                  try {
+                    profileUrls[user.id] = await getStorageUrl(user.pictureUrl);
+                  } catch (error) {
+                    console.error(`Error fetching profile URL for user ${user.id}:`, error);
+                    profileUrls[user.id] = "/profileDefault.png";
+                  }
+                } else {
+                  profileUrls[user.id] = "/profileDefault.png";
+                }
+              }
+            }));
+          }
+          setProfilePictureUrls(profileUrls);
         }
-
-        const profileUrls = new Map();
-        await Promise.all([...userMap.values()].map(async user => {
-          if (user.pictureUrl) {
+  
+        // Only fetch new image URLs
+        const urls: { [key: string]: string } = {...existingImageUrls};
+        await Promise.all(sortedPosts.map(async item => {
+          if (item.url && !existingImageUrls[item.id]) {
             try {
-              profileUrls.set(user.id, await getStorageUrl(user.pictureUrl));
+              urls[item.id] = await getStorageUrl(item.url);
             } catch (error) {
-              console.error('Error fetching profile URL:', error);
-              profileUrls.set(user.id, "/profileDefault.png");
+              console.error('Error fetching image URL:', error);
+              urls[item.id] = "/picsoritdidnthappen.webp";
             }
           }
         }));
-
-        // Process posts
-        // In the subscription, modify the posts processing:
-        const postsWithData = await Promise.all(sortedItems.map(async post => {
-          const imageUrl = post.url ?
-            await getStorageUrl(post.url) :
-            "/picsoritdidnthappen.webp";
-
-          return {
-            ...post,
-            imageUrl,
-            profileUrl: profileUrls.get(post.userID) || "/profileDefault.png",
-            showReactions: false,
-            activeReactions: getActiveReactions(post)  // Initialize with current reaction state
-          } satisfies Post;
-        }));
-
-        // When updating state, merge old and new reactions
+        setImageUrls(urls);
+  
+        // Keep existing post state handling
         setworkoutposts(prevPosts => {
+          // Map previous posts by ID to easily find old states
           const prevMap = new Map(prevPosts.map(p => [p.id, p]));
-          return postsWithData.map(newPost => {
+  
+          return sortedPosts.map(newPost => {
             const oldPost = prevMap.get(newPost.id);
             return {
               ...newPost,
               showReactions: oldPost?.showReactions ?? false,
-              activeReactions: [...(oldPost?.activeReactions || []), ...newPost.activeReactions]
+              activeReactions: oldPost?.activeReactions ?? []
             };
           });
         });
       }
     });
-
+  
     return () => subscription.unsubscribe();
   }, []);
 
@@ -442,23 +453,6 @@ function App() {
       if (loadMoreRef.current) observer.unobserve(loadMoreRef.current);
     };
   }, [workoutposts, visibleCount]);
-
-  const getActiveReactions = (post: any) => {
-    const fieldToEmoji: { [key: string]: string } = {
-      strong: "💪", fire: "🔥", zap: "⚡", fist: "👊",
-      target: "🎯", star: "⭐", rocket: "🚀", clap: "👏",
-      trophy: "🏆", thumbsUp: "👍"
-    };
-
-    return Object.entries(fieldToEmoji)
-      .flatMap(([field, emoji]) => {
-        const count = post[field] || 0;
-        return Array(count).fill(null).map(() => ({
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          emoji
-        }));
-      });
-  };
 
   const deletePost = async (id: string) => {
     // Now use the userId from above instead of calling useUser() here
@@ -491,15 +485,17 @@ function App() {
   };
 
 
-  // Return to original efficient reaction handling
   async function reactToPost(id: string, emojiType: string | null, reactionId?: string) {
+    // Handle animation cleanup
     if (!emojiType && reactionId) {
       setworkoutposts(posts =>
         posts.map(p =>
-          p.id === id ? {
-            ...p,
-            activeReactions: p.activeReactions.filter(r => r.id !== reactionId)
-          } : p
+          p.id === id
+            ? {
+              ...p,
+              activeReactions: p.activeReactions.filter(r => r.id !== reactionId)
+            }
+            : p
         )
       );
       return;
@@ -511,9 +507,15 @@ function App() {
 
       if (post && emojiType) {
         const emojiToField: EmojiMapping = {
-          "💪": "strong", "🔥": "fire", "⚡": "zap",
-          "👊": "fist", "🎯": "target", "⭐": "star",
-          "🚀": "rocket", "👏": "clap", "🏆": "trophy",
+          "💪": "strong",
+          "🔥": "fire",
+          "⚡": "zap",
+          "👊": "fist",
+          "🎯": "target",
+          "⭐": "star",
+          "🚀": "rocket",
+          "👏": "clap",
+          "🏆": "trophy",
           "👍": "thumbsUp"
         };
 
@@ -528,22 +530,25 @@ function App() {
 
           const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+          // Add floating reaction animation
           setworkoutposts(posts =>
             posts.map(p =>
-              p.id === id ? {
-                ...p,
-                [fieldName]: updatedValue,
-                activeReactions: [...p.activeReactions, {
-                  id: uniqueId,
-                  emoji: emojiType
-                }]
-              } : p
+              p.id === id
+                ? {
+                  ...p,
+                  [fieldName]: updatedValue,
+                  activeReactions: [...p.activeReactions, {
+                    id: uniqueId,
+                    emoji: emojiType
+                  }]
+                }
+                : p
             )
           );
         }
       }
     } catch (error) {
-      console.error("Error reacting to post:", error);
+      console.error("Error reacting to post", error);
     }
   }
 
@@ -555,8 +560,8 @@ function App() {
           <WorkoutPost
             key={post.id}
             post={post}
-            imageUrl={post.imageUrl}  // Changed from imageUrls[post.id]
-            profileImageUrl={post.profileUrl}  // Changed from profilePictureUrls
+            imageUrl={imageUrls[post.id] || "/picsoritdidnthappen.webp"}
+            profileImageUrl={post.userID ? profilePictureUrls[post.userID] || "/profileDefault.png" : "/profileDefault.png"}
             onReaction={reactToPost}
             onDelete={deletePost}
             onHover={(postId, isHovering) => {
