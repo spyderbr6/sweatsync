@@ -97,8 +97,11 @@
       margin-left: -1rem;
       padding-left: 1rem;
       padding-right: 1rem;
+      scroll-padding: 1rem;
+margin-bottom: 0;
+
     }
-  
+
     .stat-card {
       min-width: 180px;
     }
@@ -599,11 +602,7 @@
       justify-content: center;
     }
   
-    .stats-row {
-      margin: 0 -1rem;
-      padding: 0 1rem;
-      scroll-padding: 1rem;
-    }
+
   
     .challenges-grid {
       grid-template-columns: 1fr;
