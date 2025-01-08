@@ -544,7 +544,7 @@ export async function inviteFriendToChallenge(params: {
   try {
     // 1. Verify challenge exists and inviter is the owner
     const challengeResult = await client.models.Challenge.get({ 
-      id: params.challengeId 
+      id: params.challengeId, 
     });
 
     if (!challengeResult.data) {
@@ -615,6 +615,20 @@ export async function inviteFriendToChallenge(params: {
       invitedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
+
+        // Then trigger push notification with correct payload
+        await client.queries.sendPushNotificationFunction({
+          type: 'CHALLENGE_INVITE',
+          userID: params.friendId,
+          title: "Someone Invited You to a Challenge!",
+          body: `${challengeResult.data.title}: ${challengeResult.data.description.substring(0, 100)}${challengeResult.data.description.length > 100 ? '...' : ''}`,
+          data: JSON.stringify({
+            challengeId: params.challengeId,
+            challengeType: 'DAILY',
+            description: challengeResult.data.description.substring(0, 100), // Added for action handling
+            creatorId: params.inviterId // Added to track who created the challenge
+          })
+        });
 
     return {
       success: true,

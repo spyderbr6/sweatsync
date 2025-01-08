@@ -28,11 +28,6 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
       { 
         title: 'View', 
         action: 'view'
-      },
-      { 
-        title: 'Accept', 
-        action: 'accept',
-        urlPattern: '/challenge/{challengeId}/accept'
       }
     ],
     requireInteraction: true,

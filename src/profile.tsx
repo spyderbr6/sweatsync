@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import {   Mail,   Loader2,   Edit,     Check,    X } from 'lucide-react';import { useUser } from "./userContext";
+import { Mail, Loader2, Edit, Check, X } from 'lucide-react'; import { useUser } from "./userContext";
 import { useProfilePictureUploader } from './utils/profilePictureUploader';
 import './ProfilePage.css';
-import { 
-  FetchUserAttributesOutput, 
-  fetchUserAttributes, 
-  updateUserAttributes 
+import {
+  FetchUserAttributesOutput,
+  fetchUserAttributes,
+  updateUserAttributes
 } from "aws-amplify/auth";
 import { useUrlCache } from './urlCacheContext';
 import { NotificationPreferences } from "./components/notificationPreferences/notificationPreferences";
@@ -54,17 +54,17 @@ function ProfilePage() {
         }
       });
 
-          // Update our database
-    const client = generateClient<Schema>();
-    await client.models.User.update({
-      id: userId!,
-      preferred_username: editedName,
-      lowercasename: editedName.toLowerCase(),
-      updatedAt: new Date().toISOString()
-    });
+      // Update our database
+      const client = generateClient<Schema>();
+      await client.models.User.update({
+        id: userId!,
+        preferred_username: editedName,
+        lowercasename: editedName.toLowerCase(),
+        updatedAt: new Date().toISOString()
+      });
 
-      setUserAttributes(prev => 
-        prev ? {...prev, preferred_username: editedName} : null
+      setUserAttributes(prev =>
+        prev ? { ...prev, preferred_username: editedName } : null
       );
 
       setIsEditingName(false);
