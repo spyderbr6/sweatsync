@@ -1,3 +1,4 @@
+// src/components/NotificationBell/notificationBell.tsx
 import React, { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
@@ -88,30 +89,29 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
   const hasMore = visibleCount < notifications.length;
 
   return (
-    <div className="relative">
-      {/* Bell Icon with Badge */}
+    <div className="header-notifications">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+        className="notification-button"
+        aria-label="Notifications"
       >
-        <Bell className="w-6 h-6 text-gray-600" />
+        <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+          <span className="notification-badge">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Notification Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white rounded-lg shadow-lg border border-gray-200">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold">Notifications</h3>
+        <div className="notification-panel">
+          <div className="notification-header">
+            <h3 className="notification-title">Notifications</h3>
           </div>
           
-          <div className="divide-y divide-gray-200">
+          <div className="notification-list">
             {visibleNotifications.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
+              <div className="notification-empty">
                 No new notifications
               </div>
             ) : (
@@ -120,15 +120,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
                   <div
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                    className="notification-item"
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{notification.title}</p>
-                        <p className="text-sm text-gray-600">{notification.body}</p>
-                      </div>
+                    <div className="notification-content">
+                      <div className="notification-message">{notification.title}</div>
+                      <p className="notification-message">{notification.body}</p>
                       {notification.createdAt && (
-                        <span className="text-xs text-gray-500">
+                        <span className="notification-time">
                           {formatTimeAgo(notification.createdAt)}
                         </span>
                       )}
@@ -136,14 +134,12 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
                   </div>
                 ))}
                 {hasMore && (
-                  <div className="p-2 text-center">
-                    <button
-                      onClick={handleLoadMore}
-                      className="text-blue-500 hover:text-blue-600 text-sm font-medium"
-                    >
-                      Load More
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleLoadMore}
+                    className="load-more-button"
+                  >
+                    Load More
+                  </button>
                 )}
               </>
             )}
