@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MessageSquarePlus, LogOut, User, Users, Trophy } from 'lucide-react';
@@ -9,30 +9,29 @@ import ChallengeFeedHeader from './challengeFeedHeader';
 import FeedbackModal from './components/FeedbackModal/feedbackModal';
 import NotificationBell from './components/NotificationBell/NotificationBell';
 
-
 function Header() {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const { signOut } = useAuthenticator();
-  const { userAttributes, userId } = useUser();  // Add userId here
+  const { userAttributes, userId } = useUser();
   const { getStorageUrl } = useUrlCache();
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("/profileDefault.png");
   const { pictureUrl } = useUser();
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
+  // Handle click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const dropdown = document.querySelector(".dropdown");
-      if (dropdown && !dropdown.contains(event.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
     };
 
     if (showDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
@@ -40,14 +39,75 @@ function Header() {
     };
   }, [showDropdown]);
 
-  if (userAttributes?.picture && profilePictureUrl === "/profileDefault.png") {
-    getStorageUrl(userAttributes.picture)
-      .then(url => setProfilePictureUrl(url))
-      .catch(error => {
-        console.error('Error loading profile picture:', error);
-        setProfilePictureUrl("/profileDefault.png");
-      });
-  }
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showDropdown]);
+
+  // Load profile picture
+  useEffect(() => {
+    if (userAttributes?.picture && profilePictureUrl === "/profileDefault.png") {
+      getStorageUrl(userAttributes.picture)
+        .then(url => setProfilePictureUrl(url))
+        .catch(error => {
+          console.error('Error loading profile picture:', error);
+          setProfilePictureUrl("/profileDefault.png");
+        });
+    }
+  }, [userAttributes?.picture, profilePictureUrl, getStorageUrl]);
+
+  const menuItems = [
+    {
+      label: 'Profile',
+      icon: <User size={20} />,
+      onClick: () => navigate('/profile'),
+      ariaLabel: 'Go to profile page'
+    },
+    {
+      label: 'Friends',
+      icon: <Users size={20} />,
+      onClick: () => navigate('/friends'),
+      ariaLabel: 'Go to friends page'
+    },
+    {
+      label: 'Challenges',
+      icon: <Trophy size={20} />,
+      onClick: () => navigate('/Challenges'),
+      ariaLabel: 'Go to challenges page'
+    },
+    {
+      label: 'Send Feedback',
+      icon: <MessageSquarePlus size={20} />,
+      onClick: () => setShowFeedbackModal(true),
+      ariaLabel: 'Open feedback form'
+    },
+    {
+      label: 'Logout',
+      icon: <LogOut size={20} />,
+      onClick: signOut,
+      ariaLabel: 'Sign out of account'
+    }
+  ];
+
+  const handleKeyDown = (event: React.KeyboardEvent, action: () => void) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      action();
+      setShowDropdown(false);
+    }
+  };
 
   return (
     <>
@@ -59,54 +119,61 @@ function Header() {
               alt="SweatSync Logo"
               className="logo"
               onClick={() => navigate('/')}
+              onKeyDown={(e) => handleKeyDown(e, () => navigate('/'))}
+              role="button"
+              tabIndex={0}
             />
           </div>
-          <div className="header-actions">
-            {/* Add NotificationBell before the account icon */}
-            <div className="header-notifications">
+          <div className="header-notifications">
               {userId && <NotificationBell userId={userId} />}
             </div>
-            <div className="account-icon">
-              <div className="dropdown">
-                <img
-                  src={pictureUrl || "profileDefault.png"}
-                  alt={userAttributes?.preferred_username || "Account"}
-                  className="dropdown-toggle"
-                  onClick={() => setShowDropdown(!showDropdown)}
-                />
-                <div className={`dropdown-menu ${showDropdown ? 'show' : ''}`}>
-                  <button className="dropdown-item" onClick={() => { navigate('/profile'); setShowDropdown(false); }}>
-                    <User size={20} style={{ marginRight: '8px' }} />
-                    Profile
-                  </button>
-                  <button className="dropdown-item" onClick={() => { navigate('/friends'); setShowDropdown(false); }}>
-                    <Users size={20} style={{ marginRight: '8px' }} />
-                    Friends
-                  </button>
-                  <button className="dropdown-item" onClick={() => { navigate('/Challenges'); setShowDropdown(false); }}>
-                    <Trophy size={20} style={{ marginRight: '8px' }} />
-                    Challenges
-                  </button>
-                  <button
-                    onClick={() => setShowFeedbackModal(true)}
-                    className="dropdown-item"
-                  >
-                    <MessageSquarePlus size={20} style={{ marginRight: '8px' }} />
-                    Send Feedback
-                  </button>
-                  <button className="dropdown-item" onClick={signOut}>
-                    <LogOut size={20} style={{ marginRight: '8px' }} />
-                    Logout
-                  </button>
-                </div>
-              </div>
+          <div className="account-menu" ref={dropdownRef}>
+            <button
+              ref={buttonRef}
+              className="account-button"
+              onClick={() => setShowDropdown(!showDropdown)}
+              aria-expanded={showDropdown}
+              aria-haspopup="true"
+              aria-controls="account-dropdown"
+              aria-label="Account menu"
+            >
+              <img
+                src={pictureUrl || "/profileDefault.png"}
+                alt={`${userAttributes?.preferred_username || "User"}'s profile`}
+                className="account-image"
+              />
+            </button>
+
+            <div
+              id="account-dropdown"
+              className={`dropdown-menu ${showDropdown ? 'show' : ''}`}
+              role="menu"
+              aria-labelledby="account-button"
+            >
+              {menuItems.map((item) => (
+                <button
+                  key={item.label}
+                  className="dropdown-item"
+                  onClick={() => {
+                    item.onClick();
+                    setShowDropdown(false);
+                  }}
+                  onKeyDown={(e) => handleKeyDown(e, item.onClick)}
+                  role="menuitem"
+                  tabIndex={showDropdown ? 0 : -1}
+                  aria-label={item.ariaLabel}
+                >
+                  {item.icon}
+                  <span className="dropdown-item-label">{item.label}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
       </main>
+
       <ChallengeFeedHeader />
 
-      {/* Floating Action Button */}
       <button
         onClick={() => setIsPostModalOpen(true)}
         className="fab-button"
@@ -115,11 +182,11 @@ function Header() {
         <Plus />
       </button>
 
-      {/* Modals */}
       <CreatePostModal
         isOpen={isPostModalOpen}
         onClose={() => setIsPostModalOpen(false)}
       />
+      
       <FeedbackModal
         isOpen={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
@@ -127,4 +194,5 @@ function Header() {
     </>
   );
 }
+
 export default Header;
