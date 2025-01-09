@@ -5,7 +5,7 @@ import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../../amplify/data/resource";
 import { useNavigate } from 'react-router-dom';
 import { generateUrl } from '../../types/notifications';
-import './notificationBell.css'
+import './NotificationBell.css'
 
 const client = generateClient<Schema>();
 
