@@ -124,49 +124,52 @@ function Header() {
               tabIndex={0}
             />
           </div>
-          <div className="header-notifications">
+          <div className="header-actions">
+
+            <div className="header-notifications">
               {userId && <NotificationBell userId={userId} />}
             </div>
-          <div className="account-menu" ref={dropdownRef}>
-            <button
-              ref={buttonRef}
-              className="account-button"
-              onClick={() => setShowDropdown(!showDropdown)}
-              aria-expanded={showDropdown}
-              aria-haspopup="true"
-              aria-controls="account-dropdown"
-              aria-label="Account menu"
-            >
-              <img
-                src={pictureUrl || "/profileDefault.png"}
-                alt={`${userAttributes?.preferred_username || "User"}'s profile`}
-                className="account-image"
-              />
-            </button>
+            <div className="account-menu" ref={dropdownRef}>
+              <button
+                ref={buttonRef}
+                className="account-button"
+                onClick={() => setShowDropdown(!showDropdown)}
+                aria-expanded={showDropdown}
+                aria-haspopup="true"
+                aria-controls="account-dropdown"
+                aria-label="Account menu"
+              >
+                <img
+                  src={pictureUrl || "/profileDefault.png"}
+                  alt={`${userAttributes?.preferred_username || "User"}'s profile`}
+                  className="account-image"
+                />
+              </button>
 
-            <div
-              id="account-dropdown"
-              className={`dropdown-menu ${showDropdown ? 'show' : ''}`}
-              role="menu"
-              aria-labelledby="account-button"
-            >
-              {menuItems.map((item) => (
-                <button
-                  key={item.label}
-                  className="dropdown-item"
-                  onClick={() => {
-                    item.onClick();
-                    setShowDropdown(false);
-                  }}
-                  onKeyDown={(e) => handleKeyDown(e, item.onClick)}
-                  role="menuitem"
-                  tabIndex={showDropdown ? 0 : -1}
-                  aria-label={item.ariaLabel}
-                >
-                  {item.icon}
-                  <span className="dropdown-item-label">{item.label}</span>
-                </button>
-              ))}
+              <div
+                id="account-dropdown"
+                className={`dropdown-menu ${showDropdown ? 'show' : ''}`}
+                role="menu"
+                aria-labelledby="account-button"
+              >
+                {menuItems.map((item) => (
+                  <button
+                    key={item.label}
+                    className="dropdown-item"
+                    onClick={() => {
+                      item.onClick();
+                      setShowDropdown(false);
+                    }}
+                    onKeyDown={(e) => handleKeyDown(e, item.onClick)}
+                    role="menuitem"
+                    tabIndex={showDropdown ? 0 : -1}
+                    aria-label={item.ariaLabel}
+                  >
+                    {item.icon}
+                    <span className="dropdown-item-label">{item.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -186,7 +189,7 @@ function Header() {
         isOpen={isPostModalOpen}
         onClose={() => setIsPostModalOpen(false)}
       />
-      
+
       <FeedbackModal
         isOpen={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}

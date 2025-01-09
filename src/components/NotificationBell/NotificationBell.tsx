@@ -25,8 +25,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
 
     const subscription = client.models.Notification.observeQuery({
       filter: {
-        userID: { eq: userId },
-        readAt: { attributeExists: false }
+        userID: { eq: userId }
       }
     }).subscribe({
       next: async ({ items }) => {
@@ -35,7 +34,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setNotifications(sortedNotifications);
-        setUnreadCount(sortedNotifications.length);
+        // Count only unread notifications for the badge
+        setUnreadCount(items.filter(n => !n.readAt).length);
       },
       error: (error) => console.error('Error fetching notifications:', error)
     });
@@ -53,11 +53,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
       // Generate the target URL using the notification type and data
       const targetUrl = generateUrl(data.urlPattern || '', data);
 
-      // Mark as read
-      await client.models.Notification.update({
-        id: notification.id,
-        readAt: new Date().toISOString()
-      });
+      // Mark as read if not already read
+      if (!notification.readAt) {
+        await client.models.Notification.update({
+          id: notification.id,
+          readAt: new Date().toISOString()
+        });
+      }
 
       // Navigate to the target URL
       navigate(targetUrl);
@@ -120,16 +122,25 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
                   <div
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className="notification-item"
+                    className={`notification-item ${notification.readAt ? 'notification-item--read' : ''} 
+                              ${notification.status === 'PENDING' ? 'notification-item--pending' : ''}`}
                   >
                     <div className="notification-content">
-                      <div className="notification-message">{notification.title}</div>
+                      <div className="notification-message">
+                        <span className="notification-title">{notification.title}</span>
+                        {notification.status === 'PENDING' && (
+                          <span className="notification-status">Action Required</span>
+                        )}
+                      </div>
                       <p className="notification-message">{notification.body}</p>
-                      {notification.createdAt && (
+                      <div className="notification-meta">
                         <span className="notification-time">
                           {formatTimeAgo(notification.createdAt)}
                         </span>
-                      )}
+                        {notification.readAt && (
+                          <span className="notification-read-status">Read</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
