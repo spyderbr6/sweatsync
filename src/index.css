@@ -25,13 +25,21 @@ body {
   background-color: white;
   z-index: 1000;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  padding: 10px 0;
+  padding: 10px 20px;  /* Added horizontal padding */
 }
 
 .header-container {
   display: flex;
   align-items: center;
 }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+}
+
 
 .logo {
   height: 80px;
@@ -40,6 +48,31 @@ body {
 
 .no-shadow {
   box-shadow: none;
+}
+.header-notifications {
+  display: flex;
+  align-items: center;
+  margin-right: 1rem;
+}
+
+/* Ensure the notification panel appears above other content */
+.notification-bell-container {
+  position: relative;
+  z-index: 1000;
+}
+
+@media (max-width: 768px) {
+  .header-notifications {
+    margin-right: 0.5rem;
+  }
+
+  .header-actions {
+    gap: 0.5rem;
+  }
+  
+  .header-input-container {
+    padding: 10px;
+  }
 }
 
 /* Input Container Styles */
@@ -165,6 +198,9 @@ a:hover {
   object-fit: cover;
   border: 2px solid #ebe8e5;
   transition: border-color 0.2s ease;
+}
+.account-icon {
+  margin-left: 0;  /* Remove margin since we're using gap in header-actions */
 }
 
 .account-button:hover .account-image {

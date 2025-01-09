@@ -208,9 +208,12 @@ export async function listAvailableChallenges(userId: string): Promise<Schema["C
   }
 }
 
-export async function getPendingChallenges(userId: string) {
+export async function getPendingChallenges(
+  userId: string, 
+  getStorageUrl: (path: string) => Promise<string>
+) {
   try {
-    // Calculate the cutoff time for expired invitations (48 hours ago)
+    // Calculate the cutoff time for expired invitations (7 days ago)
     const cutoffTime = new Date();
     cutoffTime.setHours(cutoffTime.getHours() - 168);
     
@@ -220,8 +223,7 @@ export async function getPendingChallenges(userId: string) {
         and: [
           { userID: { eq: userId } },
           { status: { eq: 'PENDING' } },
-          // Only get invitations newer than cutoff time
-          //{ invitedAt: { ge: cutoffTime.toISOString() } }
+         // { invitedAt: { ge: cutoffTime.toISOString() } }
         ]
       }
     });
@@ -237,22 +239,41 @@ export async function getPendingChallenges(userId: string) {
 
         if (!challengeResult.data) return null;
 
-        // Get the inviter's username
-        const inviterResult = participation.invitedBy 
-          ? await client.models.User.get({
+        // Get the inviter's details
+        let inviterName = 'Unknown User';
+        let inviterPicture = '/profileDefault.png';
+
+        if (participation.invitedBy) {
+          try {
+            const inviterResult = await client.models.User.get({
               id: participation.invitedBy
-            })
-          : null;
+            });
+
+            if (inviterResult.data) {
+              inviterName = inviterResult.data.preferred_username || inviterResult.data.username || 'Unknown User';
+              
+              if (inviterResult.data.pictureUrl) {
+                try {
+                  inviterPicture = await getStorageUrl(inviterResult.data.pictureUrl);
+                } catch (error) {
+                  console.error('Error getting inviter picture URL:', error);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching inviter details:', error);
+          }
+        }
 
         return {
           ...challengeResult.data,
           participationId: participation.id,
-          inviterName: inviterResult?.data?.preferred_username || 'Unknown User',
+          inviterName,
+          inviterPicture,
           invitedAt: participation.invitedAt,
-          // Calculate time remaining before expiration
           expiresIn: participation.invitedAt 
             ? Math.floor((new Date(participation.invitedAt).getTime() + (24 * 60 * 60 * 1000) - Date.now()) / (60 * 1000))
-            : 0 // minutes remaining
+            : 0
         };
       })
     );

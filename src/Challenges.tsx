@@ -12,6 +12,7 @@ import { shareContent } from './utils/shareAction';
 import { ChallengeType } from './challengeTypes';
 import { promptAction } from './utils/promptAction';
 import { getChallengeStyle, getChallengeIcon, challengeStyles } from './styles/challengeStyles';
+import { useUrlCache } from './urlCacheContext';
 
 type StatItem = {
   category: ChallengeCategory;
@@ -35,6 +36,7 @@ function ChallengesPage() {
   const [pendingChallenges, setPendingChallenges] = useState<(Challenge & {
     participationId: string;
     inviterName: string;
+    inviterPicture: string; 
     invitedAt: string | null;
     expiresIn: number;
   })[]>([]);
@@ -42,6 +44,8 @@ function ChallengesPage() {
   const [joiningChallenge, setJoiningChallenge] = useState<string | null>(null);
   const { incrementVersion } = useDataVersion();
   const navigate = useNavigate();
+  const { getStorageUrl } = useUrlCache();
+
 
   const loadAllChallenges = async () => {
     try {
@@ -49,7 +53,7 @@ function ChallengesPage() {
       const [myChallenges, available, pending] = await Promise.all([
         listChallenges(userId!),
         listAvailableChallenges(userId!),
-        getPendingChallenges(userId!)
+        getPendingChallenges(userId!,getStorageUrl)
       ]);
 
       setChallenges(myChallenges);
@@ -132,7 +136,7 @@ function ChallengesPage() {
 
   const loadPendingChallenges = async () => {
     try {
-      const pending = await getPendingChallenges(userId!);
+      const pending = await getPendingChallenges(userId!, getStorageUrl);
       setPendingChallenges(pending);
     } catch (err) {
       console.error('Error loading pending challenges:', err);
@@ -272,7 +276,7 @@ function ChallengesPage() {
                 <div key={challenge.id} className="friend-challenge-card">
                   <div className="friend-card-header">
                     <img
-                      src="/profileDefault.png"
+                        src={challenge.inviterPicture??"/profileDefault.png"}
                       alt={challenge.inviterName}
                       className="friend-avatar"
                     />
