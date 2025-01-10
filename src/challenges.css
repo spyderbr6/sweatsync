@@ -1243,3 +1243,135 @@ margin-bottom: 0;
   margin-top: 2px;
   font-style: italic;
 }
+
+
+.friend-challenges {
+  margin-bottom: 2rem;
+}
+
+.friend-challenges-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.friend-challenges-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgb(17, 24, 39);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.invite-count {
+  background: #ef4444;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+}
+
+.friend-challenges-scroll {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.friend-challenge-card {
+  flex: 0 0 280px;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 2px solid;
+}
+
+.inviter-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.inviter-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.inviter-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.inviter-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.invite-message {
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.challenge-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.challenge-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.challenge-pending-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.accept-button, .decline-button {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: none;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.accept-button {
+  color: white;
+}
+
+.accept-button:hover {
+  opacity: 0.9;
+}
+
+.decline-button {
+  background: rgb(243 244 246);
+  color: rgb(55 65 81);
+}
+
+.decline-button:hover {
+  background: rgb(229 231 235);
+}
+
+@media (max-width: 640px) {
+  .friend-challenge-card {
+    flex: 0 0 260px;
+  }
+}
