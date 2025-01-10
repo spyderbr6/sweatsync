@@ -31,7 +31,7 @@ export function NotificationPreferences() {
     <div className="profile-info-section">
       <h2 className="profile-section-title">Notification Preferences</h2>
       
-      <div className="notification-status">
+      <div className="notification-preference-status">
         <div className="notification-info">
           {permission === 'granted' ? (
             <Bell className="notification-icon notification-icon--enabled" />

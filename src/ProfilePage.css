@@ -205,7 +205,7 @@
 /* NOTIFICATION PREFERENCES*/
 
  /* Add to your ProfilePage.css */
- .notification-status {
+ .notification-preference-status {
   display: flex;
   justify-content: space-between;
   align-items: center;

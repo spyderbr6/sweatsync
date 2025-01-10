@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, UserMinus, Share2, LucideIcon } from 'lucide-react';
 import { CreateChallengeModal } from './CreateChallengeModal';
-import { listChallenges, getPendingChallenges, respondToChallenge, listAvailableChallenges, checkChallengeParticipation, addParticipantToChallenge, archiveChallenge, removeParticipantFromChallenge } from './challengeOperations';
+import { listChallenges, getPendingChallenges, respondToChallenge, listAvailableChallenges, addParticipantToChallenge, archiveChallenge, removeParticipantFromChallenge } from './challengeOperations';
 import type { Schema } from "../amplify/data/resource";
 import './challenges.css';
 import { useUser } from './userContext';
@@ -40,7 +40,6 @@ function ChallengesPage() {
     invitedAt: string | null;
     expiresIn: number;
   })[]>([]);
-  const [participations, setParticipations] = useState<Record<string, boolean>>({});
   const [joiningChallenge, setJoiningChallenge] = useState<string | null>(null);
   const { incrementVersion } = useDataVersion();
   const navigate = useNavigate();
@@ -73,26 +72,6 @@ function ChallengesPage() {
     }
   }, [userId]);
 
-  useEffect(() => {
-    if (userId && challenges.length > 0) {
-      checkParticipations();
-    }
-  }, [userId, challenges]);
-
-  const checkParticipations = async () => {
-    try {
-      const participationStatus: Record<string, boolean> = {};
-      await Promise.all(
-        challenges.map(async (challenge) => {
-          const participation = await checkChallengeParticipation(challenge.id, userId!);
-          participationStatus[challenge.id] = !!participation;
-        })
-      );
-      setParticipations(participationStatus);
-    } catch (error) {
-      console.error('Error checking participations:', error);
-    }
-  };
   const handleNavigateToChallenge = (challengeId: string) => {
     navigate(`/challenge/${challengeId}`);
   };
@@ -103,12 +82,6 @@ function ChallengesPage() {
         challengeID: challengeId,
         userID: userId!
       });
-
-      // Update local state
-      setParticipations(prev => ({
-        ...prev,
-        [challengeId]: true
-      }));
 
       incrementVersion(); //this tells certain functions to rerender and pull data as a result of this change.
 
@@ -134,22 +107,11 @@ function ChallengesPage() {
     }
   };
 
-  const loadPendingChallenges = async () => {
-    try {
-      const pending = await getPendingChallenges(userId!, getStorageUrl);
-      setPendingChallenges(pending);
-    } catch (err) {
-      console.error('Error loading pending challenges:', err);
-    } finally {
-    }
-  };
-
   const handleChallengeResponse = async (participationId: string, accept: boolean) => {
     try {
       await respondToChallenge(participationId, accept ? 'ACTIVE' : 'DROPPED');
       // Refresh both pending challenges and main challenges list
-      loadPendingChallenges();
-      loadChallenges();
+ loadAllChallenges();
       incrementVersion();
     } catch (err) {
       console.error('Error responding to challenge:', err);
@@ -195,6 +157,7 @@ function ChallengesPage() {
 
   const getChallengeActions = (challenge: Challenge) => {
     const isOwner = challenge.createdBy === userId;
+    const isParticipating = challenges.some(c => c.id === challenge.id);
 
     return [
       {
@@ -209,7 +172,7 @@ function ChallengesPage() {
         icon: <UserMinus size={16} />,
         onClick: () => handleLeaveChallenge(challenge.id),
         destructive: true,
-        show: participations[challenge.id],
+        show: isParticipating,
       },
       {
         label: 'Share',
@@ -236,8 +199,7 @@ function ChallengesPage() {
 
     if (confirmed) {
       await removeParticipantFromChallenge(challengeId, userId!);
-      loadPendingChallenges();
-      loadChallenges();
+ loadAllChallenges();
       incrementVersion();
     }
 
@@ -265,50 +227,72 @@ function ChallengesPage() {
           </button>
         </div>
 
-
         {pendingChallenges.length > 0 && (
-          <div className="friend-challenges">
-            <div className="friend-challenges-header">
-              <h2 className="section-title">Pending Challenges</h2>
+  <div className="friend-challenges">
+    <div className="friend-challenges-header">
+      <h2 className="friend-challenges-title">
+        Pending Challenge Invites
+        <span className="invite-count">{pendingChallenges.length}</span>
+      </h2>
+    </div>
+    
+    <div className="friend-challenges-scroll">
+      {pendingChallenges.map((challenge) => {
+        const style = getChallengeStyle(challenge.challengeType, 'default');
+        const Icon = getChallengeIcon(challenge.challengeType, {
+          size: 20,
+          style: { color: style.textColor }
+        });
+
+        return (
+          <div 
+            key={challenge.id} 
+            className="friend-challenge-card"
+            style={{
+              backgroundColor: style.bgColor,
+              borderColor: style.borderColor
+            }}
+          >
+            <div className="inviter-section">
+              <img
+                src={challenge.inviterPicture ?? "/profileDefault.png"}
+                alt={challenge.inviterName}
+                className="inviter-avatar"
+              />
+              <div className="inviter-text">
+                <span className="inviter-name">{challenge.inviterName}</span>
+                <span className="invite-message">invited you</span>
+              </div>
             </div>
-            <div className="friend-challenges-scroll">
-              {pendingChallenges.map((challenge) => (
-                <div key={challenge.id} className="friend-challenge-card">
-                  <div className="friend-card-header">
-                    <img
-                        src={challenge.inviterPicture??"/profileDefault.png"}
-                      alt={challenge.inviterName}
-                      className="friend-avatar"
-                    />
-                    <div className="friend-info">
-                      <div className="friend-name">{challenge.inviterName} challenged you!</div>
-                      <div className="challenge-type">{challenge.title}</div>
-                    </div>
-                  </div>
-                  <p className="challenge-description">{challenge.description}</p>
-                  <div className="challenge-pending-actions">
-                    <button
-                      onClick={() => handleChallengeResponse(challenge.participationId, true)}
-                      className="challenge-button challenge-button--accept"
-                    >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleChallengeResponse(challenge.participationId, false)}
-                      className="challenge-button challenge-button--decline"
-                    >
-                      Decline
-                    </button>
-                  </div>
-                </div>
-              ))}
+
+            <div className="challenge-badge">
+              {Icon}
+              {style.name}
+            </div>
+
+            <h3 className="challenge-name">{challenge.title}</h3>
+
+            <div className="challenge-pending-actions">
+              <button
+                onClick={() => handleChallengeResponse(challenge.participationId, true)}
+                className="accept-button"
+                style={{ backgroundColor: style.mainColor }}
+              >
+                Accept
+              </button>
+              <button
+                onClick={() => handleChallengeResponse(challenge.participationId, false)}
+                className="decline-button"
+              >
+                Decline
+              </button>
             </div>
           </div>
-        )}
-
-
-
-
+        );
+      })}
+    </div>
+  </div>
+)}
 
       </div>
 
@@ -351,8 +335,7 @@ function ChallengesPage() {
             filteredMyChallenges.map(challenge => {
               if (!challenge) return null;
 
-              const isParticipant = participations[challenge.id];
-              const style = getChallengeStyle(challenge.challengeType, isParticipant ? 'active' : 'default');
+              const style = getChallengeStyle(challenge.challengeType, 'default');
               const Icon = getChallengeIcon(challenge.challengeType, {
                 size: 20,
                 style: { color: style.mainColor }

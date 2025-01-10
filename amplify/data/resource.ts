@@ -133,7 +133,8 @@ const schema = a.schema({
     pictureUpdatedAt: a.datetime(),  // optional by default
     createdAt: a.datetime().required(),
     updatedAt: a.datetime().required(),
-    lowercasename: a.string().required()
+    lowercasename: a.string().required(),
+    hasCompletedOnboarding: a.boolean().default(false)
   }).authorization((allow) => [allow.publicApiKey()]),
 
   //PUSH NOTIFICATION SETUP

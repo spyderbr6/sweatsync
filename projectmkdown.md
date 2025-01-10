@@ -22,10 +22,15 @@
         └── tsconfig.json
     └── 📁public
         └── 📁icons
-            └── globe-badge-96.png
+            └── flame-96.png
+            └── globe-96.png
+            └── group-96.png
             └── icon-192.png
             └── icon-512.png
             └── icon.png
+            └── target-96.png
+            └── trophy-96.png
+            └── userplus-96.png
         └── justicon.gif
         └── logo.png
         └── manifest.json
@@ -60,6 +65,9 @@
             └── 📁FeedbackModal
                 └── feedbackModal.css
                 └── feedbackModal.tsx
+            └── 📁NotificationBell
+                └── NotificationBell.css
+                └── NotificationBell.tsx
             └── 📁notificationPreferences
                 └── notificationPreferences.tsx
             └── 📁PostChallenges
@@ -88,9 +96,9 @@
         └── profile.tsx
         └── ProfilePage.css
         └── service-worker.ts
-        └── singlePage.css
         └── SinglePagePost.tsx
         └── 📁styles
+            └── challengeStyles.ts
             └── promptAction.css
         └── 📁types
             └── notifications.ts

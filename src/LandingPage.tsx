@@ -20,6 +20,8 @@ const LandingPage = () => {
             className="landing-logo"
           />
         </div>
+        <h1>Challenge Friends. Push Limits. Win Together.</h1>
+
         <div className="landing-cta">
             <Link to="/login" className="landing-button">
               Get Started
@@ -27,11 +29,9 @@ const LandingPage = () => {
           </div>
 
         <div className="landing-main">
-          <h1>Transform Your Fitness Journey with Friends</h1>
+          <h2>Transform Your Fitness Journey with Friends</h2>
           <p>Join SweatSync to track workouts, challenge friends, and build a 
-            community that keeps you motivated, all with the power of AI</p>
-            <p>"Challenge Friends. Push Limits. Win Together."</p>
-          
+            community that keeps you motivated, all with the power of AI</p>          
           <div className="landing-features">
             <div className="feature-item">
               <span>✓</span>

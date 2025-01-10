@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react';
-import { UserProvider } from './userContext';
+import { UserProvider, useUser } from './userContext';
 import { DataVersionProvider } from './dataVersionContext';
 import App from "./App.tsx";
 import ProfilePage from "./profile.tsx";
@@ -18,6 +18,7 @@ import '@aws-amplify/ui-react/styles.css';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { UrlCacheProvider } from './urlCacheContext';
 import UpdateNotification from './components/UpdateNotification/UpdateNotification';
+import { OnboardingFlow } from './components/OnboardingFlow/OnboardingFlow';
 
 Amplify.configure(outputs);
 
@@ -96,12 +97,22 @@ if ('serviceWorker' in navigator) {
 
 function AuthenticatedApp() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const { hasCompletedOnboarding, isLoading } = useUser();
 
   React.useEffect(() => {
     const handleUpdateAvailable = () => setShowUpdateModal(true);
     window.addEventListener('swUpdateAvailable', handleUpdateAvailable);
     return () => window.removeEventListener('swUpdateAvailable', handleUpdateAvailable);
   }, []);
+
+  if (isLoading) {
+    return null;
+  }
+
+  // Show onboarding if not completed
+  if (!hasCompletedOnboarding) {
+    return <OnboardingFlow />;
+  }
 
   const handleUpdate = () => {
     if (newWorker) {
@@ -111,8 +122,7 @@ function AuthenticatedApp() {
   };
 
   return (
-    <UrlCacheProvider>
-      <UserProvider>
+
         <DataVersionProvider>
           <>
             <Header />
@@ -127,8 +137,7 @@ function AuthenticatedApp() {
             {showUpdateModal && <UpdateNotification onUpdate={handleUpdate} />}
           </>
         </DataVersionProvider>
-      </UserProvider>
-    </UrlCacheProvider>
+
   );
 }
 
@@ -179,8 +188,26 @@ function LoginPage() {
 }
 
 function AuthenticatedRoutes() {
-  const { authStatus } = useAuthenticator(context => [context.authStatus]);
+  const { authStatus} = useAuthenticator(context => [
+    context.authStatus,
+    context.user
+  ]);
   
+  // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Handle initial load
+  useEffect(() => {
+    if (authStatus !== 'configuring') {
+      setIsLoading(false);
+    }
+  }, [authStatus]);
+
+  // Show nothing while loading to prevent flash
+  if (isLoading) {
+    return null;
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -200,7 +227,11 @@ function AppWrapper() {
   return (
     <Router>
       <Authenticator.Provider>
+      <UrlCacheProvider>
+      <UserProvider>
         <AuthenticatedRoutes />
+        </UserProvider>
+        </UrlCacheProvider>
       </Authenticator.Provider>
     </Router>
   );

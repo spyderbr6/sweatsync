@@ -19,6 +19,7 @@ interface UserContextType {
   refreshUserData: () => Promise<void>;
   picture: string | null; // Full picture
   pictureUrl: string | null; //Thumbnail
+  hasCompletedOnboarding: boolean | null;  // first time check
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -31,7 +32,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
   const [picture, setProfilePicture] = useState<string | null>(null);
   const [pictureUrl, setProfileThumbnail] = useState<string | null>(null);
-
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
   const { getStorageUrl } = useUrlCache();
 
 
@@ -52,6 +53,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Get user data from our database
       const client = generateClient<Schema>();
       const userResult = await client.models.User.get({ id: user.userId });
+
+      setHasCompletedOnboarding(userResult.data?.hasCompletedOnboarding ?? false);
       
       if (userResult.data?.picture) {
         // Construct paths using correct format
@@ -102,7 +105,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     error,
     refreshUserData: fetchUserData, 
     picture,
-    pictureUrl
+    pictureUrl,
+    hasCompletedOnboarding
   };
 
   return (
