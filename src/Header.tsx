@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MessageSquarePlus, LogOut, User, Users, Trophy } from 'lucide-react';
+import { Plus, MessageSquarePlus, LogOut, User, Users, Trophy, RefreshCw } from 'lucide-react';
 import { CreatePostModal } from './CreatePostModal';
 import { useUser } from './userContext';
 import { useUrlCache } from './urlCacheContext';
@@ -9,7 +9,12 @@ import ChallengeFeedHeader from './challengeFeedHeader';
 import FeedbackModal from './components/FeedbackModal/feedbackModal';
 import NotificationBell from './components/NotificationBell/NotificationBell';
 
-function Header() {
+interface HeaderProps {
+  updateAvailable?: boolean;
+  onUpdate?: () => Promise<void>;
+}
+
+function Header({ updateAvailable, onUpdate }: HeaderProps) {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
@@ -92,14 +97,26 @@ function Header() {
       icon: <MessageSquarePlus size={20} />,
       onClick: () => setShowFeedbackModal(true),
       ariaLabel: 'Open feedback form'
-    },
-    {
-      label: 'Logout',
-      icon: <LogOut size={20} />,
-      onClick: signOut,
-      ariaLabel: 'Sign out of account'
     }
   ];
+
+      // Add update menu item if update is available
+  if (updateAvailable && onUpdate) {
+    menuItems.push({
+      label: 'Update Available',
+      icon: <RefreshCw size={20} />,
+      onClick: () => onUpdate(),
+      ariaLabel: 'Install updates'
+    });
+  }
+  // Add logout as the last item
+  menuItems.push({
+    label: 'Logout',
+    icon: <LogOut size={20} />,
+    onClick: signOut,
+    ariaLabel: 'Sign out of account'
+  });
+  
 
   const handleKeyDown = (event: React.KeyboardEvent, action: () => void) => {
     if (event.key === 'Enter' || event.key === ' ') {
