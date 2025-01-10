@@ -49,7 +49,7 @@ export function OnboardingFlow() {
       await refreshUserData();
 
       // Navigate to main app
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Error completing onboarding:', error);
     }
