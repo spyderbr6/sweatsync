@@ -13,26 +13,22 @@ const client = generateClient<Schema>();
 
 export function OnboardingFlow() {
   const [currentStep, setCurrentStep] = useState<Step>('welcome');
-  const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
   const { userId, picture, refreshUserData } = useUser();
   const {
     uploadProfilePicture,
+    loading: isUploading,  // Renamed to match our usage
     error: uploadError,
   } = useProfilePictureUploader();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && userId) {
-      setIsUploading(true);
       await uploadProfilePicture(e.target.files[0], userId, async () => {
-        await refreshUserData();
-        setIsUploading(false);
+        // The current step should be maintained since we're still in 'profile' step
+        setCurrentStep('notifications'); // Automatically advance to next step on successful upload
       });
     }
   };
-
-  // Separate check for whether we can proceed from the profile step
-  const canProceedFromProfile = picture && picture !== '/profileDefault.png';
 
   const completeOnboarding = async () => {
     if (!userId) return;
@@ -73,42 +69,34 @@ export function OnboardingFlow() {
           </div>
         );
 
-      case 'profile':
-        return (
-          <div className="onboarding-step">
-            <h2 className="onboarding-title">Add a Profile Picture</h2>
-            <p className="onboarding-description">
-              Help others recognize you by adding a profile picture.
-            </p>
-            <div className="onboarding-profile-picture-section">
-              <div className="onboarding-profile-picture-wrapper">
-                <img
-                  src={picture || "/profileDefault.png"}
-                  alt="Profile"
-                  className="onboarding-profile-image"
-                />
+        case 'profile':
+          return (
+            <div className="onboarding-step">
+              <h2 className="onboarding-title">Add a Profile Picture</h2>
+              <p className="onboarding-description">
+                Help others recognize you by adding a profile picture.
+              </p>
+              <div className="onboarding-profile-picture-section">
+                <div className="onboarding-profile-picture-wrapper">
+                  <img
+                    src={picture || "/profileDefault.png"}
+                    alt="Profile"
+                    className="onboarding-profile-image"
+                  />
+                </div>
+                <label className="onboarding-upload-button">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                  />
+                  {isUploading ? 'Uploading...' : 'Choose Photo'}
+                </label>
               </div>
-              <label className="onboarding-upload-button">
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                />
-                {isUploading ? 'Uploading...' : 'Choose Photo'}
-              </label>
+              {uploadError && <p className="error-message">{uploadError}</p>}
             </div>
-            {uploadError && <p className="error-message">{uploadError}</p>}
-            {canProceedFromProfile && (
-              <button 
-                className="onboarding-button"
-                onClick={() => setCurrentStep('notifications')}
-              >
-                Continue
-              </button>
-            )}
-          </div>
-        );
+          );
 
       case 'notifications':
         return (
