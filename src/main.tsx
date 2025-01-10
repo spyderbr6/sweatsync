@@ -19,91 +19,16 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import { UrlCacheProvider } from './urlCacheContext';
 import UpdateNotification from './components/UpdateNotification/UpdateNotification';
 import { OnboardingFlow } from './components/OnboardingFlow/OnboardingFlow';
+import { useServiceWorkerUpdate } from './hooks/useServiceWorkerUpdate';
+
 
 Amplify.configure(outputs);
 
-let newWorker: ServiceWorker | null = null;
-
-
-// Register service worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // First check if there's an existing registration
-    navigator.serviceWorker.getRegistration().then(existingRegistration => {
-      if (existingRegistration) {
-        console.log('Found existing service worker:', existingRegistration);
-        
-        // Check if there's a waiting worker
-        if (existingRegistration.waiting) {
-          console.log('New version waiting to activate');
-          newWorker = existingRegistration.waiting;
-          window.dispatchEvent(new Event('swUpdateAvailable'));
-        }
-
-        existingRegistration.addEventListener('updatefound', () => {
-          console.log('Update found for service worker');
-          const installingWorker = existingRegistration.installing;
-          
-          if (installingWorker) {
-            newWorker = installingWorker;
-            installingWorker.addEventListener('statechange', () => {
-              console.log('Service worker state changed:', installingWorker.state);
-              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('New content available, showing update notification');
-                window.dispatchEvent(new Event('swUpdateAvailable'));
-              }
-            });
-          }
-        });
-
-      } else {
-        // Only register if there's no existing registration
-        navigator.serviceWorker.register('/service-worker.js').then(registration => {
-          console.log('SW registered:', registration);
-          
-          registration.addEventListener('updatefound', () => {
-            // Same update found logic as above
-            console.log('Update found for service worker');
-            const installingWorker = registration.installing;
-            
-            if (installingWorker) {
-              newWorker = installingWorker;
-              installingWorker.addEventListener('statechange', () => {
-                console.log('Service worker state changed:', installingWorker.state);
-                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('New content available, showing update notification');
-                  window.dispatchEvent(new Event('swUpdateAvailable'));
-                }
-              });
-            }
-          });
-        }).catch(error => {
-          console.error('SW registration failed:', error);
-        });
-      }
-
-      // Add reload control (outside the if/else since we want this either way)
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          console.log('New service worker activated, reloading page');
-          refreshing = true;
-          window.location.reload();
-        }
-      });
-    });
-  });
-}
 
 function AuthenticatedApp() {
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  //const [showUpdateModal, setShowUpdateModal] = useState(false);
   const { hasCompletedOnboarding, isLoading } = useUser();
-
-  React.useEffect(() => {
-    const handleUpdateAvailable = () => setShowUpdateModal(true);
-    window.addEventListener('swUpdateAvailable', handleUpdateAvailable);
-    return () => window.removeEventListener('swUpdateAvailable', handleUpdateAvailable);
-  }, []);
+  const { updateAvailable, forceUpdate, newWorker } = useServiceWorkerUpdate();
 
   if (isLoading) {
     return null;
@@ -125,8 +50,8 @@ function AuthenticatedApp() {
 
         <DataVersionProvider>
           <>
-            <Header />
-            <Routes>
+          <Header updateAvailable={updateAvailable} onUpdate={forceUpdate} />
+          <Routes>
               <Route path="/" element={<App />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/friends" element={<FriendsPage />} />
@@ -134,7 +59,7 @@ function AuthenticatedApp() {
               <Route path="/challenge/:challengeId" element={<ChallengeDetailPage />} />
               <Route path="/post/:postId" element={<SinglePostPage />} />
             </Routes>
-            {showUpdateModal && <UpdateNotification onUpdate={handleUpdate} />}
+            {updateAvailable && <UpdateNotification onUpdate={handleUpdate} />}
           </>
         </DataVersionProvider>
 
@@ -189,8 +114,8 @@ function LoginPage() {
 
 function AuthenticatedRoutes() {
   const { authStatus} = useAuthenticator(context => [
-    context.authStatus,
-    context.user
+    context.authStatus
+    //context.user
   ]);
   
   // Add loading state
