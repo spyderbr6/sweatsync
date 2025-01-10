@@ -46,6 +46,8 @@ export function OnboardingFlow() {
         updatedAt: new Date().toISOString()
       });
 
+      await refreshUserData();
+
       // Navigate to main app
       navigate('/');
     } catch (error) {
