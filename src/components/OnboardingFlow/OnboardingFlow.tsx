@@ -18,7 +18,6 @@ export function OnboardingFlow() {
   const { userId, picture, refreshUserData } = useUser();
   const {
     uploadProfilePicture,
-    loading: uploadLoading,
     error: uploadError,
   } = useProfilePictureUploader();
 
