@@ -60,7 +60,7 @@ export function OnboardingFlow() {
               Let's get your profile set up so you can start connecting with friends
               and tracking your fitness journey.
             </p>
-            <button 
+            <button
               className="onboarding-button"
               onClick={() => setCurrentStep('profile')}
             >
@@ -69,34 +69,35 @@ export function OnboardingFlow() {
           </div>
         );
 
-        case 'profile':
-          return (
-            <div className="onboarding-step">
-              <h2 className="onboarding-title">Add a Profile Picture</h2>
-              <p className="onboarding-description">
-                Help others recognize you by adding a profile picture.
-              </p>
-              <div className="onboarding-profile-picture-section">
-                <div className="onboarding-profile-picture-wrapper">
-                  <img
-                    src={picture || "/profileDefault.png"}
-                    alt="Profile"
-                    className="onboarding-profile-image"
-                  />
-                </div>
-                <label className="onboarding-upload-button">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                  />
-                  {isUploading ? 'Uploading...' : 'Choose Photo'}
-                </label>
+      case 'profile':
+        return (
+          <div className="onboarding-step">
+            <h2 className="onboarding-title">Add a Profile Picture</h2>
+            <p className="onboarding-description">
+              Help others recognize you by adding a profile picture.
+            </p>
+            <div className="onboarding-profile-picture-section">
+              <div className="onboarding-profile-picture-wrapper">
+                <img
+                  src={picture || "/profileDefault.png"}
+                  alt="Profile"
+                  className="onboarding-profile-image"
+                />
               </div>
-              {uploadError && <p className="error-message">{uploadError}</p>}
+              <label className="onboarding-upload-button">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+                {isUploading ? 'Uploading...' : 'Choose Photo'}
+              </label>
             </div>
-          );
+            <button onClick={() => setCurrentStep('notifications')}>Next Step</button>
+            {uploadError && <p className="error-message">{uploadError}</p>}
+          </div>
+        );
 
       case 'notifications':
         return (
@@ -106,7 +107,7 @@ export function OnboardingFlow() {
               Stay updated with your fitness challenges and friend activities.
             </p>
             <NotificationPreferences />
-            <button 
+            <button
               className="onboarding-button"
               onClick={completeOnboarding}
             >
@@ -122,7 +123,7 @@ export function OnboardingFlow() {
     return (
       <div className="onboarding-progress">
         {steps.map((step) => (
-          <div 
+          <div
             key={step}
             className={`progress-dot ${currentStep === step ? 'active' : ''}`}
           />
