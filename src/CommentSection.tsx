@@ -130,14 +130,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           postId
         );
       }
-  
+
       // Notify tagged users (excluding self and post owner)
       const uniqueTaggedUsers = new Set(taggedUserIds);
-      console.log('Unique tagged users:', uniqueTaggedUsers)
       for (const taggedId of uniqueTaggedUsers) {
         // Only check if the tagged user is not the commenter
         if (taggedId !== userId) {
-          console.log('Sending notification to:', taggedId)
           await sendCommentNotification(
             taggedId,
             'USER_TAGGED',
@@ -159,30 +157,41 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     if (!comment.taggedUsers || comment.taggedUsers.length === 0) {
       return <p className="comment-section__content">{comment.content}</p>;
     }
-
+  
     let content = comment.content || '';
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
-
-    comment.taggedUsers.forEach(user => {
-      const tag = `@${user.username}`;
-      const index = content.indexOf(tag, lastIndex);
-      if (index !== -1) {
-        // Add text before the tag
-        parts.push(content.substring(lastIndex, index));
-        // Add the tagged username
+  
+    // Updated regex to match our new @[username] format
+    const regex = /@\[(.*?)\]/g;
+    let match;
+  
+    while ((match = regex.exec(content)) !== null) {
+      // Add text before the mention
+      parts.push(content.substring(lastIndex, match.index));
+      
+      // Get the username without brackets
+      const username = match[1];
+      const taggedUser = comment.taggedUsers.find(user => user.username === username);
+  
+      if (taggedUser) {
+        // Add the styled @mention
         parts.push(
-          <span key={user.id} className="tagged-user">
-            {tag}
+          <span key={taggedUser.id} className="tagged-user">
+            @{username}
           </span>
         );
-        lastIndex = index + tag.length;
+      } else {
+        // If user not found, just render as text
+        parts.push(match[0]);
       }
-    });
-
-    // Add remaining text
+  
+      lastIndex = match.index + match[0].length;
+    }
+  
+    // Add any remaining text
     parts.push(content.substring(lastIndex));
-
+  
     return <p className="comment-section__content">{parts}</p>;
   };
 

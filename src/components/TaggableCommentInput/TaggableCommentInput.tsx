@@ -11,6 +11,11 @@ interface Friend {
     username: string;
 }
 
+interface SelectedMention {
+    username: string;
+    id: string;
+  }
+
 interface TaggableCommentInputProps {
     onSubmit: (content: string, taggedUserIds: string[]) => void;
     disabled?: boolean;
@@ -27,6 +32,8 @@ export const TaggableCommentInput: React.FC<TaggableCommentInputProps> = ({
     const [cursorPosition, setCursorPosition] = useState(0);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
+    const [selectedMentions, setSelectedMentions] = useState<SelectedMention[]>([]);
+
 
     // Get friends for suggestions
     const getFriendSuggestions = async (query: string) => {
@@ -88,54 +95,68 @@ export const TaggableCommentInput: React.FC<TaggableCommentInputProps> = ({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (showSuggestions) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                setSelectedIndex(prev => (prev + 1) % suggestions.length);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                setSelectedIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
-            } else if (e.key === 'Enter' && suggestions.length > 0) {
-                e.preventDefault();
-                insertMention(suggestions[selectedIndex]);
-            } else if (e.key === 'Escape') {
-                setShowSuggestions(false);
-            }
+        if (showSuggestions && suggestions.length > 0) {
+          switch (e.key) {
+            case 'Tab':
+              e.preventDefault(); // Prevent moving focus
+              insertMention(suggestions[selectedIndex]);
+              break;
+            case 'ArrowDown':
+              e.preventDefault();
+              setSelectedIndex(prev => (prev + 1) % suggestions.length);
+              break;
+            case 'ArrowUp':
+              e.preventDefault();
+              setSelectedIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+              break;
+            case 'Enter':
+              e.preventDefault();
+              insertMention(suggestions[selectedIndex]);
+              break;
+            case 'Escape':
+              setShowSuggestions(false);
+              break;
+          }
         }
-    };
+      };
 
     const insertMention = (friend: Friend) => {
         const lastAtSymbol = inputValue.lastIndexOf('@', cursorPosition);
-        const newValue =
-            inputValue.slice(0, lastAtSymbol) +
-            `@${friend.username} ` +
-            inputValue.slice(cursorPosition);
-
+        const newValue = 
+          inputValue.slice(0, lastAtSymbol) + 
+          `@[${friend.username}]` + 
+          ' ' + 
+          inputValue.slice(cursorPosition);
+        
         setInputValue(newValue);
+        setSelectedMentions(prev => [...prev, { username: friend.username, id: friend.id }]);
         setShowSuggestions(false);
         inputRef.current?.focus();
-    };
+      };
 
-    const handleSubmit = (e: React.FormEvent) => {
+      const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputValue.trim()) return;
-
-        // Extract tagged users
+    
         const taggedUsers = new Set<string>();
-        const regex = /@(\w+)/g;
+        const regex = /@\[(.*?)\]/g;
         let match;
-
+    
         while ((match = regex.exec(inputValue)) !== null) {
-            const username = match[1];
-            const friend = suggestions.find(f => f.username === username);
-            if (friend) {
-                taggedUsers.add(friend.id);
-            }
+          const username = match[1];
+          const mention = selectedMentions.find(m => m.username === username);
+          if (mention) {
+            taggedUsers.add(mention.id);
+          }
         }
-
-        onSubmit(inputValue, Array.from(taggedUsers));
+    
+        const taggedArray = Array.from(taggedUsers);
+        console.log('Tagged users array:', taggedArray);
+        
+        onSubmit(inputValue, taggedArray);
         setInputValue('');
-    };
+        setSelectedMentions([]); // Clear mentions after submit
+      };
 
     return (
         <form onSubmit={handleSubmit} className="comment-section__form">
