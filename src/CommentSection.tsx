@@ -150,12 +150,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       // Notify tagged users (excluding self and post owner)
       const uniqueTaggedUsers = new Set(taggedUserIds);
       for (const taggedId of uniqueTaggedUsers) {
-        // Only exclude self from tag notifications
+        // Only check if the tagged user is not the commenter
         if (taggedId !== userId) {
-          // If it's the post owner and they already got a comment notification, skip
-          if (taggedId === postOwnerId && postOwnerId !== userId) {
-            continue;
-          }
           await sendCommentNotification(
             taggedId,
             'USER_TAGGED',
