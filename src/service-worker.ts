@@ -8,10 +8,16 @@
   import { NOTIFICATION_CONFIGS} from './types/notifications';
   
   declare const self: ServiceWorkerGlobalScope;
+
+  const DEBUG = true; // We can disable this in production later
+const log = (...args: any[]) => DEBUG && console.log('[ServiceWorker]', ...args);
+
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   const CACHE_VERSION = '1.0.6'; //IF THIS ISNT UPDATED YOU GONNA HAVE A BAD TIME
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
+  log('Service Worker Version:', CACHE_VERSION);
+  
 
   // Precache all assets marked by your build tool
   precacheAndRoute(self.__WB_MANIFEST);
@@ -70,16 +76,16 @@ interface CustomNotificationOptions extends NotificationOptions {
 }
 
 self.addEventListener('install', (event: ExtendableEvent) => {
-  console.log('Service Worker installing.');
+  log('Installing new service worker version:', CACHE_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME).then(() => {
-      console.log('Opened cache');
+      log('Cache opened:', CACHE_NAME);
     })
   );
 });
 
 self.addEventListener('activate', (event: ExtendableEvent) => {
-  console.log('Service Worker activating.');
+  log('Activating new service worker version:', CACHE_VERSION);
   
   event.waitUntil(
     Promise.all([
@@ -87,13 +93,17 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
         return Promise.all(
           cacheNames.map(cacheName => {
             if (cacheName !== CACHE_NAME) {
-              console.log('Deleting old cache:', cacheName);
+              log('Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
+            log('Keeping current cache:', cacheName);
+            return Promise.resolve();
           })
         );
       }),
-      self.clients.claim()
+      self.clients.claim().then(() => {
+        log('Service worker claimed clients');
+      })
     ])
   );
 });
