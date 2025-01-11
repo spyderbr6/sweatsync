@@ -11,17 +11,30 @@ export function useServiceWorkerUpdate(): UseServiceWorkerUpdate {
   const [newWorker, setNewWorker] = useState<ServiceWorker | null>(null);
   
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
+    if (!('serviceWorker' in navigator)) {
+      console.log('[SW Update] Service workers not supported');
+      return;
+    }
 
     const handleUpdateFound = (registration: ServiceWorkerRegistration) => {
       const installingWorker = registration.installing;
       
       if (installingWorker) {
+        console.log('[SW Update] New worker installing, current controller:', !!navigator.serviceWorker.controller);
         setNewWorker(installingWorker);
+        
         installingWorker.addEventListener('statechange', () => {
-          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            console.log('New content available, showing update notification');
-            setUpdateAvailable(true);
+          console.log('[SW Update] Worker state changed to:', installingWorker.state);
+          
+          if (installingWorker.state === 'installed') {
+            console.log('[SW Update] Worker installed, controller exists:', !!navigator.serviceWorker.controller);
+            if (navigator.serviceWorker.controller) {
+              console.log('[SW Update] New content available, showing notification');
+              setUpdateAvailable(true);
+            } else {
+              console.log('[SW Update] Service Worker installed for the first time');
+              setUpdateAvailable(false);
+            }
           }
         });
       }
@@ -30,31 +43,21 @@ export function useServiceWorkerUpdate(): UseServiceWorkerUpdate {
     // Check for existing registration
     navigator.serviceWorker.getRegistration().then(existingRegistration => {
       if (existingRegistration) {
-        console.log('Found existing service worker:', existingRegistration);
+        console.log('[SW Update] Found existing registration:', {
+          state: existingRegistration.installing ? 'installing' :
+                 existingRegistration.waiting ? 'waiting' :
+                 existingRegistration.active ? 'active' : 'unknown'
+        });
         
-        // Check if there's a waiting worker
         if (existingRegistration.waiting) {
-          console.log('New version waiting to activate');
+          console.log('[SW Update] Found waiting worker');
           setNewWorker(existingRegistration.waiting);
           setUpdateAvailable(true);
         }
 
         existingRegistration.addEventListener('updatefound', () => {
-          console.log('Update found for service worker');
+          console.log('[SW Update] Update found for existing registration');
           handleUpdateFound(existingRegistration);
-        });
-
-      } else {
-        // Only register if there's no existing registration
-        navigator.serviceWorker.register('/service-worker.js').then(registration => {
-          console.log('SW registered:', registration);
-          
-          registration.addEventListener('updatefound', () => {
-            console.log('Update found for service worker');
-            handleUpdateFound(registration);
-          });
-        }).catch(error => {
-          console.error('SW registration failed:', error);
         });
       }
     });
@@ -62,9 +65,10 @@ export function useServiceWorkerUpdate(): UseServiceWorkerUpdate {
     // Add reload control
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      console.log('[SW Update] Controller changed, refreshing:', refreshing);
       if (!refreshing) {
-        console.log('New service worker activated, reloading page');
         refreshing = true;
+        console.log('[SW Update] Reloading page');
         window.location.reload();
       }
     });
@@ -72,30 +76,36 @@ export function useServiceWorkerUpdate(): UseServiceWorkerUpdate {
 
   const forceUpdate = async () => {
     if (!('serviceWorker' in navigator)) {
-      throw new Error('Service Worker not supported');
+      console.log('[SW Update] Cannot force update - service workers not supported');
+      return;
     }
 
     try {
-      // Get current registration
+      console.log('[SW Update] Starting force update');
       const registration = await navigator.serviceWorker.getRegistration();
+      
       if (!registration) {
-        throw new Error('No Service Worker registration found');
+        console.log('[SW Update] No registration found');
+        return;
       }
 
-      // Unregister current service worker
+      console.log('[SW Update] Unregistering current worker');
       await registration.unregister();
       
-      // Clear all caches
+      console.log('[SW Update] Clearing caches');
       const cacheKeys = await caches.keys();
-      await Promise.all(cacheKeys.map(key => caches.delete(key)));
+      await Promise.all(cacheKeys.map(key => {
+        console.log('[SW Update] Clearing cache:', key);
+        return caches.delete(key);
+      }));
 
-      // Register new service worker
+      console.log('[SW Update] Registering new worker');
       await navigator.serviceWorker.register('/service-worker.js');
       
-      // Reload the page to ensure clean state
+      console.log('[SW Update] Force update complete, reloading');
       window.location.reload();
     } catch (error) {
-      console.error('Error forcing update:', error);
+      console.error('[SW Update] Force update failed:', error);
       throw error;
     }
   };
