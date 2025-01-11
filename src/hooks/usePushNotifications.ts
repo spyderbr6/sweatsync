@@ -7,14 +7,27 @@ const client = generateClient<Schema>();
 
 // Helper function to check if the browser supports push notifications
 const checkPushNotificationSupport = (): boolean => {
+  // If it's an installed PWA on iOS, treat as supported
+  if (isIOSPWA()) {
+    return true;
+  }
+
+  // For non-iOS or non-PWA, check standard web push support
   return (
     'serviceWorker' in navigator &&
     'Notification' in window &&
     'PushManager' in window &&
-    'permissions' in navigator &&
-    // iOS detection - if iOS, return false as it doesn't support web push
-    !/iPad|iPhone|iPod/.test(navigator.platform)
+    'permissions' in navigator
   );
+};
+// Helper function to check if running as installed PWA on iOS
+const isIOSPWA = (): boolean => {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                      (window.navigator as any).standalone || 
+                      document.referrer.includes('ios-app://');
+  
+  return isIOS && isStandalone;
 };
 
 export function usePushNotifications(userId: string | null) {
