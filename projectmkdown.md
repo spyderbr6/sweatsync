@@ -21,6 +21,7 @@
             └── resource.ts
         └── tsconfig.json
     └── 📁public
+        └── add-to-homepage.png
         └── 📁icons
             └── flame-96.png
             └── globe-96.png
@@ -28,6 +29,7 @@
             └── icon-192.png
             └── icon-512.png
             └── icon.png
+            └── ios-safari-addhomepage.png
             └── target-96.png
             └── trophy-96.png
             └── userplus-96.png
@@ -70,9 +72,16 @@
                 └── NotificationBell.tsx
             └── 📁notificationPreferences
                 └── notificationPreferences.tsx
+            └── 📁OnboardingFlow
+                └── IOSInstructions.css
+                └── IOSInstructions.tsx
+                └── OnboardingFlow.css
+                └── OnboardingFlow.tsx
             └── 📁PostChallenges
                 └── postChallenges.css
                 └── postChallenges.tsx
+            └── 📁TaggableCommentInput
+                └── TaggableCommentInput.tsx
             └── 📁UpdateNotification
                 └── UpdateNotification.css
                 └── UpdateNotification.tsx
@@ -86,6 +95,7 @@
         └── Header.tsx
         └── 📁hooks
             └── usePushNotifications.ts
+            └── useServiceWorkerUpdate.ts
         └── index.css
         └── inviteFriendsModal.tsx
         └── LandingPage.css

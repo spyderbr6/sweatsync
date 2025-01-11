@@ -13,7 +13,7 @@
 const log = (...args: any[]) => DEBUG && console.log('[ServiceWorker]', ...args);
 
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  const CACHE_VERSION = '1.0.6'; //IF THIS ISNT UPDATED YOU GONNA HAVE A BAD TIME
+  const CACHE_VERSION = '1.0.7'; //IF THIS ISNT UPDATED YOU GONNA HAVE A BAD TIME
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
   log('Service Worker Version:', CACHE_VERSION);
@@ -164,6 +164,7 @@ self.addEventListener('push', (event: PushEvent) => {
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
+  // Close the notification right away
   event.notification.close();
 
   const notificationData = event.notification.data;
@@ -181,17 +182,36 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
   }
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' })
-      .then(windowClients => {
-        // Check if there's already a window open
-        for (const client of windowClients) {
-          if (client.url === targetUrl && 'focus' in client) {
-            return client.focus();
-          }
+    (async () => {
+      try {
+        // Get all windows
+        const windowClients = await self.clients.matchAll({
+          type: 'window',
+          includeUncontrolled: true
+        });
+
+        // Find any existing window/tab with our URL
+        const existingWindow = windowClients.find(client => 
+          client.url === targetUrl
+        );
+
+        if (existingWindow) {
+          // If we have an existing window, focus it and reload to ensure fresh content
+          await existingWindow.focus();
+          return existingWindow.navigate(targetUrl);
+        } else {
+          // Open new window
+          const newWindow = await self.clients.openWindow(targetUrl);
+          // Ensure it's focused if the API allows
+          if (newWindow) await newWindow.focus();
+          return newWindow;
         }
-        // If no window is open, open a new one
+      } catch (error) {
+        console.error('Error handling notification click:', error);
+        // Fallback to simple window opening
         return self.clients.openWindow(targetUrl);
-      })
+      }
+    })()
   );
 });
 

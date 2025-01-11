@@ -162,7 +162,7 @@ export async function listAvailableChallenges(userId: string): Promise<Schema["C
       const userParticipations = await client.models.ChallengeParticipant.list({
           filter: {
               userID: { eq: userId },
-              status: { eq: 'ACTIVE' }
+              or : [ { status: { eq: 'ACTIVE' } }, { status: { eq: 'PENDING' } }, {status: {eq: 'COMPLETE'}} ]
           }
       });
 
@@ -612,8 +612,6 @@ export async function removeParticipantFromChallenge(challengeID: string, userID
     return "Failed to remove participant";
   }
 }
-
-// Add this to challengeOperations.tsx
 
 export async function inviteFriendToChallenge(params: {
   challengeId: string;
