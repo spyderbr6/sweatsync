@@ -1,5 +1,5 @@
 import React from 'react';
-import './IOSInstruction.css';
+import './IOSInstructions.css';
 
 interface IOSInstructionProps {
   onClose: () => void;
@@ -13,14 +13,14 @@ const IOSInstruction: React.FC<IOSInstructionProps> = ({ onClose }) => {
         <p>For the best experience on iOS, please add SweatSync to your home screen before continuing.</p>
         
         <div className="ios-steps">
-          <li>Tap the share button <img src="/share-icon.png" alt="Share icon" style={{ height: '20px', verticalAlign: 'middle' }} /></li>
+          <li>Tap the share button <img src="/icons/ios-safari-addhomepage.png" alt="Share icon" style={{ height: '20px', verticalAlign: 'middle' }} /></li>
           <li>Scroll down and tap "Add to Home Screen"</li>
           <li>Tap "Add" in the top right corner</li>
           <li>Open SweatSync from your home screen</li>
         </div>
 
         <img 
-          src="/add-to-homescreen.png" 
+          src="/add-to-homespage.png" 
           alt="Add to home screen instruction" 
           className="ios-image"
         />
