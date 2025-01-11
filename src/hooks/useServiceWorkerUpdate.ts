@@ -16,70 +16,51 @@ export function useServiceWorkerUpdate(): UseServiceWorkerUpdate {
       return;
     }
 
-    const handleUpdateFound = (registration: ServiceWorkerRegistration) => {
-      const installingWorker = registration.installing;
-      
-      if (installingWorker) {
-        console.log('[SW Update] New worker installing, current controller:', !!navigator.serviceWorker.controller);
-        setNewWorker(installingWorker);
-        
-        installingWorker.addEventListener('statechange', () => {
-          console.log('[SW Update] Worker state changed to:', installingWorker.state);
-          
-          if (installingWorker.state === 'installed') {
-            console.log('[SW Update] Worker installed, controller exists:', !!navigator.serviceWorker.controller);
-            if (navigator.serviceWorker.controller) {
-              console.log('[SW Update] New content available, showing notification');
-              setUpdateAvailable(true);
-            } else {
-              console.log('[SW Update] Service Worker installed for the first time');
-              setUpdateAvailable(false);
-            }
-          }
-        });
-      }
-    };
-
     // Check for existing registration
-    navigator.serviceWorker.getRegistration().then(existingRegistration => {
-      if (existingRegistration) {
+    navigator.serviceWorker.getRegistration().then(async (registration) => {
+      if (registration) {
         console.log('[SW Update] Found existing registration:', {
-          state: existingRegistration.installing ? 'installing' :
-                 existingRegistration.waiting ? 'waiting' :
-                 existingRegistration.active ? 'active' : 'unknown'
+          state: registration.installing ? 'installing' :
+                 registration.waiting ? 'waiting' :
+                 registration.active ? 'active' : 'unknown'
         });
         
-        if (existingRegistration.waiting) {
+        if (registration.waiting) {
           console.log('[SW Update] Found waiting worker');
-          setNewWorker(existingRegistration.waiting);
+          setNewWorker(registration.waiting);
           setUpdateAvailable(true);
+          // Don't automatically activate - wait for user interaction
         }
 
-        existingRegistration.addEventListener('updatefound', () => {
+        registration.addEventListener('updatefound', () => {
           console.log('[SW Update] Update found for existing registration');
-          handleUpdateFound(existingRegistration);
+          const installingWorker = registration.installing;
+          
+          if (installingWorker) {
+            installingWorker.addEventListener('statechange', () => {
+              console.log('[SW Update] Worker state changed to:', installingWorker.state);
+              if (installingWorker.state === 'installed') {
+                setUpdateAvailable(true);
+                setNewWorker(installingWorker);
+              }
+            });
+          }
         });
       }
     });
 
-    // Add reload control
+    // Update the controllerchange handler
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       console.log('[SW Update] Controller changed, refreshing:', refreshing);
       if (!refreshing) {
         refreshing = true;
-        console.log('[SW Update] Reloading page');
         window.location.reload();
       }
     });
   }, []);
 
   const forceUpdate = async () => {
-    if (!('serviceWorker' in navigator)) {
-      console.log('[SW Update] Cannot force update - service workers not supported');
-      return;
-    }
-
     try {
       console.log('[SW Update] Starting force update');
       const registration = await navigator.serviceWorker.getRegistration();
@@ -89,21 +70,14 @@ export function useServiceWorkerUpdate(): UseServiceWorkerUpdate {
         return;
       }
 
-      console.log('[SW Update] Unregistering current worker');
-      await registration.unregister();
-      
-      console.log('[SW Update] Clearing caches');
-      const cacheKeys = await caches.keys();
-      await Promise.all(cacheKeys.map(key => {
-        console.log('[SW Update] Clearing cache:', key);
-        return caches.delete(key);
-      }));
+      if (registration.waiting) {
+        console.log('[SW Update] Activating waiting worker');
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        // The controllerchange event will trigger the page reload
+        return;
+      }
 
-      console.log('[SW Update] Registering new worker');
-      await navigator.serviceWorker.register('/service-worker.js');
-      
-      console.log('[SW Update] Force update complete, reloading');
-      window.location.reload();
+      console.log('[SW Update] No waiting worker found');
     } catch (error) {
       console.error('[SW Update] Force update failed:', error);
       throw error;

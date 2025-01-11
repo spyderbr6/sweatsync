@@ -194,3 +194,13 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
       })
   );
 });
+
+// In service-worker.ts
+// Add this event listener after your other event listeners
+self.addEventListener('message', (event) => {
+  log('Received message:', event.data);
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    log('Skip waiting message received, activating worker');
+    self.skipWaiting();
+  }
+});
