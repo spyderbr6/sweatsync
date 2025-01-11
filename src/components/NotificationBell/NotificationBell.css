@@ -77,11 +77,11 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: background-color 0.2s ease;
-  background-color: #f8fafc;  /* Light background for unread */
+  background-color: #d7ebff;  /* Light background for unread */
 }
 
 .notification-item--read {
-  background-color: white;  /* White background for read items */
+  background-color: rgb(255, 255, 255); 
 }
 
 .notification-item--pending {

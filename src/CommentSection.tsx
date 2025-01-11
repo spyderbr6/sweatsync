@@ -14,6 +14,7 @@ interface CommentSectionProps {
   postId: string;
   commentsLimit?: number;
   showInput?: boolean;
+  postOwnerId:string;
 }
 
 const sendCommentNotification = async (
@@ -54,7 +55,8 @@ const sendCommentNotification = async (
 export const CommentSection: React.FC<CommentSectionProps> = ({
   postId,
   commentsLimit = 3,
-  showInput = false
+  showInput = false, 
+  postOwnerId
 }) => {
   const navigate = useNavigate();
   const { userId } = useUser();
@@ -65,23 +67,6 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { getStorageUrl } = useUrlCache();
   const [commentProfileUrls, setCommentProfileUrls] = useState<{ [key: string]: string }>({});
-  const [postOwnerId, setPostOwnerId] = useState<string | null>(null);
-
-  // Fetch post data to get owner ID
-  useEffect(() => {
-    const fetchPostData = async () => {
-      try {
-        const postResult = await client.models.PostforWorkout.get({ id: postId });
-        if (postResult.data?.userID) {
-          setPostOwnerId(postResult.data.userID);
-        }
-      } catch (err) {
-        console.error('Error fetching post data:', err);
-      }
-    };
-
-    fetchPostData();
-  }, [postId]);
 
   useEffect(() => {
     const loadComments = async () => {
@@ -115,7 +100,6 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     loadComments();
   }, [postId, commentsLimit]);
 
-  // Update handleSubmitComment:
   const handleSubmitComment = async (content: string, taggedUserIds: string[]) => {
     if (!userId || !postOwnerId) return;
   
@@ -149,9 +133,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   
       // Notify tagged users (excluding self and post owner)
       const uniqueTaggedUsers = new Set(taggedUserIds);
+      console.log('Unique tagged users:', uniqueTaggedUsers)
       for (const taggedId of uniqueTaggedUsers) {
         // Only check if the tagged user is not the commenter
         if (taggedId !== userId) {
+          console.log('Sending notification to:', taggedId)
           await sendCommentNotification(
             taggedId,
             'USER_TAGGED',

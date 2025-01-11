@@ -34,8 +34,8 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     vibrate: [200, 100, 200]
   },
   COMMENT_ON_POST: {
-    icon: '/icons/message-circle.png', // Using existing icon since I see lucide-react icons in use
-    badge: '/icons/message-circle.png',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/message-circle-96.png',
     urlPattern: '/post/{postId}',
     requireInteraction: true,
     vibrate: [200, 100, 200],
@@ -48,8 +48,8 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     ]
   },
   USER_TAGGED: {
-    icon: '/icons/at-sign.png',
-    badge: '/icons/at-sign.png',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/at-sign-96.png',
     urlPattern: '/post/{postId}',
     requireInteraction: true,
     vibrate: [200, 100, 200],
