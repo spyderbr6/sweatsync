@@ -14,7 +14,7 @@ const client = generateClient<Schema>();
 export function OnboardingFlow() {
   const [currentStep, setCurrentStep] = useState<Step>('welcome');
   const navigate = useNavigate();
-  const { userId, picture, refreshUserData } = useUser();
+  const { userId, picture, refreshUserData,isLoading } = useUser();
   const {
     uploadProfilePicture,
     loading: isUploading,  // Renamed to match our usage
@@ -131,6 +131,18 @@ export function OnboardingFlow() {
       </div>
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="onboarding-container">
+        <div className="onboarding-content">
+          <div className="onboarding-step">
+            <h2 className="onboarding-title">Loading...</h2>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="onboarding-container">
