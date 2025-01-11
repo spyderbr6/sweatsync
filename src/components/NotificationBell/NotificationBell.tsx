@@ -1,6 +1,6 @@
 // src/components/NotificationBell/notificationBell.tsx
 import React, { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../../amplify/data/resource";
 import { useNavigate } from 'react-router-dom';
@@ -49,7 +49,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
     try {
       // Parse the data JSON string
       const data = JSON.parse(notification.data);
-      
+
       // Generate the target URL using the notification type and data
       const targetUrl = generateUrl(data.urlPattern || '', data);
 
@@ -63,7 +63,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
 
       // Navigate to the target URL
       navigate(targetUrl);
-      
+
       // Close the notification panel
       setIsOpen(false);
     } catch (error) {
@@ -109,8 +109,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ userId }) => {
         <div className="notification-panel">
           <div className="notification-header">
             <h3 className="notification-title">Notifications</h3>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="notification-close-button"
+              aria-label="Close notifications"
+            >
+              <X size={20} />
+            </button>
           </div>
-          
+
           <div className="notification-list">
             {visibleNotifications.length === 0 ? (
               <div className="notification-empty">
