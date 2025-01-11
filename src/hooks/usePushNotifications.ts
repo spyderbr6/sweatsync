@@ -5,23 +5,46 @@ import type { Schema } from '../../amplify/data/resource';
 
 const client = generateClient<Schema>();
 
-export function usePushNotifications(userId: string | null) {
-  const [permission, setPermission] = useState<NotificationPermission>(
-    'default'
+// Helper function to check if the browser supports push notifications
+const checkPushNotificationSupport = (): boolean => {
+  return (
+    'serviceWorker' in navigator &&
+    'Notification' in window &&
+    'PushManager' in window &&
+    'permissions' in navigator &&
+    // iOS detection - if iOS, return false as it doesn't support web push
+    !/iPad|iPhone|iPod/.test(navigator.platform)
   );
+};
+
+export function usePushNotifications(userId: string | null) {
+  const [permission, setPermission] = useState<NotificationPermission>('default');
   const [error, setError] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
+  const [isSupported, setIsSupported] = useState<boolean>(false);
 
-  // Check initial permission state
+  // Check initial support and permission state
   useEffect(() => {
+    const isPushSupported = checkPushNotificationSupport();
+    setIsSupported(isPushSupported);
+
+    if (!isPushSupported) {
+      if (/iPad|iPhone|iPod/.test(navigator.platform)) {
+        setError('Push notifications are not supported on iOS devices. Please add this app to your home screen for the best experience.');
+      } else {
+        setError('Push notifications are not supported in this browser.');
+      }
+      return;
+    }
+
     const checkCurrentDeviceSubscription = async () => {
-      if (!userId) return;
-  
+      if (!userId || !isPushSupported) return;
+
       try {
         // Get current browser subscription
         const registration = await navigator.serviceWorker.ready;
-        const browserSub = await registration.pushManager.getSubscription();
-  
+        const browserSub = await registration.pushManager?.getSubscription();
+
         // If we have a browser subscription, check if it exists in database
         if (browserSub) {
           const dbSubs = await client.models.PushSubscription.list({
@@ -30,7 +53,7 @@ export function usePushNotifications(userId: string | null) {
               endpoint: { eq: browserSub.endpoint }
             }
           });
-  
+
           // Only set permission to granted if this device's subscription exists
           if (dbSubs.data.length > 0) {
             setPermission('granted');
@@ -43,15 +66,16 @@ export function usePushNotifications(userId: string | null) {
           setPermission('default');
           setSubscription(null);
         }
-  
+
       } catch (error) {
         console.error('Error checking device subscription:', error);
         setError(error instanceof Error ? error.message : 'Failed to check notification status');
       }
     };
-  
+
     checkCurrentDeviceSubscription();
   }, [userId]);
+
   // Function to convert subscription to database format
   const saveSubscription = async (sub: PushSubscription) => {
     if (!userId) {
@@ -83,8 +107,8 @@ export function usePushNotifications(userId: string | null) {
 
   // Request permission and subscribe to push notifications
   const requestPermission = async () => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-      setError('This browser does not support notifications');
+    if (!isSupported) {
+      setError('Push notifications are not supported in this browser');
       return;
     }
 
@@ -94,14 +118,12 @@ export function usePushNotifications(userId: string | null) {
     }
 
     try {
-
       // Register service worker if not already registered
       const registration = await navigator.serviceWorker.ready;
       const permission = await Notification.requestPermission();
       setPermission(permission);
 
       if (permission === 'granted') {
-
         // Get push subscription
         let sub = await registration.pushManager.getSubscription();
         
@@ -124,6 +146,11 @@ export function usePushNotifications(userId: string | null) {
 
   // Unsubscribe from push notifications
   const unsubscribe = async () => {
+    if (!isSupported) {
+      setError('Push notifications are not supported in this browser');
+      return;
+    }
+
     if (!userId) {
       setError('User must be logged in to manage notifications');
       return;
@@ -168,6 +195,7 @@ export function usePushNotifications(userId: string | null) {
     error,
     subscription,
     requestPermission,
-    unsubscribe
+    unsubscribe,
+    isSupported
   };
 }
