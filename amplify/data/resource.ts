@@ -118,7 +118,9 @@ const schema = a.schema({
     content: a.string(),
     timestamp: a.datetime(),
     updatedAt: a.datetime(),
-    createdAt: a.datetime()
+    createdAt: a.datetime(), 
+    taggedUserIds: a.string().array(), // Store array of tagged friend IDs
+    postOwnerId: a.string() // To track post owner for notifications
   }).authorization((allow) => [allow.publicApiKey()]),
 
   //Store user info just for searching/retrieval
