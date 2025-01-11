@@ -100,7 +100,7 @@ function Header({ updateAvailable, onUpdate }: HeaderProps) {
     }
   ];
 
-      // Add update menu item if update is available
+  // Add update menu item if update is available
   if (updateAvailable && onUpdate) {
     menuItems.push({
       label: 'Update Available',
@@ -116,7 +116,7 @@ function Header({ updateAvailable, onUpdate }: HeaderProps) {
     onClick: signOut,
     ariaLabel: 'Sign out of account'
   });
-  
+
 
   const handleKeyDown = (event: React.KeyboardEvent, action: () => void) => {
     if (event.key === 'Enter' || event.key === ' ') {

@@ -37,14 +37,14 @@ async function getUserInfo(userId: string | null): Promise<UserCache> {
   try {
     // Get user data
     const userResult = await client.models.User.get({ id: userId });
-    
+
     const userInfo: UserCache = {
-      username: userResult.data?.preferred_username || 
-                userResult.data?.username || 
-                'Anonymous User',
+      username: userResult.data?.preferred_username ||
+        userResult.data?.username ||
+        'Anonymous User',
       picture: userResult.data?.picture
     };
-    
+
     // Cache the result
     userCache[userId] = userInfo;
     return userInfo;
@@ -118,6 +118,7 @@ export async function getPostComments(postId: string, limit: number = 3): Promis
     throw error;
   }
 }
+
 // Create a new comment
 export async function createComment(
   postId: string,
@@ -127,7 +128,7 @@ export async function createComment(
   taggedUserIds?: string[]
 ): Promise<EnrichedComment> {
   const now = new Date().toISOString();
-  
+
   try {
     // Filter out any null values from taggedUserIds before creating the comment
     const validTaggedUserIds = taggedUserIds?.filter((id): id is string => id !== null) || [];
@@ -145,7 +146,7 @@ export async function createComment(
 
     if (result.data) {
       const userInfo = await getUserInfo(userId);
-      
+
       // Get tagged users info if any exist
       let taggedUsers;
       if (validTaggedUserIds.length > 0) {

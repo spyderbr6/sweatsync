@@ -613,8 +613,6 @@ export async function removeParticipantFromChallenge(challengeID: string, userID
   }
 }
 
-// Add this to challengeOperations.tsx
-
 export async function inviteFriendToChallenge(params: {
   challengeId: string;
   inviterId: string;    

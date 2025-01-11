@@ -33,23 +33,33 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     requireInteraction: true,
     vibrate: [200, 100, 200]
   },
-  COMMENT: {
-    icon: '/icons/icon-192.png',
-    badge: '/icons/badge-comment.png',
-    urlPattern: '/post/{postId}#comment-{commentId}',
+  COMMENT_ON_POST: {
+    icon: '/icons/message-circle.png', // Using existing icon since I see lucide-react icons in use
+    badge: '/icons/message-circle.png',
+    urlPattern: '/post/{postId}',
+    requireInteraction: true,
+    vibrate: [200, 100, 200],
     actions: [
-      { 
-        title: 'View', 
-        action: 'view'
-      },
-      { 
-        title: 'Reply', 
-        action: 'reply',
-        urlPattern: '/post/{postId}/reply/{commentId}'
+      {
+        action: 'viewComment',
+        title: 'View Comment',
+        urlPattern: '/post/{postId}'
       }
-    ],
-    requireInteraction: false,
-    vibrate: [100, 50, 100]
+    ]
+  },
+  USER_TAGGED: {
+    icon: '/icons/at-sign.png',
+    badge: '/icons/at-sign.png',
+    urlPattern: '/post/{postId}',
+    requireInteraction: true,
+    vibrate: [200, 100, 200],
+    actions: [
+      {
+        action: 'viewTag',
+        title: 'View Post',
+        urlPattern: '/post/{postId}'
+      }
+    ]
   },
   FRIEND_REQUEST: {
     icon: '/icons/icon-192.png',
