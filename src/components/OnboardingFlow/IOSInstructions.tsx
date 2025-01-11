@@ -20,7 +20,7 @@ const IOSInstruction: React.FC<IOSInstructionProps> = ({ onClose }) => {
         </div>
 
         <img 
-          src="/add-to-homespage.png" 
+          src="/add-to-homepage.png" 
           alt="Add to home screen instruction" 
           className="ios-image"
         />
