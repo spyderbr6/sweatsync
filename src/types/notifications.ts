@@ -86,5 +86,20 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     ],
     requireInteraction: true,
     vibrate: [150, 75, 150]
+  }, 
+  CHALLENGE_POST: {
+    icon: '/icons/icon-192.png',
+    badge: '/icons/flame-96.png',  // Using flame icon to indicate activity
+    urlPattern: '/challenge/{challengeId}',  // Will direct to the challenge where post was made
+    actions: [
+      { 
+        title: 'View Post', 
+        action: 'viewPost',
+        urlPattern: '/post/{postId}'  // Alternative action to view the specific post
+      }
+    ],
+    requireInteraction: true,
+    vibrate: [150, 75, 150]  // Keeping consistent with your other notification patterns
   }
+
 };

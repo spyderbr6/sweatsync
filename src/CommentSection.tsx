@@ -1,3 +1,5 @@
+//src/CommentSection.tsx
+
 import React, { useState, useEffect } from 'react';
 import { generateClient } from "aws-amplify/api";
 import { useNavigate } from 'react-router-dom';
@@ -22,7 +24,8 @@ const sendCommentNotification = async (
   notificationType: 'COMMENT_ON_POST' | 'USER_TAGGED',
   commenterUsername: string,
   commentId: string,
-  postId: string  // Add postId as parameter
+  postId: string, 
+  content: string
 ) => {
   if (!recipientId) return;
 
@@ -36,7 +39,7 @@ const sendCommentNotification = async (
     : 'You were mentioned';
 
   const body = notificationType === 'COMMENT_ON_POST'
-    ? `${commenterUsername} commented on your post`
+    ? `${commenterUsername} commented: ${content}`
     : `${commenterUsername} mentioned you in a comment`;
 
   try {
@@ -127,7 +130,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           'COMMENT_ON_POST',
           commenterUsername,
           comment.id,
-          postId
+          postId,
+          content
         );
       }
 
@@ -141,7 +145,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             'USER_TAGGED',
             commenterUsername,
             comment.id,
-            postId
+            postId, 
+            content
           );
         }
       }
