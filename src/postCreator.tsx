@@ -4,7 +4,7 @@ import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { listChallenges } from './challengeOperations';
 import { getChallengeStyle, getChallengeIcon, type ChallengeState } from './styles/challengeStyles';
-import { updateChallengePoints, validateChallengePost } from './challengeRules';
+import { updateChallengePoints, validateChallengePost, sendChallengePostNotifications } from './challengeRules';
 import { useUser } from './userContext';
 import './postCreator.css';
 import { uploadImageWithThumbnails } from './utils/imageUploadUtils';
@@ -33,7 +33,7 @@ interface ChallengeSelectability {
 }
 
 const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
-  const { userId, userAttributes } = useUser();
+  const { userId, userAttributes, pictureUrl } = useUser();
   const { incrementVersion } = useDataVersion();
   const [step, setStep] = useState<'initial' | 'details'>('initial');
   const [content, setContent] = useState("");
@@ -44,7 +44,6 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [challengeSelectability, setChallengeSelectability] = useState<Record<string, ChallengeSelectability>>({});
-  const { pictureUrl } = useUser();
 
   // Fetch challenges and user data on component mount
   useEffect(() => {
@@ -228,7 +227,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         userID: userId,
         thumbsUp: 0,
         smiley: selectedChallenges.length,
-        trophy: 0, 
+        trophy: 0,
         challengeIds: selectedChallenges // Add the array of challenge IDs
       });
 
@@ -250,6 +249,17 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             validated: true,
             validationComment: ""
           });
+
+          const challengeResult = await client.models.Challenge.get({ id: challengeId });
+          if (challengeResult.data?.challengeType === 'GROUP' ||
+            (challengeResult.data?.challengeType === 'DAILY' && challengeResult.data.parentChallengeId)) {
+            await sendChallengePostNotifications(
+              newPost.id,
+              challengeId,
+              userAttributes?.preferred_username || 'Unknown User',
+              challengeResult.data.title
+            );
+          }
 
           // Update points now that the post is validated
           await updateChallengePoints({

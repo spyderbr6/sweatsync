@@ -265,3 +265,48 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
         };
     }
 }
+
+export async function sendChallengePostNotifications(
+    postId: string,
+    challengeId: string,
+    posterId: string, 
+    challengeTitle: string
+  ) {
+    const client = generateClient<Schema>();
+  
+    try {
+      // Get all active participants
+      const participantsResult = await client.models.ChallengeParticipant.list({
+        filter: {
+          challengeID: { eq: challengeId },
+          status: { eq: 'ACTIVE' }
+        }
+      });
+  
+      if (!participantsResult.data?.length) return;
+    
+      // Prepare notification data
+      const notificationData = {
+        challengeId,
+        postId,
+      };
+  
+      // Send notification to each participant except the poster
+      const notificationPromises = participantsResult.data
+        .filter(participant => participant.userID !== posterId) // Exclude poster
+        .map(participant => 
+          client.queries.sendPushNotificationFunction({
+            type: 'CHALLENGE_POST',
+            userID: participant.userID,
+            title: `New Workout against ${challengeTitle}`,
+            body: `${posterId} just completed a workout in your challenge, don't let them pull ahead!`,
+            data: JSON.stringify(notificationData)
+          })
+        );
+  
+      await Promise.all(notificationPromises);
+  
+    } catch (error) {
+      console.error('Error sending challenge post notifications:', error);
+    }
+  }

@@ -1,3 +1,5 @@
+//src/components/TaggableCommentInput/TaggableCommentInput.tsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../../../amplify/data/resource";

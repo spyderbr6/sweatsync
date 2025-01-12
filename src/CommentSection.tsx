@@ -1,3 +1,5 @@
+//src/CommentSection.tsx
+
 import React, { useState, useEffect } from 'react';
 import { generateClient } from "aws-amplify/api";
 import { useNavigate } from 'react-router-dom';
