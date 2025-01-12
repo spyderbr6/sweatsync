@@ -269,6 +269,7 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
 export async function sendChallengePostNotifications(
     postId: string,
     challengeId: string,
+    posterName: string,
     posterId: string, 
     challengeTitle: string
   ) {
@@ -299,7 +300,7 @@ export async function sendChallengePostNotifications(
             type: 'CHALLENGE_POST',
             userID: participant.userID,
             title: `New Workout against ${challengeTitle}`,
-            body: `${posterId} just completed a workout in your challenge, don't let them pull ahead!`,
+            body: `${posterName} just completed a workout in your challenge, don't let them pull ahead!`,
             data: JSON.stringify(notificationData)
           })
         );

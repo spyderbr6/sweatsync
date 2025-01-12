@@ -257,6 +257,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
               newPost.id,
               challengeId,
               userAttributes?.preferred_username || 'Unknown User',
+              userId,
               challengeResult.data.title
             );
           }
