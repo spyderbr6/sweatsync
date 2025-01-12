@@ -162,7 +162,7 @@ export async function listAvailableChallenges(userId: string): Promise<Schema["C
       const userParticipations = await client.models.ChallengeParticipant.list({
           filter: {
               userID: { eq: userId },
-              or : [ { status: { eq: 'ACTIVE' } }, { status: { eq: 'PENDING' } }, {status: {eq: 'COMPLETE'}} ]
+              or : [ { status: { eq: 'ACTIVE' } }, { status: { eq: 'PENDING' } }, {status: {eq: 'COMPLETED'}} ]
           }
       });
 
