@@ -205,7 +205,7 @@
 /* NOTIFICATION PREFERENCES*/
 
  /* Add to your ProfilePage.css */
- .notification-status {
+ .notification-preference-status {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -330,4 +330,36 @@
   position: absolute;
   left: -1rem;
   color: #2563eb;
+}
+.notification-error,
+.notification-success {
+  display: flex;
+  align-items: flex-start;  /* Changed to flex-start for better alignment with multi-line text */
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.notification-error {
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.notification-success {
+  background-color: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+/* iOS instructions specific styling */
+.notification-error br {
+  margin-bottom: 0.25rem;
+}
+
+.notification-error br + span {
+  padding-left: 1rem;
 }

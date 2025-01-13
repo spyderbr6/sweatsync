@@ -7,6 +7,10 @@ const client = generateClient<Schema>();
 export type EnrichedComment = Schema['Comment']['type'] & {
   friendlyUsername: string;
   profilePicture?: string | null;
+  taggedUsers?: Array<{
+    id: string;  // Must be non-null
+    username: string;
+  }>;
 };
 
 interface UserCache {
@@ -17,7 +21,14 @@ interface UserCache {
 const userCache: { [key: string]: UserCache } = {};
 
 // Get username for a user ID
-async function getUserInfo(userId: string): Promise<UserCache> {
+async function getUserInfo(userId: string | null): Promise<UserCache> {
+  // Handle null userId
+  if (!userId) {
+    return {
+      username: 'Anonymous User'
+    };
+  }
+
   // Check cache first
   if (userCache[userId]) {
     return userCache[userId];
@@ -26,14 +37,14 @@ async function getUserInfo(userId: string): Promise<UserCache> {
   try {
     // Get user data
     const userResult = await client.models.User.get({ id: userId });
-    
+
     const userInfo: UserCache = {
-      username: userResult.data?.preferred_username || 
-                userResult.data?.username || 
-                'Anonymous User',
+      username: userResult.data?.preferred_username ||
+        userResult.data?.username ||
+        'Anonymous User',
       picture: userResult.data?.picture
     };
-    
+
     // Cache the result
     userCache[userId] = userInfo;
     return userInfo;
@@ -54,17 +65,14 @@ export async function getPostComments(postId: string, limit: number = 3): Promis
       }
     });
 
-    // Sort the comments by timestamp in memory
     const sortedComments = comments.data.sort((a, b) => {
       const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
       const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-      return dateB - dateA; // Sort in descending order (newest first)
+      return dateB - dateA;
     });
 
-    // Apply limit after sorting
     const limitedComments = sortedComments.slice(0, limit);
 
-    // Map to properly typed comments
     return await Promise.all(
       limitedComments.map(async (comment): Promise<EnrichedComment> => {
         if (!comment.userId) {
@@ -76,10 +84,32 @@ export async function getPostComments(postId: string, limit: number = 3): Promis
         }
 
         const userInfo = await getUserInfo(comment.userId);
+
+        // Get tagged users info if any exist, filtering out null values
+        let taggedUsers;
+        if (comment.taggedUserIds && comment.taggedUserIds.length > 0) {
+          const taggedUsersArray = await Promise.all(
+            comment.taggedUserIds
+              .filter((userId): userId is string => userId !== null) // Type guard to ensure non-null
+              .map(async (userId) => {
+                const taggedUserInfo = await getUserInfo(userId);
+                return {
+                  id: userId,
+                  username: taggedUserInfo.username
+                };
+              })
+          );
+          // Only set taggedUsers if we have valid entries
+          if (taggedUsersArray.length > 0) {
+            taggedUsers = taggedUsersArray;
+          }
+        }
+
         return {
           ...comment,
           friendlyUsername: userInfo.username,
-          profilePicture: userInfo.picture
+          profilePicture: userInfo.picture,
+          taggedUsers
         };
       })
     );
@@ -89,34 +119,53 @@ export async function getPostComments(postId: string, limit: number = 3): Promis
   }
 }
 
-
 // Create a new comment
 export async function createComment(
   postId: string,
   userId: string,
-  content: string
-): Promise<EnrichedComment> {  // Specify return type
+  content: string,
+  postOwnerId: string,
+  taggedUserIds?: string[]
+): Promise<EnrichedComment> {
   const now = new Date().toISOString();
-  
+
   try {
+    // Filter out any null values from taggedUserIds before creating the comment
+    const validTaggedUserIds = taggedUserIds?.filter((id): id is string => id !== null) || [];
+
     const result = await client.models.Comment.create({
       postId,
       userId,
       content,
       timestamp: now,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      postOwnerId,
+      taggedUserIds: validTaggedUserIds
     });
 
     if (result.data) {
-      // Get the user info
       const userInfo = await getUserInfo(userId);
-      
-      // Return properly typed enriched comment
+
+      // Get tagged users info if any exist
+      let taggedUsers;
+      if (validTaggedUserIds.length > 0) {
+        taggedUsers = await Promise.all(
+          validTaggedUserIds.map(async (taggedId) => {
+            const taggedUserInfo = await getUserInfo(taggedId);
+            return {
+              id: taggedId,
+              username: taggedUserInfo.username
+            };
+          })
+        );
+      }
+
       return {
         ...result.data,
-        friendlyUsername: userInfo.username,  // Use the string username
-        profilePicture: userInfo.picture
+        friendlyUsername: userInfo.username,
+        profilePicture: userInfo.picture,
+        taggedUsers
       };
     }
 

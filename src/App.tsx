@@ -325,6 +325,7 @@ const WorkoutPost: React.FC<WorkoutPostProps> = ({ post, imageUrl, profileImageU
               postId={post.id}
               commentsLimit={3} // Number of comments to initially load
               showInput={visibleCommentsPostId === post.id} // Control input visibility
+              postOwnerId={post.userID ||  ''}
             />            <p className="post__timestamp">
               {getTimeAgo(post.createdAt)}
             </p>

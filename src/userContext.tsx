@@ -1,13 +1,14 @@
 // userContext.tsx
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
+import {
   getCurrentUser,
-  FetchUserAttributesOutput, 
-  fetchUserAttributes 
+  FetchUserAttributesOutput,
+  fetchUserAttributes
 } from 'aws-amplify/auth';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
 import { useUrlCache } from './urlCacheContext';  // Add this at the top
+import { useAuthenticator } from '@aws-amplify/ui-react';
 
 
 interface UserContextType {
@@ -19,6 +20,7 @@ interface UserContextType {
   refreshUserData: () => Promise<void>;
   picture: string | null; // Full picture
   pictureUrl: string | null; //Thumbnail
+  hasCompletedOnboarding: boolean | null;  // first time check
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -31,42 +33,68 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
   const [picture, setProfilePicture] = useState<string | null>(null);
   const [pictureUrl, setProfileThumbnail] = useState<string | null>(null);
-
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
   const { getStorageUrl } = useUrlCache();
 
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
 
   const fetchUserData = async () => {
     try {
       setIsLoading(true);
       setError(null);
-  
-      // Get current user
-      const user = await getCurrentUser();
+
+      // Only proceed if properly authenticated
+      if (authStatus !== 'authenticated') {
+        console.log('Waiting for authentication...');
+        setIsLoading(false);
+        return;
+      }
+
+      const [user, attributes] = await Promise.all([
+        getCurrentUser(),
+        fetchUserAttributes()
+      ]);
+
+      if (!user?.userId) {
+        throw new Error('No user ID available');
+      }
+
       setUserId(user.userId);
       setUsername(user.username);
-  
-      // Get user attributes
-      const attributes = await fetchUserAttributes();
       setUserAttributes(attributes);
-  
-      // Get user data from our database
+
+      // Get user data from database
       const client = generateClient<Schema>();
       const userResult = await client.models.User.get({ id: user.userId });
-      
-      if (userResult.data?.picture) {
-        // Construct paths using correct format
-        const originalPath = userResult.data.picture;
-        const thumbnailPath = userResult.data.pictureUrl ?? "";
-  
+
+      if (!userResult?.data) {
+        // If no user data, sync it first
+        await syncUserToDatabase({
+          userId: user.userId,
+          username: user.username,
+          attributes: attributes
+        });
+        // Fetch again after sync
+        const refreshedUser = await client.models.User.get({ id: user.userId });
+        setHasCompletedOnboarding(refreshedUser.data?.hasCompletedOnboarding ?? false);
+      } else {
+        setHasCompletedOnboarding(userResult.data.hasCompletedOnboarding ?? false);
+      }
+
+      if (userResult?.data?.picture) {
         try {
-          // Get URLs for both versions
-          const originalUrl = await getStorageUrl(originalPath);
-          const thumbnailUrl = await getStorageUrl(thumbnailPath);
-          
+          const originalPath = userResult.data.picture;
+          const thumbnailPath = userResult.data.pictureUrl ?? originalPath;
+
+          const [originalUrl, thumbnailUrl] = await Promise.all([
+            getStorageUrl(originalPath),
+            getStorageUrl(thumbnailPath)
+          ]);
+
           setProfilePicture(originalUrl);
           setProfileThumbnail(thumbnailUrl);
         } catch (urlError) {
-          console.error('Error getting picture URLs:', urlError);
+          console.error('8A. Error getting picture URLs:', urlError);
           setProfilePicture('/profileDefault.png');
           setProfileThumbnail('/profileDefault.png');
         }
@@ -74,25 +102,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setProfilePicture('/profileDefault.png');
         setProfileThumbnail('/profileDefault.png');
       }
-  
-      // Sync user data to database
-      await syncUserToDatabase({
-        userId: user.userId,
-        username: user.username,
-        attributes: attributes
-      });
-  
+
     } catch (err) {
+      console.error('Error in fetchUserData:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch user data'));
-      console.error('Error fetching user data:', err);
+      setProfilePicture('/profileDefault.png');
+      setProfileThumbnail('/profileDefault.png');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Update useEffect to depend on auth status
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    if (authStatus === 'authenticated') {
+      fetchUserData();
+    } else {
+      // Reset states when not authenticated
+      setUserId(null);
+      setUsername(null);
+      setUserAttributes(null);
+      setProfilePicture('/profileDefault.png');
+      setProfileThumbnail('/profileDefault.png');
+      setHasCompletedOnboarding(null);
+    }
+  }, [authStatus]);
 
   const value = {
     userId,
@@ -100,10 +134,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     userAttributes,
     isLoading,
     error,
-    refreshUserData: fetchUserData, 
+    refreshUserData: fetchUserData,
     picture,
-    pictureUrl
+    pictureUrl,
+    hasCompletedOnboarding
   };
+
+
+
 
   return (
     <UserContext.Provider value={value}>
@@ -127,11 +165,11 @@ async function syncUserToDatabase(cognitoUser: {
   attributes: FetchUserAttributesOutput;
 }) {
   const client = generateClient<Schema>();
-  
+
   try {
     // Check if user already exists in our table
     const response = await client.models.User.get({ id: cognitoUser.userId });
-    
+
     const userData = {
       id: cognitoUser.userId,
       email: cognitoUser.attributes.email || '',

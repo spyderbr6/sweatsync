@@ -21,11 +21,18 @@
             └── resource.ts
         └── tsconfig.json
     └── 📁public
+        └── add-to-homepage.png
         └── 📁icons
-            └── globe-badge-96.png
+            └── flame-96.png
+            └── globe-96.png
+            └── group-96.png
             └── icon-192.png
             └── icon-512.png
             └── icon.png
+            └── ios-safari-addhomepage.png
+            └── target-96.png
+            └── trophy-96.png
+            └── userplus-96.png
         └── justicon.gif
         └── logo.png
         └── manifest.json
@@ -60,11 +67,21 @@
             └── 📁FeedbackModal
                 └── feedbackModal.css
                 └── feedbackModal.tsx
+            └── 📁NotificationBell
+                └── NotificationBell.css
+                └── NotificationBell.tsx
             └── 📁notificationPreferences
                 └── notificationPreferences.tsx
+            └── 📁OnboardingFlow
+                └── IOSInstructions.css
+                └── IOSInstructions.tsx
+                └── OnboardingFlow.css
+                └── OnboardingFlow.tsx
             └── 📁PostChallenges
                 └── postChallenges.css
                 └── postChallenges.tsx
+            └── 📁TaggableCommentInput
+                └── TaggableCommentInput.tsx
             └── 📁UpdateNotification
                 └── UpdateNotification.css
                 └── UpdateNotification.tsx
@@ -78,6 +95,7 @@
         └── Header.tsx
         └── 📁hooks
             └── usePushNotifications.ts
+            └── useServiceWorkerUpdate.ts
         └── index.css
         └── inviteFriendsModal.tsx
         └── LandingPage.css
@@ -88,9 +106,9 @@
         └── profile.tsx
         └── ProfilePage.css
         └── service-worker.ts
-        └── singlePage.css
         └── SinglePagePost.tsx
         └── 📁styles
+            └── challengeStyles.ts
             └── promptAction.css
         └── 📁types
             └── notifications.ts

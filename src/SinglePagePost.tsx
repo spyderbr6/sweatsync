@@ -411,6 +411,7 @@ const SinglePostPage: React.FC = () => {
                                     postId={post.id}
                                     commentsLimit={10}
                                     showInput = {true}
+                                    postOwnerId={post.userID || ''}
                                 />
                             </div>
                         </div>

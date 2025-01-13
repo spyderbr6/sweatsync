@@ -8,10 +8,16 @@
   import { NOTIFICATION_CONFIGS} from './types/notifications';
   
   declare const self: ServiceWorkerGlobalScope;
+
+  const DEBUG = true; // We can disable this in production later
+const log = (...args: any[]) => DEBUG && console.log('[ServiceWorker]', ...args);
+
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  const CACHE_VERSION = '1.0.6'; //IF THIS ISNT UPDATED YOU GONNA HAVE A BAD TIME
+  const CACHE_VERSION = '1.0.7'; //IF THIS ISNT UPDATED YOU GONNA HAVE A BAD TIME
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   const CACHE_NAME = `sweatsync-cache-v${CACHE_VERSION}`;
+  log('Service Worker Version:', CACHE_VERSION);
+  
 
   // Precache all assets marked by your build tool
   precacheAndRoute(self.__WB_MANIFEST);
@@ -70,16 +76,16 @@ interface CustomNotificationOptions extends NotificationOptions {
 }
 
 self.addEventListener('install', (event: ExtendableEvent) => {
-  console.log('Service Worker installing.');
+  log('Installing new service worker version:', CACHE_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME).then(() => {
-      console.log('Opened cache');
+      log('Cache opened:', CACHE_NAME);
     })
   );
 });
 
 self.addEventListener('activate', (event: ExtendableEvent) => {
-  console.log('Service Worker activating.');
+  log('Activating new service worker version:', CACHE_VERSION);
   
   event.waitUntil(
     Promise.all([
@@ -87,13 +93,17 @@ self.addEventListener('activate', (event: ExtendableEvent) => {
         return Promise.all(
           cacheNames.map(cacheName => {
             if (cacheName !== CACHE_NAME) {
-              console.log('Deleting old cache:', cacheName);
+              log('Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
+            log('Keeping current cache:', cacheName);
+            return Promise.resolve();
           })
         );
       }),
-      self.clients.claim()
+      self.clients.claim().then(() => {
+        log('Service worker claimed clients');
+      })
     ])
   );
 });
@@ -154,6 +164,7 @@ self.addEventListener('push', (event: PushEvent) => {
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
+  // Close the notification right away
   event.notification.close();
 
   const notificationData = event.notification.data;
@@ -171,16 +182,45 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
   }
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' })
-      .then(windowClients => {
-        // Check if there's already a window open
-        for (const client of windowClients) {
-          if (client.url === targetUrl && 'focus' in client) {
-            return client.focus();
-          }
+    (async () => {
+      try {
+        // Get all windows
+        const windowClients = await self.clients.matchAll({
+          type: 'window',
+          includeUncontrolled: true
+        });
+
+        // Find any existing window/tab with our URL
+        const existingWindow = windowClients.find(client => 
+          client.url === targetUrl
+        );
+
+        if (existingWindow) {
+          // If we have an existing window, focus it and reload to ensure fresh content
+          await existingWindow.focus();
+          return existingWindow.navigate(targetUrl);
+        } else {
+          // Open new window
+          const newWindow = await self.clients.openWindow(targetUrl);
+          // Ensure it's focused if the API allows
+          if (newWindow) await newWindow.focus();
+          return newWindow;
         }
-        // If no window is open, open a new one
+      } catch (error) {
+        console.error('Error handling notification click:', error);
+        // Fallback to simple window opening
         return self.clients.openWindow(targetUrl);
-      })
+      }
+    })()
   );
+});
+
+// In service-worker.ts
+// Add this event listener after your other event listeners
+self.addEventListener('message', (event) => {
+  log('Received message:', event.data);
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    log('Skip waiting message received, activating worker');
+    self.skipWaiting();
+  }
 });
