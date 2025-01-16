@@ -788,3 +788,4 @@ export async function getChallengeStats(challengeId: string, userId: string) {
     throw error;
   }
 }
+

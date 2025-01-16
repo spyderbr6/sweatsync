@@ -138,7 +138,8 @@ const schema = a.schema({
     createdAt: a.datetime().required(),
     updatedAt: a.datetime().required(),
     lowercasename: a.string().required(),
-    hasCompletedOnboarding: a.boolean().default(false)
+    hasCompletedOnboarding: a.boolean().default(false), 
+    reminderPreferences: a.json()
   }).authorization((allow) => [allow.publicApiKey()]),
 
   //PUSH NOTIFICATION SETUP
@@ -179,6 +180,17 @@ const schema = a.schema({
     createdAt: a.datetime().required(),
     updatedAt: a.datetime().required()
   }).authorization((allow) => [allow.publicApiKey()]),
+
+  ChallengeReminderPreferences: a.model({
+    userId: a.string().required(),
+    challengeId: a.string().required(),
+    enabled: a.boolean().default(true),
+    primaryTime: a.string(),        // Optional override of default time
+    secondaryTime: a.string(),      // Optional second reminder time
+    reminderTypes: a.string().array(),
+    createdAt: a.datetime().required(),
+    updatedAt: a.datetime().required()
+}).authorization((allow) => [allow.publicApiKey()]),
 
 
   rotateCreator: a
