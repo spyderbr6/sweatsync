@@ -165,16 +165,19 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
             return;
         }
         setIsSubmitting(true);
-    
+
         try {
             if (!isValidChallengeType(formData.challengeType)) {
                 throw new Error('Please select a valid challenge type');
             }
-    
+
+            const now = new Date().toISOString();
+
+
             const totalWorkouts = formData.challengeType === ChallengeType.GROUP
                 ? calculateTotalWorkouts()
                 : formData.totalWorkouts;
-    
+
             // Create challenge with all fields in one operation
             const challengeResult = await client.models.Challenge.create({
                 title: formData.title,
@@ -189,7 +192,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                 status: 'ACTIVE',
                 basePointsPerWorkout: formData.basePointsPerWorkout,
                 isActive: true,
-                
+
                 // Add group-specific fields if it's a group challenge
                 ...(formData.challengeType === ChallengeType.GROUP && {
                     maxPostsPerDay: formData.groupRules.maxPostsPerDay,
@@ -198,32 +201,45 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                     rotationIntervalDays: formData.groupRules.rotationIntervalDays,
                     dailyChallengePoints: formData.groupRules.dailyChallengePoints,
                     currentCreatorId: userId,
-                    nextRotationDate: new Date(Date.now() + 
+                    nextRotationDate: new Date(Date.now() +
                         formData.groupRules.rotationIntervalDays * 86400000).toISOString()
                 })
             });
-    
+
             if (!challengeResult.data) {
                 throw new Error('Failed to create challenge');
             }
-    
-            // Create initial group participant entry
-            if (formData.challengeType === ChallengeType.GROUP) {
-                await client.models.ChallengeParticipant.create({
+
+            await Promise.all([
+                // Create initial participant
+                client.models.ChallengeParticipant.create({
                     challengeID: challengeResult.data.id,
                     userID: userId,
                     status: 'ACTIVE',
                     points: 0,
                     workoutsCompleted: 0,
-                    joinedAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                });
-            }
-    
+                    joinedAt: now,
+                    updatedAt: now
+                }),
+                // Create reminder schedule
+                client.models.ReminderSchedule.create({
+                    userId,
+                    challengeId: challengeResult.data.id,
+                    type: formData.challengeType === ChallengeType.GROUP ? 'GROUP_POST' : 'DAILY_POST',
+                    scheduledTime: now,
+                    repeatDaily: true,
+                    status: 'PENDING',
+                    createdAt: now,
+                    updatedAt: now,
+                    nextScheduled: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+                })
+            ]);
+            
+
             onSuccess();
             incrementVersion();
             onClose();
-    
+
         } catch (error) {
             console.error('Error creating challenge:', error);
             setError(error instanceof Error ? error.message : 'Failed to create challenge');
@@ -489,7 +505,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                             type="submit"
                             className="btn btn-primary"
                             disabled={!canSubmit()} // Disable the button if the form is invalid
-                            >
+                        >
                             {isSubmitting ? 'Creating...' : 'Create Challenge'}
                         </button>
                     </div>

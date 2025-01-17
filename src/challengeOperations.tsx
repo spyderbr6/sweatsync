@@ -293,6 +293,11 @@ export async function respondToChallenge(
 ) {
   try {
     const client = generateClient<Schema>();
+
+    const participant = await client.models.ChallengeParticipant.get({ id: participationId });
+    if (!participant.data) {
+      throw new Error('Participation not found');
+    }
     
     await client.models.ChallengeParticipant.update({
       id: participationId,
@@ -300,12 +305,28 @@ export async function respondToChallenge(
       updatedAt: new Date().toISOString()
     });
 
+    // If accepting the challenge, create base reminder schedule
+    if (status === 'ACTIVE' && participant.data.challengeID && participant.data.userID) {
+      await client.models.ReminderSchedule.create({
+        userId: participant.data.userID,
+        challengeId: participant.data.challengeID,
+        type: 'DAILY_POST',
+        scheduledTime: new Date().toISOString(),
+        repeatDaily: true,
+        status: 'PENDING',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        nextScheduled: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // Next day
+      });
+    }
+
     return true;
   } catch (error) {
     console.error('Error responding to challenge:', error);
     throw error;
   }
 }
+
 
 export async function checkChallengeParticipation(challengeId: string, userId: string) {
   try {
