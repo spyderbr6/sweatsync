@@ -97,6 +97,8 @@ async function handleExpiredChallenge(challengeId: string): Promise<void> {
             updatedBy: SYSTEM_USER
         });
     }));
+    cleanupChallengeReminders(challengeId)
+
 }
 
 async function processParticipants(challenge: Schema['Challenge']['type'], yesterday: Date): Promise<void> {
@@ -157,17 +159,52 @@ async function archiveOldDailyChallenges(cutoffDate: Date): Promise<void> {
         }
     });
 
-    // Archive them
+    // Archive them and cleanup reminders
     await Promise.all(
-        oldDailyChallenges.data.map(challenge => {
+        oldDailyChallenges.data.map(async challenge => {
             if (!challenge.id) return;
 
-            return client.models.Challenge.update({
-                id: challenge.id,
-                status: 'ARCHIVED',
-                updatedAt: new Date().toISOString(),
-                updatedBy: SYSTEM_USER
-            });
+            // Parallel operations for each challenge
+            return Promise.all([
+                client.models.Challenge.update({
+                    id: challenge.id,
+                    status: 'ARCHIVED',
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: SYSTEM_USER
+                }),
+                cleanupChallengeReminders(challenge.id)
+            ]);
         })
     );
+    
+}
+
+async function cleanupChallengeReminders(challengeId: string): Promise<void> {
+    try {
+        // Get all active reminders for the challenge
+        const reminders = await client.models.ReminderSchedule.list({
+            filter: {
+                and: [
+                    { challengeId: { eq: challengeId } },
+                    { status: { eq: 'PENDING' } }
+                ]
+            }
+        });
+
+        // Cancel all reminders
+        await Promise.all(
+            reminders.data.map(reminder => {
+                if (!reminder.id) return;
+
+                return client.models.ReminderSchedule.update({
+                    id: reminder.id,
+                    status: 'CANCELLED',
+                    updatedAt: new Date().toISOString()
+                });
+            })
+        );
+    } catch (error) {
+        console.error(`Error cleaning up reminders for challenge ${challengeId}:`, error);
+        throw error;
+    }
 }
