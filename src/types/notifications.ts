@@ -87,6 +87,8 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     requireInteraction: true,
     vibrate: [150, 75, 150]
   }, 
+
+//Lets people know that a challenge they are in was posted to. Lets keep them motivated.
   CHALLENGE_POST: {
     icon: '/icons/icon-192.png',
     badge: '/icons/flame-96.png',  // Using flame icon to indicate activity
@@ -100,6 +102,50 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     ],
     requireInteraction: true,
     vibrate: [150, 75, 150]  // Keeping consistent with your other notification patterns
+  }, 
+  CHALLENGE_DAILY_REMINDER: {
+    icon: '/icons/flame-96.png',
+    badge: '/icons/flame-96.png',
+    urlPattern: '/challenge/{challengeId}',
+    actions: [
+      { 
+        title: 'Post Now', 
+        action: 'post',
+        urlPattern: '/challenge/{challengeId}'
+      }
+    ],
+    requireInteraction: true,
+    vibrate: [200, 100, 200]
+  },
+
+  CHALLENGE_GROUP_REMINDER: {
+    icon: '/icons/group-96.png',
+    badge: '/icons/group-96.png',
+    urlPattern: '/challenge/{challengeId}',
+    actions: [
+      { 
+        title: 'Post Now', 
+        action: 'post',
+        urlPattern: '/challenge/{challengeId}'
+      }
+    ],
+    requireInteraction: true,
+    vibrate: [200, 100, 200]
+  },
+
+  CHALLENGE_CREATOR_REMINDER: {
+    icon: '/icons/target-96.png',
+    badge: '/icons/target-96.png',
+    urlPattern: '/challenge/{challengeId}',
+    actions: [
+      { 
+        title: 'Create Challenge', 
+        action: 'create',
+        urlPattern: '/challenge/{challengeId}'
+      }
+    ],
+    requireInteraction: true,
+    vibrate: [200, 100, 200]
   }
 
 };

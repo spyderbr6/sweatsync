@@ -11,6 +11,7 @@ import { useUrlCache } from './urlCacheContext';
 import { NotificationPreferences } from "./components/notificationPreferences/notificationPreferences";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
+import { ReminderPreferences } from "./components/notificationPreferences/reminderPreferences"; 
 
 
 function ProfilePage() {
@@ -152,6 +153,9 @@ function ProfilePage() {
       </div>
 
       <NotificationPreferences />
+
+      <ReminderPreferences />
+
 
     </div>
   );
