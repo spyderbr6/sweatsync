@@ -11,7 +11,7 @@ import { shareContent } from './utils/shareAction';
 import { promptAction } from './utils/promptAction';
 import './challenges.css';
 import { ChallengeDetails } from './challengeTypes';
-import { removeParticipantFromChallenge, archiveChallenge } from './challengeOperations';
+import { removeParticipantFromChallenge, archiveChallenge, handleChallengeResponses } from './challengeOperations';
 import { useUser } from './userContext';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
 import { ActivityItem } from './components/challengeActivityItem/challengeActivityItem';
@@ -125,8 +125,73 @@ export default function ChallengeDetailPage() {
     };
     const headerStyle = getChallengeStyle(challengeDetails?.challengeType);
 
+    // Add pending challenge UI
+    const PendingChallengeActions = ({
+        title,
+        participationId,
+        challengeId,
+        refreshData
+    }: {
+        title: string;
+        participationId: string;
+        challengeId: string;
+        refreshData: () => void;
+    }) => {
+        const { userId } = useUser();
+
+        const handleResponse = async (accept: boolean) => {
+            if (!userId) return;
+
+            try {
+                const success = await handleChallengeResponses(participationId, accept, challengeId, userId);
+                if (success) {
+                    await refreshData();
+                }
+            } catch (error) {
+                console.error('Error responding to challenge:', error);
+            }
+        };
+
+        return (
+            <div className="pending-challenge-banner">
+                <div className="pending-challenge-content">
+                    <h3>Challenge Invitation</h3>
+                    <p>You've been invited to join {title}. Would you like to participate?</p>
+                    <div className="pending-challenge-actions">
+                        <button
+                            onClick={() => handleResponse(true)}
+                            className="accept-button"
+                        >
+                            Accept Challenge
+                        </button>
+                        <button
+                            onClick={() => handleResponse(false)}
+                            className="decline-button"
+                        >
+                            Decline
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+
+
+
     return (
         <div className="challenge-container">
+
+            {challengeDetails.userParticipation?.status === 'PENDING' && (
+
+                <PendingChallengeActions
+                    title={challengeDetails.title}
+                    participationId={challengeDetails.userParticipation.id}
+                    challengeId={challengeDetails.id}
+                    refreshData={refreshData}
+                />
+            )}
+
             {isCurrentCreator && challengeDetails?.dailyChallenges && !todaysChallengeCreated && challengeId && (
                 <ChallengeDailyPrompt
                     challengeId={challengeId}
