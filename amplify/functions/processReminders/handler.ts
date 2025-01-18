@@ -35,8 +35,11 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                     console.error('Invalid reminder data:', reminder);
                     return null;
                 }
+                console.log(`Reminder dump1: ${reminder}`)
 
                 const shouldSend = await validateReminder(reminder);
+                console.log(`shouldsend : ${shouldSend}`)
+
                 if (!shouldSend) {
                     await client.models.ReminderSchedule.update({
                         id: reminder.id,
@@ -47,6 +50,9 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                 }
 
                 try {
+                    console.log(`Processing reminder for user ${reminder.userId} and challenge ${reminder.challengeId}`)
+                    console.log(`Reminder type: ${reminder.type}`)
+                    console.log(`Reminder dump2: ${reminder}`)
                     await client.queries.sendPushNotificationFunction({
                         type: getNotificationType(reminder.type as ReminderType),
                         userID: reminder.userId,
