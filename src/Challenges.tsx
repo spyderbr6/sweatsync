@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, UserMinus, Share2, LucideIcon } from 'lucide-react';
 import { CreateChallengeModal } from './CreateChallengeModal';
-import { listChallenges, getPendingChallenges, respondToChallenge, listAvailableChallenges, addParticipantToChallenge, archiveChallenge, removeParticipantFromChallenge } from './challengeOperations';
+import { listChallenges, getPendingChallenges, handleChallengeResponses, listAvailableChallenges, addParticipantToChallenge, archiveChallenge, removeParticipantFromChallenge } from './challengeOperations';
 import type { Schema } from "../amplify/data/resource";
 import './challenges.css';
 import { useUser } from './userContext';
@@ -75,6 +75,7 @@ function ChallengesPage() {
   const handleNavigateToChallenge = (challengeId: string) => {
     navigate(`/challenge/${challengeId}`);
   };
+
   const handleJoinChallenge = async (challengeId: string) => {
     try {
       setJoiningChallenge(challengeId);
@@ -86,7 +87,7 @@ function ChallengesPage() {
       incrementVersion(); //this tells certain functions to rerender and pull data as a result of this change.
 
       // Refresh challenges to get updated data
-      await loadChallenges();
+      await loadAllChallenges();
     } catch (error) {
       console.error('Error joining challenge:', error);
     } finally {
@@ -94,29 +95,20 @@ function ChallengesPage() {
     }
   };
 
-  const loadChallenges = async () => {
-    try {
-      setIsLoading(true);
-      const fetchedChallenges = await listChallenges();
-      setChallenges(fetchedChallenges);
-    } catch (err) {
-      console.error('Error loading challenges:', err);
-      setError('Failed to load challenges');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleChallengeResponse = async (participationId: string, accept: boolean) => {
     try {
-      await respondToChallenge(participationId, accept ? 'ACTIVE' : 'DROPPED');
-      // Refresh both pending challenges and main challenges list
- loadAllChallenges();
-      incrementVersion();
+        const challenge = pendingChallenges.find(c => c.participationId === participationId);
+        if (!challenge) return;
+
+        const success = await handleChallengeResponses(participationId, accept, challenge.id, userId!);
+        if (success) {
+            await loadAllChallenges();
+            incrementVersion();
+        }
     } catch (err) {
-      console.error('Error responding to challenge:', err);
+        console.error('Error responding to challenge:', err);
     }
-  };
+};
 
 
   const stats: StatItem[] = Object.values(ChallengeType)
@@ -463,7 +455,7 @@ function ChallengesPage() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={() => {
-          loadChallenges(); // Refresh challenges after creation
+          loadAllChallenges(); // Refresh challenges after creation
         }}
       />
     </div>
