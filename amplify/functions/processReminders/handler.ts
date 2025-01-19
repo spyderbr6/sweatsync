@@ -50,9 +50,6 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                 }
 
                 try {
-                    console.log(`Processing reminder for user ${reminder.userId} and challenge ${reminder.challengeId}`)
-                    console.log(`Reminder type: ${reminder.type}`)
-                    console.log(`Reminder dump2: ${reminder}`)
                     await client.queries.sendPushNotificationFunction({
                         type: getNotificationType(reminder.type as ReminderType),
                         userID: reminder.userId,
@@ -63,16 +60,32 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                             type: reminder.type
                         })
                     });
-
+                
+                    console.log('[Notification] Successfully called sendPushNotificationFunction:', {
+                        reminderId: reminder.id,
+                        type: reminder.type,
+                        userId: reminder.userId,
+                        challengeId: reminder.challengeId,
+                        nextSchedule: reminder.repeatDaily ? 
+                            calculateNextSchedule(reminder.timePreference ?? "", nowISOString) : 
+                            undefined
+                    });
+                
                     const updates = {
                         id: reminder.id,
                         lastSent: nowISOString,
                         status: reminder.repeatDaily ? 'PENDING' : 'SENT',
                         updatedAt: nowISOString
                     } as const;
-
+                
                     if (reminder.repeatDaily && reminder.timePreference) {
                         const nextScheduled = calculateNextSchedule(reminder.timePreference, nowISOString);
+                        console.log('[Schedule] Setting next reminder:', {
+                            reminderId: reminder.id,
+                            currentTime: nowISOString,
+                            timePreference: reminder.timePreference,
+                            nextScheduled
+                        });
                         await client.models.ReminderSchedule.update({
                             ...updates,
                             nextScheduled
@@ -80,10 +93,16 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                     } else {
                         await client.models.ReminderSchedule.update(updates);
                     }
-
+                
                     return reminder;
                 } catch (error) {
-                    console.error('Error processing reminder:', error);
+                    console.error('[Notification] Error processing reminder:', {
+                        error,
+                        reminderId: reminder.id,
+                        type: reminder.type,
+                        userId: reminder.userId,
+                        challengeId: reminder.challengeId
+                    });
                     return null;
                 }
             })
@@ -101,6 +120,11 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
 
 async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']['type']>): Promise<boolean> {
     if (!reminder.challengeId || !reminder.userId || !reminder.type) {
+        console.log('[Validation] Failed basic validation:', {
+            hasChallenge: !!reminder.challengeId,
+            hasUser: !!reminder.userId,
+            hasType: !!reminder.type
+        });
         return false;
     }
 
@@ -117,23 +141,52 @@ async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']
             })
         ]);
 
+        console.log('[Validation] Challenge and preferences:', {
+            challengeId: reminder.challengeId,
+            userId: reminder.userId,
+            challengeFound: !!challenge.data,
+            challengeStatus: challenge.data?.status,
+            preferencesCount: preferencesResult.data.length,
+        });
+
         if (!challenge.data || challenge.data.status !== 'ACTIVE') {
+            console.log('[Validation] Challenge inactive or not found');
             return false;
         }
 
         const preference = preferencesResult.data[0];
+        console.log('[Validation] Preference check:', {
+            preferenceFound: !!preference,
+            enabled: preference?.enabled,
+            reminderTypes: preference?.reminderTypes
+        });
+
         if (!preference?.enabled) {
+            console.log('[Validation] Preferences disabled');
             return false;
         }
 
         const reminderType = reminder.type as ReminderType;
         const validTypes = preference.reminderTypes as ReminderType[] || ['DAILY_POST'];
+        
+        console.log('[Validation] Type check:', {
+            reminderType,
+            validTypes,
+            isValid: validTypes.includes(reminderType)
+        });
+
         if (!validTypes.includes(reminderType)) {
+            console.log('[Validation] Invalid reminder type');
             return false;
         }
 
         if (reminderType === 'GROUP_POST' && challenge.data.maxPostsPerDay != null) {
             const dailyPosts = await getPostsCount(reminder.challengeId, reminder.userId, 'day');
+            console.log('[Validation] Group post check:', {
+                maxPostsPerDay: challenge.data.maxPostsPerDay,
+                currentDailyPosts: dailyPosts,
+                withinLimit: dailyPosts < challenge.data.maxPostsPerDay
+            });
             if (dailyPosts >= challenge.data.maxPostsPerDay) {
                 return false;
             }
@@ -141,6 +194,10 @@ async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']
 
         if (reminderType === 'DAILY_POST') {
             const dailyPosts = await getPostsCount(reminder.challengeId, reminder.userId, 'day');
+            console.log('[Validation] Daily post check:', {
+                dailyPosts,
+                needsReminder: dailyPosts === 0
+            });
             if (dailyPosts > 0) {
                 return false;
             }
@@ -148,7 +205,12 @@ async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']
 
         return true;
     } catch (error) {
-        console.error('Error validating reminder:', error);
+        console.error('[Validation] Error validating reminder:', {
+            error,
+            reminderId: reminder.id,
+            challengeId: reminder.challengeId,
+            userId: reminder.userId
+        });
         return false;
     }
 }
