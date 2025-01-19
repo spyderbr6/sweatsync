@@ -53,46 +53,46 @@ export async function addParticipantToChallenge(params: {
   userID: string;
 }): Promise<string> {
   try {
-      // Check for existing participation
-      const existingParticipation = await client.models.ChallengeParticipant.list({
-          filter: {
-              and: [
-                  { challengeID: { eq: params.challengeID } },
-                  { userID: { eq: params.userID } }
-              ]
-          }
-      });
-
-      const now = new Date().toISOString();
-
-      if (existingParticipation.data.length > 0) {
-          // Update existing participation to ACTIVE
-          await client.models.ChallengeParticipant.update({
-              id: existingParticipation.data[0].id,
-              status: "ACTIVE",
-              points: 0,
-              workoutsCompleted: 0,
-              joinedAt: now,
-              updatedAt: now
-          });
-          return "Participant updated successfully";
+    // Check for existing participation
+    const existingParticipation = await client.models.ChallengeParticipant.list({
+      filter: {
+        and: [
+          { challengeID: { eq: params.challengeID } },
+          { userID: { eq: params.userID } }
+        ]
       }
+    });
 
-      // Create new participation if none exists
-      await client.models.ChallengeParticipant.create({
-          challengeID: params.challengeID,
-          userID: params.userID,
-          status: "ACTIVE",
-          points: 0,
-          workoutsCompleted: 0,
-          joinedAt: now,
-          updatedAt: now
+    const now = new Date().toISOString();
+
+    if (existingParticipation.data.length > 0) {
+      // Update existing participation to ACTIVE
+      await client.models.ChallengeParticipant.update({
+        id: existingParticipation.data[0].id,
+        status: "ACTIVE",
+        points: 0,
+        workoutsCompleted: 0,
+        joinedAt: now,
+        updatedAt: now
       });
-      
-      return "Participant added successfully";
+      return "Participant updated successfully";
+    }
+
+    // Create new participation if none exists
+    await client.models.ChallengeParticipant.create({
+      challengeID: params.challengeID,
+      userID: params.userID,
+      status: "ACTIVE",
+      points: 0,
+      workoutsCompleted: 0,
+      joinedAt: now,
+      updatedAt: now
+    });
+
+    return "Participant added successfully";
   } catch (error) {
-      console.error("Error adding participant to challenge", error);
-      throw error;
+    console.error("Error adding participant to challenge", error);
+    throw error;
   }
 }
 
@@ -709,12 +709,12 @@ export async function inviteFriendToChallenge(params: {
     // 3. Check if already participating
     const existingParticipation = await client.models.ChallengeParticipant.list({
       filter: {
-          and: [
-              { challengeID: { eq: params.challengeId } },
-              { userID: { eq: params.friendId } }
-          ]
+        and: [
+          { challengeID: { eq: params.challengeId } },
+          { userID: { eq: params.friendId } }
+        ]
       }
-  });
+    });
 
     if (existingParticipation.data.length > 0) {
       // If they were previously in the challenge, update to PENDING
@@ -832,7 +832,6 @@ export async function getChallengeStats(challengeId: string, userId: string) {
   }
 }
 
-// challengeOperations.tsx
 export async function handleChallengeResponses(
   participationId: string,
   accept: boolean,
@@ -844,34 +843,176 @@ export async function handleChallengeResponses(
     await respondToChallenge(participationId, accept ? 'ACTIVE' : 'DROPPED');
 
     if (accept) {
-      // Create reminder schedule
+      // Get user's reminder preferences
+      const userResult = await client.models.User.get({ id: userId });
+      let primaryTime = '09:00'; // Default time
+      let secondaryTime = null;
+      let timezone = 'UTC'; // Default timezone
+
+      if (userResult.data?.reminderPreferences === 'string') {
+        try {
+
+          const preferences = JSON.parse(userResult.data.reminderPreferences);
+          primaryTime = preferences.primaryTime || '09:00';
+          secondaryTime = preferences.secondaryTime || null;
+          timezone = preferences.timezone || 'UTC';
+
+          console.log('[Challenge] User preferences loaded:', {
+            userId,
+            primaryTime,
+            secondaryTime,
+            timezone
+          });
+        } catch (error) {
+          console.error('[Challenge] Error parsing user reminder preferences:', {
+            error,
+            userId,
+            reminderPreferences: userResult.data.reminderPreferences
+          });
+        }
+      }
+
+      // Calculate initial next schedule
+      const nextScheduled = calculateNextSchedule(
+        primaryTime,
+        secondaryTime,
+        new Date().toISOString(),
+        timezone
+      );
+
+      // Create reminder schedule with all preferences
       await client.models.ReminderSchedule.create({
         userId,
         challengeId,
         type: 'DAILY_POST',
         scheduledTime: new Date().toISOString(),
         repeatDaily: true,
+        timePreference: primaryTime,
+        secondPreference: secondaryTime,
+        timezone,
         status: 'PENDING',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        nextScheduled: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        nextScheduled
       });
 
-      // Create default reminder preferences
-      await client.models.ChallengeReminderPreferences.create({
+      console.log('[Challenge] Created reminder schedule:', {
         userId,
         challengeId,
-        enabled: true,
-        primaryTime: '09:00', // Default time
-        reminderTypes: ['DAILY_POST'],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        primaryTime,
+        secondaryTime,
+        timezone,
+        nextScheduled
       });
+
+      // Note: Since we removed ChallengeReminderPreferences, this is no longer needed
     }
 
     return true;
   } catch (error) {
-    console.error('Error handling challenge response:', error);
+    console.error('[Challenge] Error handling challenge response:', {
+      error,
+      participationId,
+      challengeId,
+      userId
+    });
     return false;
+  }
+}
+
+function calculateNextSchedule(
+  timePreference: string,
+  secondPreference: string | null | undefined,
+  currentTime: string,
+  timezone: string = 'UTC' // Default to UTC if no timezone specified
+): string {
+  try {
+      // Convert current time to user's timezone
+      const userNow = new Date(currentTime).toLocaleString('en-US', { timeZone: timezone });
+      const now = new Date(userNow);
+
+      // Calculate next schedule for each time preference
+      const schedules: Date[] = [];
+
+      // Helper to convert user's preferred time to UTC
+      const convertToUTC = (timeStr: string, baseDate: Date): Date => {
+          const [hours, minutes] = timeStr.split(':').map(Number);
+          if (!Number.isNaN(hours) && !Number.isNaN(minutes)) {
+              // Create date in user's timezone
+              const localDate = new Date(baseDate);
+              localDate.setHours(hours, minutes, 0, 0);
+
+              // Convert to UTC string then back to Date to get UTC time
+              return new Date(
+                  new Date(localDate).toLocaleString('en-US', {
+                      timeZone: 'UTC',
+                      timeZoneName: 'short'
+                  })
+              );
+          }
+          throw new Error('Invalid time format');
+      };
+
+      // Get tomorrow's date in user's timezone
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Handle primary time
+      try {
+          const primarySchedule = convertToUTC(timePreference, tomorrow);
+          schedules.push(primarySchedule);
+          console.log('[Schedule] Primary time converted:', {
+              original: timePreference,
+              timezone,
+              utc: primarySchedule.toISOString()
+          });
+      } catch (error) {
+          console.error('[Schedule] Error converting primary time:', error);
+      }
+
+      // Handle secondary time if it exists
+      if (secondPreference) {
+          try {
+              const secondarySchedule = convertToUTC(secondPreference, tomorrow);
+              schedules.push(secondarySchedule);
+              console.log('[Schedule] Secondary time converted:', {
+                  original: secondPreference,
+                  timezone,
+                  utc: secondarySchedule.toISOString()
+              });
+          } catch (error) {
+              console.error('[Schedule] Error converting secondary time:', error);
+          }
+      }
+
+      // Return the earliest next schedule
+      if (schedules.length > 0) {
+          const nextSchedule = schedules.sort((a, b) => a.getTime() - b.getTime())[0];
+          console.log('[Schedule] Selected next schedule:', {
+              timezone,
+              userTime: nextSchedule.toLocaleString('en-US', { timeZone: timezone }),
+              utc: nextSchedule.toISOString()
+          });
+          return nextSchedule.toISOString();
+      }
+
+      // Fallback to default 9 AM tomorrow if no valid times
+      console.log('[Schedule] Using fallback time');
+      const defaultSchedule = convertToUTC('09:00', tomorrow);
+      return defaultSchedule.toISOString();
+
+  } catch (error) {
+      console.error('[Schedule] Error in calculateNextSchedule:', {
+          error,
+          timePreference,
+          secondPreference,
+          timezone,
+          currentTime
+      });
+      // Ultimate fallback - 9 AM UTC tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0);
+      return tomorrow.toISOString();
   }
 }
