@@ -4,7 +4,7 @@ import { Bell, BellOff, Clock, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../../../amplify/data/resource";
 import { useUser } from '../../userContext';
-import './ChallengeReminderBell.css';
+import './challengeReminderBell.css';
 
 const client = generateClient<Schema>();
 
