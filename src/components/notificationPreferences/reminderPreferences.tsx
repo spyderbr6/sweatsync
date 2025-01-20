@@ -8,11 +8,11 @@ import './reminderPreferences.css';
 const client = generateClient<Schema>();
 
 interface UserReminderPreferences {
-    primaryTime: string;
-    secondaryTime?: string;
-    enabled: boolean;
-    timezone?: string;
-  }
+  primaryTime: string;
+  secondaryTime?: string;
+  enabled: boolean;
+  timezone?: string;
+}
 
 export function ReminderPreferences() {
   const { userId } = useUser();
@@ -25,6 +25,15 @@ export function ReminderPreferences() {
     timezone: 'UST'
   });
   const [showSuccess, setShowSuccess] = useState(false);
+  const validTimeZones = [
+    { label: "Eastern Time (ET)", value: "America/New_York" },
+    { label: "Central Time (CT)", value: "America/Chicago" },
+    { label: "Mountain Time (MT)", value: "America/Denver" },
+    { label: "Arizona Time (MT, no DST)", value: "America/Phoenix" },
+    { label: "Pacific Time (PT)", value: "America/Los_Angeles" },
+    { label: "Alaska Time (AKT)", value: "America/Anchorage" },
+    { label: "Hawaii Time (HST)", value: "Pacific/Honolulu" },
+  ];
 
   useEffect(() => {
     if (!userId) return;
@@ -35,7 +44,7 @@ export function ReminderPreferences() {
     try {
       setLoading(true);
       const userResult = await client.models.User.get({ id: userId! });
-      
+
       if (userResult.data?.reminderPreferences && typeof userResult.data.reminderPreferences === 'string') {
         try {
           const parsedPrefs = JSON.parse(userResult.data.reminderPreferences) as UserReminderPreferences;
@@ -43,7 +52,7 @@ export function ReminderPreferences() {
             primaryTime: parsedPrefs.primaryTime || "09:00",
             secondaryTime: parsedPrefs.secondaryTime,
             enabled: parsedPrefs.enabled ?? true,
-            timezone: parsedPrefs.timezone ??'UST'
+            timezone: parsedPrefs.timezone ?? 'UST'
           });
         } catch (parseError) {
           console.error('Error parsing reminder preferences:', parseError);
@@ -62,7 +71,7 @@ export function ReminderPreferences() {
     }
   };
 
-  const handleTimeChange = (field: 'primaryTime' | 'secondaryTime'| 'timezone', value: string) => {
+  const handleTimeChange = (field: 'primaryTime' | 'secondaryTime' | 'timezone', value: string) => {
     setPreferences(prev => ({
       ...prev,
       [field]: value
@@ -121,13 +130,12 @@ export function ReminderPreferences() {
   return (
     <div className="profile-info-section">
       <h2 className="profile-section-title">Reminder Preferences</h2>
-      
+
       <div className="notification-preference-status">
         <div className="notification-info">
-          <Clock 
-            className={`notification-icon ${
-              preferences.enabled ? 'notification-icon--enabled' : 'notification-icon--disabled'
-            }`} 
+          <Clock
+            className={`notification-icon ${preferences.enabled ? 'notification-icon--enabled' : 'notification-icon--disabled'
+              }`}
           />
           <div className="notification-details">
             <span className="notification-label">Daily Reminders</span>
@@ -139,9 +147,8 @@ export function ReminderPreferences() {
 
         <button
           onClick={handleToggle}
-          className={`notification-toggle-button ${
-            preferences.enabled ? 'notification-toggle-button--enabled' : ''
-          }`}
+          className={`notification-toggle-button ${preferences.enabled ? 'notification-toggle-button--enabled' : ''
+            }`}
         >
           {preferences.enabled ? 'Disable' : 'Enable'}
         </button>
@@ -173,13 +180,18 @@ export function ReminderPreferences() {
 
           <div className="time-preference-item">
             <label htmlFor="timezone">Timezone</label>
-            <input
-              type="text"
+            <select
               id="timezone"
               value={preferences.timezone || ''}
               onChange={(e) => handleTimeChange('timezone', e.target.value)}
               className="time-input"
-            />
+            >
+              {validTimeZones.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button onClick={handleSave} className="save-button">
