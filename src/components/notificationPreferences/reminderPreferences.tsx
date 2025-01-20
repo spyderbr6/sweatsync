@@ -7,12 +7,6 @@ import './reminderPreferences.css';
 
 const client = generateClient<Schema>();
 
-interface ReminderPreference {
-  primaryTime: string;
-  secondaryTime?: string;
-  enabled: boolean;
-}
-
 interface UserReminderPreferences {
     primaryTime: string;
     secondaryTime?: string;
@@ -24,9 +18,11 @@ export function ReminderPreferences() {
   const { userId } = useUser();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [preferences, setPreferences] = useState<ReminderPreference>({
+  const [preferences, setPreferences] = useState<UserReminderPreferences>({
     primaryTime: "09:00",
-    enabled: true
+    secondaryTime: '',
+    enabled: true,
+    timezone: 'UST'
   });
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -46,7 +42,8 @@ export function ReminderPreferences() {
           setPreferences({
             primaryTime: parsedPrefs.primaryTime || "09:00",
             secondaryTime: parsedPrefs.secondaryTime,
-            enabled: parsedPrefs.enabled ?? true
+            enabled: parsedPrefs.enabled ?? true,
+            timezone: parsedPrefs.timezone ??'UST'
           });
         } catch (parseError) {
           console.error('Error parsing reminder preferences:', parseError);
@@ -65,7 +62,7 @@ export function ReminderPreferences() {
     }
   };
 
-  const handleTimeChange = (field: 'primaryTime' | 'secondaryTime', value: string) => {
+  const handleTimeChange = (field: 'primaryTime' | 'secondaryTime'| 'timezone', value: string) => {
     setPreferences(prev => ({
       ...prev,
       [field]: value
@@ -98,7 +95,7 @@ export function ReminderPreferences() {
     }
   };
 
-  const updatePreferences = async (prefs: ReminderPreference) => {
+  const updatePreferences = async (prefs: UserReminderPreferences) => {
     if (!userId) return;
 
     await client.models.User.update({
@@ -170,6 +167,17 @@ export function ReminderPreferences() {
               id="secondaryTime"
               value={preferences.secondaryTime || ''}
               onChange={(e) => handleTimeChange('secondaryTime', e.target.value)}
+              className="time-input"
+            />
+          </div>
+
+          <div className="time-preference-item">
+            <label htmlFor="timezone">Timezone</label>
+            <input
+              type="text"
+              id="timezone"
+              value={preferences.timezone || ''}
+              onChange={(e) => handleTimeChange('timezone', e.target.value)}
               className="time-input"
             />
           </div>
