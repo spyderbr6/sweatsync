@@ -77,6 +77,8 @@
                 └── NotificationBell.tsx
             └── 📁notificationPreferences
                 └── notificationPreferences.tsx
+                └── reminderPreferences.css
+                └── reminderPreferences.tsx
             └── 📁OnboardingFlow
                 └── IOSInstructions.css
                 └── IOSInstructions.tsx
@@ -121,6 +123,7 @@
         └── useChallengeDetail.ts
         └── userContext.tsx
         └── 📁utils
+            └── calculateNextSchedule.ts
             └── challengeDailyPrompt.css
             └── challengeDailyPrompt.tsx
             └── githubUtils.ts
@@ -138,6 +141,7 @@
     └── package-lock.json
     └── package.json
     └── projectmkdown.md
+    └── todo
     └── tsconfig.json
     └── tsconfig.node.json
     └── vite.config.ts
