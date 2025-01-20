@@ -10,6 +10,9 @@
             └── 📁challengeCleanup
                 └── handler.ts
                 └── resource.ts
+            └── 📁processReminders
+                └── handler.ts
+                └── resource.ts
             └── 📁rotateCreator
                 └── handler.ts
                 └── resource.ts
@@ -23,6 +26,7 @@
     └── 📁public
         └── add-to-homepage.png
         └── 📁icons
+            └── at-sign-96.png
             └── flame-96.png
             └── globe-96.png
             └── group-96.png
@@ -30,6 +34,7 @@
             └── icon-512.png
             └── icon.png
             └── ios-safari-addhomepage.png
+            └── message-circle-96.png
             └── target-96.png
             └── trophy-96.png
             └── userplus-96.png

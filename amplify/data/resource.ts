@@ -4,6 +4,8 @@ import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 import { rotateCreator } from "../functions/rotateCreator/resource";
 import { challengeCleanup } from "../functions/challengeCleanup/resource";
 import { sendPushNotificationFunction } from "../functions/sendNotificationFunction/resource";
+import { processReminders } from "../functions/processReminders/resource";
+
 const schema = a.schema({
   PostforWorkout: a.model({
     content: a.string(),
@@ -118,7 +120,7 @@ const schema = a.schema({
     content: a.string(),
     timestamp: a.datetime(),
     updatedAt: a.datetime(),
-    createdAt: a.datetime(), 
+    createdAt: a.datetime(),
     taggedUserIds: a.string().array(), // Store array of tagged friend IDs
     postOwnerId: a.string() // To track post owner for notifications
   }).authorization((allow) => [allow.publicApiKey()]),
@@ -136,7 +138,8 @@ const schema = a.schema({
     createdAt: a.datetime().required(),
     updatedAt: a.datetime().required(),
     lowercasename: a.string().required(),
-    hasCompletedOnboarding: a.boolean().default(false)
+    hasCompletedOnboarding: a.boolean().default(false), 
+    reminderPreferences: a.json()
   }).authorization((allow) => [allow.publicApiKey()]),
 
   //PUSH NOTIFICATION SETUP
@@ -163,6 +166,23 @@ const schema = a.schema({
     updatedAt: a.datetime()
   }).authorization((allow) => [allow.publicApiKey()]),
 
+  //Schema to track reminders timing and types
+  ReminderSchedule: a.model({
+    userId: a.string().required(),
+    challengeId: a.string().required(),
+    type: a.enum(['DAILY_POST', 'GROUP_POST', 'CREATOR_ROTATION']),
+    scheduledTime: a.datetime().required(),  // When to send the reminder
+    repeatDaily: a.boolean().default(true),  // If this should repeat
+    timePreference: a.string(),  // Store time as "HH:mm" format
+    secondPreference: a.string(),  // Store time as "HH:mm" format
+    timezone: a.string(),  // Store IANA timezone, e.g., "America/New_York"
+    status: a.enum(['PENDING', 'SENT', 'CANCELLED']),
+    lastSent: a.datetime(),  // Track last reminder
+    nextScheduled: a.datetime(),  // Next scheduled reminder
+    enabled: a.boolean().default(false), 
+    createdAt: a.datetime().required(),
+    updatedAt: a.datetime().required()
+  }).authorization((allow) => [allow.publicApiKey()]),
 
   rotateCreator: a
     .query()
@@ -192,7 +212,18 @@ const schema = a.schema({
     })
     .returns(a.boolean())
     .handler(a.handler.function(sendPushNotificationFunction))
-    .authorization((allow) => [allow.publicApiKey()])
+    .authorization((allow) => [allow.publicApiKey()]),
+
+    processReminders: a
+    .query()
+    .arguments({
+      startTime: a.string().required(),  // ISO timestamp to process
+      endTime: a.string().required()     // ISO timestamp to process until
+    })
+    .returns(a.boolean())
+    .handler(a.handler.function(processReminders))
+    .authorization((allow) => [allow.publicApiKey()]),
+
 
 }).authorization((allow) => [
   /**
@@ -202,7 +233,8 @@ const schema = a.schema({
    */
   allow.resource(rotateCreator).to(["query", "listen", "mutate"]),
   allow.resource(challengeCleanup).to(["query", "listen", "mutate"]),
-  allow.resource(sendPushNotificationFunction).to(["query", "listen", "mutate"])
+  allow.resource(sendPushNotificationFunction).to(["query", "listen", "mutate"]),
+  allow.resource(processReminders).to(["query", "listen", "mutate"])
 ]);
 
 

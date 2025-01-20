@@ -1,0 +1,123 @@
+.time-preferences {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #f8fafc;
+    border-radius: 0.5rem;
+  }
+  
+  .time-preference-item {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .time-preference-item label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+  }
+  
+  .time-input {
+    padding: 0.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    color: #1f2937;
+    background-color: white;
+    transition: border-color 0.2s ease;
+    width: 150px;
+  }
+  
+  .time-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.5); /* This replaces the ring effect */
+}
+  
+  .time-input:hover {
+    border-color: #d1d5db;
+  }
+  
+  .time-input:disabled {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+  }
+  
+  .save-button {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .save-button:hover {
+    background-color: #1d4ed8;
+  }
+  
+  .save-button:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+  }
+  
+  .reminder-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 1rem;
+  }
+  
+  /* Status Messages */
+  .reminder-success,
+  .reminder-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .reminder-success {
+    background-color: #dcfce7;
+    color: #16a34a;
+  }
+  
+  .reminder-error {
+    background-color: #fee2e2;
+    color: #dc2626;
+  }
+  
+  /* Mobile Responsiveness */
+  @media (max-width: 640px) {
+    .time-preference-item {
+      flex-direction: column;
+    }
+  
+    .time-input {
+      width: 100%;
+    }
+  }
+  
+  /* Optional: Time zone selector if you want to add it later */
+  .timezone-selector {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+  }
+  
+  .timezone-selector select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    background-color: white;
+    color: #1f2937;
+    font-size: 0.875rem;
+  }

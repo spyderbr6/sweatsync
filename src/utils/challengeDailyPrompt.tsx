@@ -5,13 +5,14 @@ import { useUser } from '../userContext';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../amplify/data/resource";
 import './challengeDailyPrompt.css';
+import { calculateNextSchedule } from './calculateNextSchedule';
 
 const client = generateClient<Schema>();
 
 interface ChallengeDailyPromptProps {
   challengeId: string;
   challengePoints: number;
-  parentTitle:string;//feed parent title as prop
+  parentTitle: string;//feed parent title as prop
   onSuccess: () => void;
 }
 
@@ -24,7 +25,7 @@ const ChallengeDailyPrompt: React.FC<ChallengeDailyPromptProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { userId} = useUser();
+  const { userId } = useUser();
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -39,6 +40,8 @@ const ChallengeDailyPrompt: React.FC<ChallengeDailyPromptProps> = ({
 
     try {
       setIsSubmitting(true);
+      const today = new Date();
+      const now = today.toISOString();
 
       // Create as a regular challenge with daily challenge properties
       const result = await client.models.Challenge.create({
@@ -68,47 +71,91 @@ const ChallengeDailyPrompt: React.FC<ChallengeDailyPromptProps> = ({
           }
         });
 
-        await Promise.all(
-          participants.data.map(participant =>
-            client.models.ChallengeParticipant.create({
-              challengeID: result.data!.id,
-              userID: participant.userID!,
-              status: 'ACTIVE',
-              points: 0,
-              workoutsCompleted: 0,
-              joinedAt: today.toISOString(),
-              updatedAt: today.toISOString()
+        // Create participant entries and reminders
+        const participantPromises = participants.data
+          .filter(participant => participant.userID)
+          .map(participant =>
+            Promise.all([
+              // Create participant entry
+              client.models.ChallengeParticipant.create({
+                challengeID: result.data!.id,
+                userID: participant.userID!,
+                status: 'ACTIVE',
+                points: 0,
+                workoutsCompleted: 0,
+                joinedAt: now,
+                updatedAt: now
+              })
+            ])
+          );
+
+        await Promise.all(participantPromises);
+
+        // Add notification for all participants
+        try {
+          const notificationPromises = participants.data.map(async (participant) => {
+            if (!participant.userID) return;
+
+            const userResult = await client.models.User.get({ id: participant.userID });
+            let primaryTime = '09:00'; // Default time
+            let secondaryTime = null;
+            let timezone = 'UTC'; // Default timezone
+
+            if (userResult.data?.reminderPreferences === 'string') {
+              try {
+        
+                const preferences = JSON.parse(userResult.data.reminderPreferences);
+                primaryTime = preferences.primaryTime || '09:00';
+                secondaryTime = preferences.secondaryTime || null;
+                timezone = preferences.timezone || 'UTC';
+        
+              } catch (error) {
+                console.error('[Challenge] Error parsing user reminder preferences:', {
+                  error,
+                  user: userResult.data.id,
+                  reminderPreferences: userResult.data.reminderPreferences
+                });
+              }
+            }
+
+            // Create reminder
+            client.models.ReminderSchedule.create({
+              userId: participant.userID!,
+              challengeId: result.data!.id,
+              type: 'DAILY_POST',
+              scheduledTime: calculateNextSchedule(primaryTime, secondaryTime, new Date().toISOString(), timezone),
+              repeatDaily: false, // Daily challenges only need one reminder
+              timePreference: primaryTime, // Default time,
+              secondPreference: secondaryTime, // Default time,
+              timezone: timezone,
+              status: 'PENDING',
+              createdAt: now,
+              updatedAt: now,
+              nextScheduled: tomorrow.toISOString() // Set to end of daily challenge
             })
-          )
-        );
-
- // Add notification for all participants
- try {
-  const notificationPromises = participants.data.map(async (participant) => {
-    if (!participant.userID) return;
 
 
-    // Then trigger push notification with correct payload
-    await client.queries.sendPushNotificationFunction({
-      type: 'CHALLENGE_DAILY_ADDED',
-      userID: participant.userID,
-      title: "New Daily Challenge Available!",
-      body: `${parentTitle}: ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`,
-      data: JSON.stringify({
-        challengeId: result.data!.id,
-        challengeType: 'DAILY',
-        parentChallengeId: challengeId,
-        description: description.substring(0, 100), // Added for action handling
-        creatorId: userId // Added to track who created the challenge
-      })
-    });
-  });
+            // Then trigger push notification with correct payload
+            await client.queries.sendPushNotificationFunction({
+              type: 'CHALLENGE_DAILY_ADDED',
+              userID: participant.userID,
+              title: "New Daily Challenge Available!",
+              body: `${parentTitle}: ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`,
+              data: JSON.stringify({
+                challengeId: result.data!.id,
+                challengeType: 'DAILY',
+                parentChallengeId: challengeId,
+                description: description.substring(0, 100), // Added for action handling
+                creatorId: userId // Added to track who created the challenge
+              })
+            });
+          });
 
-  await Promise.all(notificationPromises);
-} catch (notificationError) {
-  console.error('Error sending notifications:', notificationError);
-  // We don't throw here to avoid failing the whole challenge creation
-}
+          await Promise.all(notificationPromises);
+        } catch (notificationError) {
+          console.error('Error sending notifications:', notificationError);
+          // We don't throw here to avoid failing the whole challenge creation
+        }
 
       }
 

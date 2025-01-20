@@ -2,6 +2,7 @@
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
+import { calculateNextSchedule } from "./utils/calculateNextSchedule";
 
 const client = generateClient<Schema>();
 
@@ -14,7 +15,7 @@ export async function createChallenge(params: {
   reward?: string;
   challengeType: 'none';
   totalWorkouts?: number;
-  status?: 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' | 'DRAFT' | 'CANCELLED'; 
+  status?: 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' | 'DRAFT' | 'CANCELLED';
 }): Promise<string> {
   try {
     await client.models.Challenge.create({
@@ -53,19 +54,46 @@ export async function addParticipantToChallenge(params: {
   userID: string;
 }): Promise<string> {
   try {
+    // Check for existing participation
+    const existingParticipation = await client.models.ChallengeParticipant.list({
+      filter: {
+        and: [
+          { challengeID: { eq: params.challengeID } },
+          { userID: { eq: params.userID } }
+        ]
+      }
+    });
+
+    const now = new Date().toISOString();
+
+    if (existingParticipation.data.length > 0) {
+      // Update existing participation to ACTIVE
+      await client.models.ChallengeParticipant.update({
+        id: existingParticipation.data[0].id,
+        status: "ACTIVE",
+        points: 0,
+        workoutsCompleted: 0,
+        joinedAt: now,
+        updatedAt: now
+      });
+      return "Participant updated successfully";
+    }
+
+    // Create new participation if none exists
     await client.models.ChallengeParticipant.create({
       challengeID: params.challengeID,
       userID: params.userID,
       status: "ACTIVE",
       points: 0,
       workoutsCompleted: 0,
-      joinedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      joinedAt: now,
+      updatedAt: now
     });
+
     return "Participant added successfully";
   } catch (error) {
     console.error("Error adding participant to challenge", error);
-    return "Failed to add participant";
+    throw error;
   }
 }
 
@@ -151,79 +179,79 @@ export async function listAvailableChallenges(userId: string): Promise<Schema["C
   const client = generateClient<Schema>();
 
   try {
-      // First get all challenges
-      const allChallenges = await client.models.Challenge.list({
-          filter: {
-              status: { eq: 'ACTIVE' }
-          }
-      });
+    // First get all challenges
+    const allChallenges = await client.models.Challenge.list({
+      filter: {
+        status: { eq: 'ACTIVE' }
+      }
+    });
 
-      // Get user's current participations to exclude
-      const userParticipations = await client.models.ChallengeParticipant.list({
-          filter: {
-              userID: { eq: userId },
-              or : [ { status: { eq: 'ACTIVE' } }, { status: { eq: 'PENDING' } }, {status: {eq: 'COMPLETED'}} ]
-          }
-      });
+    // Get user's current participations to exclude
+    const userParticipations = await client.models.ChallengeParticipant.list({
+      filter: {
+        userID: { eq: userId },
+        or: [{ status: { eq: 'ACTIVE' } }, { status: { eq: 'PENDING' } }, { status: { eq: 'COMPLETED' } }]
+      }
+    });
 
-      // Create set of challenges user is already in
-      const participatingChallengeIds = new Set(
-          userParticipations.data.map(p => p.challengeID)
-      );
+    // Create set of challenges user is already in
+    const participatingChallengeIds = new Set(
+      userParticipations.data.map(p => p.challengeID)
+    );
 
-      // Get user's friends to check group challenges
-      const friendships = await client.models.Friend.list({
-          filter: { user: { eq: userId } }
-      });
-      const friendIds = new Set(friendships.data.map(f => f.friendUser));
+    // Get user's friends to check group challenges
+    const friendships = await client.models.Friend.list({
+      filter: { user: { eq: userId } }
+    });
+    const friendIds = new Set(friendships.data.map(f => f.friendUser));
 
-      // Filter challenges
-      const availableChallenges = allChallenges.data.filter(challenge => {
-          // Exclude if user is already participating
-          if (participatingChallengeIds.has(challenge.id)) {
-              return false;
-          }
+    // Filter challenges
+    const availableChallenges = allChallenges.data.filter(challenge => {
+      // Exclude if user is already participating
+      if (participatingChallengeIds.has(challenge.id)) {
+        return false;
+      }
 
-          switch (challenge.challengeType) {
-              case 'PUBLIC':
-                  // Show all public challenges
-                  return true;
-              case 'GROUP':
-              case 'DAILY':
-                  // Show only if friends with creator
-                  return challenge.createdBy && friendIds.has(challenge.createdBy);
-              case 'PERSONAL':
-                  // Show only if user created it
-                  return challenge.createdBy === userId;
-              default:
-                  return false;
-          }
-      });
+      switch (challenge.challengeType) {
+        case 'PUBLIC':
+          // Show all public challenges
+          return true;
+        case 'GROUP':
+        case 'DAILY':
+          // Show only if friends with creator
+          return challenge.createdBy && friendIds.has(challenge.createdBy);
+        case 'PERSONAL':
+          // Show only if user created it
+          return challenge.createdBy === userId;
+        default:
+          return false;
+      }
+    });
 
-      return availableChallenges;
+    return availableChallenges;
 
   } catch (error) {
-      console.error('Error fetching available challenges:', error);
-      throw error;
+    console.error('Error fetching available challenges:', error);
+    throw error;
   }
 }
 
 export async function getPendingChallenges(
-  userId: string, 
+  userId: string,
   getStorageUrl: (path: string) => Promise<string>
 ) {
   try {
     // Calculate the cutoff time for expired invitations (7 days ago)
     const cutoffTime = new Date();
     cutoffTime.setHours(cutoffTime.getHours() - 168);
-    
+
     // Get pending challenge participations
     const pendingParticipations = await client.models.ChallengeParticipant.list({
       filter: {
         and: [
           { userID: { eq: userId } },
           { status: { eq: 'PENDING' } },
-         // { invitedAt: { ge: cutoffTime.toISOString() } }
+          // { invitedAt: { ge: cutoffTime.toISOString() } }
         ]
       }
     });
@@ -251,7 +279,7 @@ export async function getPendingChallenges(
 
             if (inviterResult.data) {
               inviterName = inviterResult.data.preferred_username || inviterResult.data.username || 'Unknown User';
-              
+
               if (inviterResult.data.pictureUrl) {
                 try {
                   inviterPicture = await getStorageUrl(inviterResult.data.pictureUrl);
@@ -271,14 +299,14 @@ export async function getPendingChallenges(
           inviterName,
           inviterPicture,
           invitedAt: participation.invitedAt,
-          expiresIn: participation.invitedAt 
+          expiresIn: participation.invitedAt
             ? Math.floor((new Date(participation.invitedAt).getTime() + (24 * 60 * 60 * 1000) - Date.now()) / (60 * 1000))
             : 0
         };
       })
     );
 
-    return pendingChallenges.filter((challenge): challenge is NonNullable<typeof challenge> => 
+    return pendingChallenges.filter((challenge): challenge is NonNullable<typeof challenge> =>
       challenge !== null
     );
   } catch (error) {
@@ -293,12 +321,65 @@ export async function respondToChallenge(
 ) {
   try {
     const client = generateClient<Schema>();
-    
+
+    const participant = await client.models.ChallengeParticipant.get({ id: participationId });
+    if (!participant.data) {
+      throw new Error('Participation not found');
+    }
+
     await client.models.ChallengeParticipant.update({
       id: participationId,
       status,
       updatedAt: new Date().toISOString()
     });
+
+    // Get user's reminder preferences
+    const userResult = await client.models.User.get({ id: participant.data.userID });
+    let primaryTime = '09:00'; // Default time
+    let secondaryTime = null;
+    let timezone = 'UTC'; // Default timezone
+
+    if (userResult.data?.reminderPreferences === 'string') {
+      try {
+
+        const preferences = JSON.parse(userResult.data.reminderPreferences);
+        primaryTime = preferences.primaryTime || '09:00';
+        secondaryTime = preferences.secondaryTime || null;
+        timezone = preferences.timezone || 'UTC';
+
+      } catch (error) {
+        console.error('[Challenge] Error parsing user reminder preferences:', {
+          error,
+          user: userResult.data.id,
+          reminderPreferences: userResult.data.reminderPreferences
+        });
+      }
+    }
+
+    // Calculate initial next schedule
+    const nextScheduled = calculateNextSchedule(
+      primaryTime,
+      secondaryTime,
+      new Date().toISOString(),
+      timezone
+    );
+    // If accepting the challenge, create base reminder schedule
+    if (status === 'ACTIVE' && participant.data.challengeID && participant.data.userID) {
+      await client.models.ReminderSchedule.create({
+        userId: participant.data.userID,
+        challengeId: participant.data.challengeID,
+        type: 'DAILY_POST',
+        scheduledTime: nextScheduled,
+        repeatDaily: true,
+        timePreference: primaryTime,
+        secondPreference: secondaryTime,
+        timezone,
+        status: 'PENDING',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        nextScheduled: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // Next day
+      });
+    }
 
     return true;
   } catch (error) {
@@ -306,6 +387,7 @@ export async function respondToChallenge(
     throw error;
   }
 }
+
 
 export async function checkChallengeParticipation(challengeId: string, userId: string) {
   try {
@@ -320,7 +402,7 @@ export async function checkChallengeParticipation(challengeId: string, userId: s
         ]
       }
     });
-    
+
     return result.data[0] || null;
   } catch (error) {
     console.error('Error checking challenge participation:', error);
@@ -333,7 +415,7 @@ export async function checkChallengeParticipation(challengeId: string, userId: s
 export async function getChallengeDetails(challengeId: string, userId: string) {
   try {
     const client = generateClient<Schema>();
-    
+
     // Get challenge basic info
     const challengeResult = await client.models.Challenge.get({ id: challengeId });
     if (!challengeResult.data) {
@@ -357,10 +439,10 @@ export async function getChallengeDetails(challengeId: string, userId: string) {
       }));
 
     const participationResults = await Promise.all(participationPromises);
-    
+
     // Combine all participations
     const allParticipations = participationResults.flatMap(result => result.data);
-    
+
     // Calculate total points and workouts
     const totalPoints = allParticipations.reduce((sum, p) => sum + (p.points || 0), 0);
     const totalWorkouts = allParticipations.reduce((sum, p) => sum + (p.workoutsCompleted || 0), 0);
@@ -378,10 +460,10 @@ export async function getChallengeDetails(challengeId: string, userId: string) {
       }));
 
     const participantResults = await Promise.all(participantPromises);
-    
+
     // Get unique participant count
     const uniqueParticipants = new Set(
-      participantResults.flatMap(result => 
+      participantResults.flatMap(result =>
         result.data.map(p => p.userID)
       ).filter((id): id is string => id !== null)
     );
@@ -394,7 +476,7 @@ export async function getChallengeDetails(challengeId: string, userId: string) {
         workoutsCompleted: totalWorkouts
       },
       totalParticipants: uniqueParticipants.size,
-      daysRemaining: challengeResult.data.endAt 
+      daysRemaining: challengeResult.data.endAt
         ? Math.ceil((new Date(challengeResult.data.endAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
         : null
     };
@@ -408,7 +490,7 @@ export async function getChallengeDetails(challengeId: string, userId: string) {
 export async function getChallengeLeaderboard(challengeId: string) {
   try {
     const client = generateClient<Schema>();
-    
+
     // First get all child challenges
     const childChallenges = await client.models.Challenge.list({
       filter: {
@@ -433,7 +515,7 @@ export async function getChallengeLeaderboard(challengeId: string) {
     );
 
     const participationsResults = await Promise.all(participationsPromises);
-    
+
     // Combine and aggregate participant data
     const userStats = new Map<string, {
       id: string;
@@ -468,7 +550,7 @@ export async function getChallengeLeaderboard(challengeId: string) {
     const userDetailsPromises = Array.from(userStats.keys()).map(async (userId) => {
       const userResult = await client.models.User.get({ id: userId });
       const stats = userStats.get(userId)!;
-      
+
       return {
         ...stats,
         name: userResult.data?.preferred_username || 'Unknown User',
@@ -490,7 +572,7 @@ export async function getChallengeLeaderboard(challengeId: string) {
 export async function getChallengeActivity(challengeId: string) {
   try {
     const client = generateClient<Schema>();
-    
+
     // Get the parent challenge first to verify it exists
     const parentChallenge = await client.models.Challenge.get({ id: challengeId });
     if (!parentChallenge.data) {
@@ -555,7 +637,7 @@ export async function getChallengeActivity(challengeId: string) {
     );
 
     // Sort by timestamp in descending order
-    return activityFeed.sort((a, b) => 
+    return activityFeed.sort((a, b) =>
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
   } catch (error) {
@@ -615,16 +697,16 @@ export async function removeParticipantFromChallenge(challengeID: string, userID
 
 export async function inviteFriendToChallenge(params: {
   challengeId: string;
-  inviterId: string;    
-  friendId: string;     
+  inviterId: string;
+  friendId: string;
 }): Promise<{
   success: boolean;
   message: string;
 }> {
   try {
     // 1. Verify challenge exists and inviter is the owner
-    const challengeResult = await client.models.Challenge.get({ 
-      id: params.challengeId, 
+    const challengeResult = await client.models.Challenge.get({
+      id: params.challengeId,
     });
 
     if (!challengeResult.data) {
@@ -663,52 +745,47 @@ export async function inviteFriendToChallenge(params: {
       filter: {
         and: [
           { challengeID: { eq: params.challengeId } },
-          { userID: { eq: params.friendId } },
-          { 
-            or: [
-              { status: { eq: 'ACTIVE' } },
-              { status: { eq: 'PENDING' } }
-            ]
-          }
+          { userID: { eq: params.friendId } }
         ]
       }
     });
 
     if (existingParticipation.data.length > 0) {
-      const status = existingParticipation.data[0].status;
-      return {
-        success: false,
-        message: status === 'ACTIVE' 
-          ? "User is already participating in this challenge"
-          : "User already has a pending invitation"
-      };
+      // If they were previously in the challenge, update to PENDING
+      await client.models.ChallengeParticipant.update({
+        id: existingParticipation.data[0].id,
+        status: 'PENDING',
+        invitedBy: params.inviterId,
+        invitedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      // Create new participation record if none exists
+      await client.models.ChallengeParticipant.create({
+        challengeID: params.challengeId,
+        userID: params.friendId,
+        status: "PENDING",
+        points: 0,
+        workoutsCompleted: 0,
+        invitedBy: params.inviterId,
+        invitedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
     }
 
-    // 4. Create the invitation
-    await client.models.ChallengeParticipant.create({
-      challengeID: params.challengeId,
+    // Then trigger push notification with correct payload
+    await client.queries.sendPushNotificationFunction({
+      type: 'CHALLENGE_INVITE',
       userID: params.friendId,
-      status: "PENDING",
-      points: 0,
-      workoutsCompleted: 0,
-      invitedBy: params.inviterId,
-      invitedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      title: "Someone Invited You to a Challenge!",
+      body: `${challengeResult.data.title}: ${challengeResult.data.description.substring(0, 100)}${challengeResult.data.description.length > 100 ? '...' : ''}`,
+      data: JSON.stringify({
+        challengeId: params.challengeId,
+        challengeType: 'DAILY',
+        description: challengeResult.data.description.substring(0, 100), // Added for action handling
+        creatorId: params.inviterId // Added to track who created the challenge
+      })
     });
-
-        // Then trigger push notification with correct payload
-        await client.queries.sendPushNotificationFunction({
-          type: 'CHALLENGE_INVITE',
-          userID: params.friendId,
-          title: "Someone Invited You to a Challenge!",
-          body: `${challengeResult.data.title}: ${challengeResult.data.description.substring(0, 100)}${challengeResult.data.description.length > 100 ? '...' : ''}`,
-          data: JSON.stringify({
-            challengeId: params.challengeId,
-            challengeType: 'DAILY',
-            description: challengeResult.data.description.substring(0, 100), // Added for action handling
-            creatorId: params.inviterId // Added to track who created the challenge
-          })
-        });
 
     return {
       success: true,
@@ -763,7 +840,7 @@ export async function getChallengeStats(challengeId: string, userId: string) {
 
     // Get all participations for these challenges
     const participations = await Promise.all(
-      allChallengeIds.map(cId => 
+      allChallengeIds.map(cId =>
         client.models.ChallengeParticipant.list({
           filter: {
             challengeID: { eq: cId },
@@ -788,3 +865,81 @@ export async function getChallengeStats(challengeId: string, userId: string) {
     throw error;
   }
 }
+
+export async function handleChallengeResponses(
+  participationId: string,
+  accept: boolean,
+  challengeId: string,
+  userId: string
+): Promise<boolean> {
+  try {
+    // Update participation status
+    await respondToChallenge(participationId, accept ? 'ACTIVE' : 'DROPPED');
+
+    if (accept) {
+      // Get user's reminder preferences
+      const userResult = await client.models.User.get({ id: userId });
+      let primaryTime = '09:00'; // Default time
+      let secondaryTime = null;
+      let timezone = 'UTC'; // Default timezone
+
+      if (userResult.data?.reminderPreferences === 'string') {
+        try {
+
+          const preferences = JSON.parse(userResult.data.reminderPreferences);
+          primaryTime = preferences.primaryTime || '09:00';
+          secondaryTime = preferences.secondaryTime || null;
+          timezone = preferences.timezone || 'UTC';
+
+          console.log('[Challenge] User preferences loaded:', {
+            userId,
+            primaryTime,
+            secondaryTime,
+            timezone
+          });
+        } catch (error) {
+          console.error('[Challenge] Error parsing user reminder preferences:', {
+            error,
+            userId,
+            reminderPreferences: userResult.data.reminderPreferences
+          });
+        }
+      }
+
+      // Calculate initial next schedule
+      const nextScheduled = calculateNextSchedule(
+        primaryTime,
+        secondaryTime,
+        new Date().toISOString(),
+        timezone
+      );
+
+      // Create reminder schedule with all preferences
+      await client.models.ReminderSchedule.create({
+        userId,
+        challengeId,
+        type: 'DAILY_POST',
+        scheduledTime: new Date().toISOString(),
+        repeatDaily: true,
+        timePreference: primaryTime,
+        secondPreference: secondaryTime,
+        timezone,
+        status: 'PENDING',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        nextScheduled
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[Challenge] Error handling challenge response:', {
+      error,
+      participationId,
+      challengeId,
+      userId
+    });
+    return false;
+  }
+}
+
