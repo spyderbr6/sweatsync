@@ -174,24 +174,15 @@ const schema = a.schema({
     scheduledTime: a.datetime().required(),  // When to send the reminder
     repeatDaily: a.boolean().default(true),  // If this should repeat
     timePreference: a.string(),  // Store time as "HH:mm" format
+    secondPreference: a.string(),  // Store time as "HH:mm" format
+    timezone: a.string(),  // Store IANA timezone, e.g., "America/New_York"
     status: a.enum(['PENDING', 'SENT', 'CANCELLED']),
     lastSent: a.datetime(),  // Track last reminder
     nextScheduled: a.datetime(),  // Next scheduled reminder
+    enabled: a.boolean().default(false), 
     createdAt: a.datetime().required(),
     updatedAt: a.datetime().required()
   }).authorization((allow) => [allow.publicApiKey()]),
-
-  ChallengeReminderPreferences: a.model({
-    userId: a.string().required(),
-    challengeId: a.string().required(),
-    enabled: a.boolean().default(true),
-    primaryTime: a.string(),        // Optional override of default time
-    secondaryTime: a.string(),      // Optional second reminder time
-    reminderTypes: a.string().array(),
-    createdAt: a.datetime().required(),
-    updatedAt: a.datetime().required()
-}).authorization((allow) => [allow.publicApiKey()]),
-
 
   rotateCreator: a
     .query()

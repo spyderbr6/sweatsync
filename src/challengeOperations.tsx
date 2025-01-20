@@ -2,6 +2,7 @@
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
+import { calculateNextSchedule } from "./utils/calculateNextSchedule";
 
 const client = generateClient<Schema>();
 
@@ -53,46 +54,46 @@ export async function addParticipantToChallenge(params: {
   userID: string;
 }): Promise<string> {
   try {
-      // Check for existing participation
-      const existingParticipation = await client.models.ChallengeParticipant.list({
-          filter: {
-              and: [
-                  { challengeID: { eq: params.challengeID } },
-                  { userID: { eq: params.userID } }
-              ]
-          }
-      });
-
-      const now = new Date().toISOString();
-
-      if (existingParticipation.data.length > 0) {
-          // Update existing participation to ACTIVE
-          await client.models.ChallengeParticipant.update({
-              id: existingParticipation.data[0].id,
-              status: "ACTIVE",
-              points: 0,
-              workoutsCompleted: 0,
-              joinedAt: now,
-              updatedAt: now
-          });
-          return "Participant updated successfully";
+    // Check for existing participation
+    const existingParticipation = await client.models.ChallengeParticipant.list({
+      filter: {
+        and: [
+          { challengeID: { eq: params.challengeID } },
+          { userID: { eq: params.userID } }
+        ]
       }
+    });
 
-      // Create new participation if none exists
-      await client.models.ChallengeParticipant.create({
-          challengeID: params.challengeID,
-          userID: params.userID,
-          status: "ACTIVE",
-          points: 0,
-          workoutsCompleted: 0,
-          joinedAt: now,
-          updatedAt: now
+    const now = new Date().toISOString();
+
+    if (existingParticipation.data.length > 0) {
+      // Update existing participation to ACTIVE
+      await client.models.ChallengeParticipant.update({
+        id: existingParticipation.data[0].id,
+        status: "ACTIVE",
+        points: 0,
+        workoutsCompleted: 0,
+        joinedAt: now,
+        updatedAt: now
       });
-      
-      return "Participant added successfully";
+      return "Participant updated successfully";
+    }
+
+    // Create new participation if none exists
+    await client.models.ChallengeParticipant.create({
+      challengeID: params.challengeID,
+      userID: params.userID,
+      status: "ACTIVE",
+      points: 0,
+      workoutsCompleted: 0,
+      joinedAt: now,
+      updatedAt: now
+    });
+
+    return "Participant added successfully";
   } catch (error) {
-      console.error("Error adding participant to challenge", error);
-      throw error;
+    console.error("Error adding participant to challenge", error);
+    throw error;
   }
 }
 
@@ -332,14 +333,47 @@ export async function respondToChallenge(
       updatedAt: new Date().toISOString()
     });
 
+    // Get user's reminder preferences
+    const userResult = await client.models.User.get({ id: participant.data.userID });
+    let primaryTime = '09:00'; // Default time
+    let secondaryTime = null;
+    let timezone = 'UTC'; // Default timezone
+
+    if (userResult.data?.reminderPreferences === 'string') {
+      try {
+
+        const preferences = JSON.parse(userResult.data.reminderPreferences);
+        primaryTime = preferences.primaryTime || '09:00';
+        secondaryTime = preferences.secondaryTime || null;
+        timezone = preferences.timezone || 'UTC';
+
+      } catch (error) {
+        console.error('[Challenge] Error parsing user reminder preferences:', {
+          error,
+          user: userResult.data.id,
+          reminderPreferences: userResult.data.reminderPreferences
+        });
+      }
+    }
+
+    // Calculate initial next schedule
+    const nextScheduled = calculateNextSchedule(
+      primaryTime,
+      secondaryTime,
+      new Date().toISOString(),
+      timezone
+    );
     // If accepting the challenge, create base reminder schedule
     if (status === 'ACTIVE' && participant.data.challengeID && participant.data.userID) {
       await client.models.ReminderSchedule.create({
         userId: participant.data.userID,
         challengeId: participant.data.challengeID,
         type: 'DAILY_POST',
-        scheduledTime: new Date().toISOString(),
+        scheduledTime: nextScheduled,
         repeatDaily: true,
+        timePreference: primaryTime,
+        secondPreference: secondaryTime,
+        timezone,
         status: 'PENDING',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -709,12 +743,12 @@ export async function inviteFriendToChallenge(params: {
     // 3. Check if already participating
     const existingParticipation = await client.models.ChallengeParticipant.list({
       filter: {
-          and: [
-              { challengeID: { eq: params.challengeId } },
-              { userID: { eq: params.friendId } }
-          ]
+        and: [
+          { challengeID: { eq: params.challengeId } },
+          { userID: { eq: params.friendId } }
+        ]
       }
-  });
+    });
 
     if (existingParticipation.data.length > 0) {
       // If they were previously in the challenge, update to PENDING
@@ -832,7 +866,6 @@ export async function getChallengeStats(challengeId: string, userId: string) {
   }
 }
 
-// challengeOperations.tsx
 export async function handleChallengeResponses(
   participationId: string,
   accept: boolean,
@@ -844,34 +877,69 @@ export async function handleChallengeResponses(
     await respondToChallenge(participationId, accept ? 'ACTIVE' : 'DROPPED');
 
     if (accept) {
-      // Create reminder schedule
+      // Get user's reminder preferences
+      const userResult = await client.models.User.get({ id: userId });
+      let primaryTime = '09:00'; // Default time
+      let secondaryTime = null;
+      let timezone = 'UTC'; // Default timezone
+
+      if (userResult.data?.reminderPreferences === 'string') {
+        try {
+
+          const preferences = JSON.parse(userResult.data.reminderPreferences);
+          primaryTime = preferences.primaryTime || '09:00';
+          secondaryTime = preferences.secondaryTime || null;
+          timezone = preferences.timezone || 'UTC';
+
+          console.log('[Challenge] User preferences loaded:', {
+            userId,
+            primaryTime,
+            secondaryTime,
+            timezone
+          });
+        } catch (error) {
+          console.error('[Challenge] Error parsing user reminder preferences:', {
+            error,
+            userId,
+            reminderPreferences: userResult.data.reminderPreferences
+          });
+        }
+      }
+
+      // Calculate initial next schedule
+      const nextScheduled = calculateNextSchedule(
+        primaryTime,
+        secondaryTime,
+        new Date().toISOString(),
+        timezone
+      );
+
+      // Create reminder schedule with all preferences
       await client.models.ReminderSchedule.create({
         userId,
         challengeId,
         type: 'DAILY_POST',
         scheduledTime: new Date().toISOString(),
         repeatDaily: true,
+        timePreference: primaryTime,
+        secondPreference: secondaryTime,
+        timezone,
         status: 'PENDING',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        nextScheduled: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      });
-
-      // Create default reminder preferences
-      await client.models.ChallengeReminderPreferences.create({
-        userId,
-        challengeId,
-        enabled: true,
-        primaryTime: '09:00', // Default time
-        reminderTypes: ['DAILY_POST'],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        nextScheduled
       });
     }
 
     return true;
   } catch (error) {
-    console.error('Error handling challenge response:', error);
+    console.error('[Challenge] Error handling challenge response:', {
+      error,
+      participationId,
+      challengeId,
+      userId
+    });
     return false;
   }
 }
+
