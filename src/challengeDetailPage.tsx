@@ -18,6 +18,7 @@ import { ActivityItem } from './components/challengeActivityItem/challengeActivi
 import ChallengeDailyPrompt from './utils/challengeDailyPrompt';
 import { useNavigate } from 'react-router-dom';
 import { getChallengeStyle, getChallengeIcon } from './styles/challengeStyles';
+import { ChallengeReminderBell } from './components/challengeReminderBell/challengeReminderBell';
 
 type RouteParams = {
     challengeId: string;
@@ -206,21 +207,22 @@ export default function ChallengeDetailPage() {
             <div className="challenge-hero">
                 <div className="challenge-header">
                     <div>
-
-                        <h1 className="challenge-title">{challengeDetails.title}                        <div
-                            className="challenge-type-badge"
-                            style={{
-                                backgroundColor: headerStyle.bgColor,
-                                color: headerStyle.textColor,
-                                borderColor: headerStyle.borderColor
-                            }}
-                        >
-                            {getChallengeIcon(challengeDetails?.challengeType, { size: 20 })}
-                            <span>{headerStyle.name}</span>
-                        </div></h1>
+                        <h1 className="challenge-title">{challengeDetails.title}
+                            <div
+                                className="challenge-type-badge"
+                                style={{
+                                    backgroundColor: headerStyle.bgColor,
+                                    color: headerStyle.textColor,
+                                    borderColor: headerStyle.borderColor
+                                }}
+                            >
+                                {getChallengeIcon(challengeDetails?.challengeType, { size: 20 })}
+                                <span>{headerStyle.name}</span>
+                            </div></h1>
                         <p className="challenge-description">{challengeDetails.description}</p>
                     </div>
                     <div className="challenge-actions">
+                        <ChallengeReminderBell challengeId={challengeId ?? ''} />
                         <ActionMenu actions={getChallengeActions(challengeDetails)} />
                         <InviteFriendsModal
                             isOpen={isInviteModalOpen}
