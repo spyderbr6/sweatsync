@@ -63,12 +63,21 @@
         └── commentOperations.tsx
         └── CommentSection.tsx
         └── 📁components
+            └── 📁BottomNav
+                └── BottomNav.css
+                └── BottomNav.tsx
             └── 📁cardActionMenu
                 └── cardActionMenu.css
                 └── cardActionMenu.tsx
             └── 📁challengeActivityItem
                 └── challengeActivityItem.tsx
                 └── challengeActivityStyle.css
+            └── 📁ChallengeDailyPrompt
+                └── challengeDailyPrompt.css
+                └── challengeDailyPrompt.tsx
+            └── 📁challengeReminderBell
+                └── challengeReminderBell.css
+                └── challengeReminderBell.tsx
             └── 📁FeedbackModal
                 └── feedbackModal.css
                 └── feedbackModal.tsx
@@ -108,6 +117,7 @@
         └── LandingPage.css
         └── LandingPage.tsx
         └── main.tsx
+        └── postCreationContext.tsx
         └── postCreator.css
         └── postCreator.tsx
         └── profile.tsx
@@ -124,8 +134,6 @@
         └── userContext.tsx
         └── 📁utils
             └── calculateNextSchedule.ts
-            └── challengeDailyPrompt.css
-            └── challengeDailyPrompt.tsx
             └── githubUtils.ts
             └── imageUploadUtils.ts
             └── profilePictureUploader.ts

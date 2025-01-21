@@ -52,23 +52,31 @@
 }
 
 .notification-panel {
-  position: absolute;
-  top: 100%;
+  position: fixed;
+  left: 0;
   right: 0;
-  width: 320px;
   background: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  margin-top: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   z-index: 50;
 }
 
+/* Desktop styles */
+@media (min-width: 768px) {
+  .notification-panel {
+    max-width: 24rem;
+    left: auto;
+    right: 1rem;
+    height: auto;
+    max-height: 80vh;
+    border-radius: 0.5rem;
+    bottom: calc(var(--bottom-nav-height) + 1rem);
+  }
+}
+
 .notification-panel--bottom {
-  bottom: 100%;
-  top: auto;
-  margin-top: 0;
-  margin-bottom: 0.5rem;
+  bottom: var(--bottom-nav-height);
+  height: calc(100vh - var(--bottom-nav-height));
+  overflow-y: auto;
 }
 
 .notification-header {
@@ -171,16 +179,12 @@
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .notification-panel {
-    position: fixed;
-    bottom: 4rem; /* Adjust based on your bottom nav height */
-    left: 0;
-    right: 0;
     top: auto;
     width: 100%;
-    margin: 0;
     border-radius: 0.5rem 0.5rem 0 0;
     max-height: calc(80vh - 4rem);
   }
+
 
   .notification-list {
     max-height: calc(60vh - 4rem);

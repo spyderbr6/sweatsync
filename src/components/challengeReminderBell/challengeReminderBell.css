@@ -1,150 +1,117 @@
-/* src/components/ChallengeReminderBell/ChallengeReminderBell.css */
-
 .challenge-reminder-bell {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-  }
-  
-  .challenge-reminder-bell__button {
-    background: none;
-    border: none;
-    padding: 0.5rem;
-    border-radius: 9999px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: #6B7280;
-  }
-  
-  .challenge-reminder-bell__button:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-  }
-  
-  .challenge-reminder-bell__button--enabled {
-    color: #2563EB;
-  }
-  
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.challenge-reminder-bell__button {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6B7280;
+}
+
+.challenge-reminder-bell__button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.challenge-reminder-bell__button--enabled {
+  color: #2563EB;
+}
+
+.challenge-reminder-bell__settings {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 300px;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1rem;
+  z-index: 50;
+}
+
+.challenge-reminder-bell__settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.challenge-reminder-bell__settings-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.challenge-reminder-bell__toggle-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+}
+
+.challenge-reminder-bell__toggle {
+  background-color: #E5E7EB;
+  color: #6B7280;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.challenge-reminder-bell__toggle--enabled {
+  background-color: #2563EB;
+  color: white;
+}
+
+.challenge-reminder-bell__time-settings {
+  border-top: 1px solid #E5E7EB;
+  padding-top: 1rem;
+}
+
+.challenge-reminder-bell__time-input {
+  margin-bottom: 1rem;
+}
+
+.challenge-reminder-bell__time-input label {
+  display: block;
+  font-size: 0.875rem;
+  color: #4B5563;
+  margin-bottom: 0.25rem;
+}
+
+.challenge-reminder-bell__time-input input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
   .challenge-reminder-bell__settings {
+    width: 280px;
+    right: -70px; /* Center it more over the button */
+  }
+
+  /* Add a little arrow/pointer */
+  .challenge-reminder-bell__settings::before {
+    content: '';
     position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
-    width: 300px;
-    background: white;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    padding: 1rem;
-    z-index: 50;
+    top: -8px;
+    right: 82px; /* Position arrow relative to the button */
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid white;
   }
-  
-  .challenge-reminder-bell__settings-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-  }
-  
-  .challenge-reminder-bell__settings-header h3 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1F2937;
-  }
-  
-  .challenge-reminder-bell__close-button {
-    background: none;
-    border: none;
-    padding: 0.25rem;
-    cursor: pointer;
-    color: #6B7280;
-    border-radius: 0.375rem;
-    transition: all 0.2s ease;
-  }
-  
-  .challenge-reminder-bell__close-button:hover {
-    background-color: #F3F4F6;
-    color: #1F2937;
-  }
-  
-  .challenge-reminder-bell__toggle-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding: 0.5rem 0;
-  }
-  
-  .challenge-reminder-bell__toggle {
-    background-color: #E5E7EB;
-    color: #6B7280;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  
-  .challenge-reminder-bell__toggle--enabled {
-    background-color: #2563EB;
-    color: white;
-  }
-  
-  .challenge-reminder-bell__time-settings {
-    border-top: 1px solid #E5E7EB;
-    padding-top: 1rem;
-  }
-  
-  .challenge-reminder-bell__time-input {
-    margin-bottom: 1rem;
-  }
-  
-  .challenge-reminder-bell__time-input label {
-    display: block;
-    font-size: 0.875rem;
-    color: #4B5563;
-    margin-bottom: 0.25rem;
-  }
-  
-  .challenge-reminder-bell__time-input input {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #D1D5DB;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-  }
-  
-  .challenge-reminder-bell__time-input input:focus {
-    outline: none;
-    border-color: #2563EB;
-    box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.5);
-  }
-  
-  .challenge-reminder-bell__error {
-    margin-top: 0.5rem;
-    padding: 0.5rem;
-    background-color: #FEE2E2;
-    border-radius: 0.375rem;
-    color: #DC2626;
-    font-size: 0.875rem;
-  }
-  
-  .challenge-reminder-bell--loading {
-    display: inline-flex;
-    padding: 0.5rem;
-    color: #6B7280;
-  }
-  
-  /* Mobile Responsiveness */
-  @media (max-width: 640px) {
-    .challenge-reminder-bell__settings {
-      position: fixed;
-      top: auto;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      width: 100%;
-      border-radius: 1rem 1rem 0 0;
-      padding: 1.5rem;
-    }
-  }
+}

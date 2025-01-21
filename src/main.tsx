@@ -52,7 +52,7 @@ function AuthenticatedApp() {
 
     <DataVersionProvider>
       <PostCreationProvider>
-        <>
+        <main className="main-content">
           <Header updateAvailable={updateAvailable} onUpdate={forceUpdate} />
           <Routes>
             <Route path="/" element={<App />} />
@@ -64,7 +64,7 @@ function AuthenticatedApp() {
           </Routes>
           <BottomNav />
           {updateAvailable && <UpdateNotification onUpdate={handleUpdate} />}
-        </>
+        </main>
       </PostCreationProvider>
 
     </DataVersionProvider>

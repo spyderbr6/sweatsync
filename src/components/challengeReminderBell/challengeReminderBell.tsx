@@ -245,7 +245,7 @@ export function ChallengeReminderBell({ challengeId }: ChallengeReminderBellProp
   return (
     <div className="challenge-reminder-bell">
       <button
-        onClick={() => setShowSettings(!showSettings)}
+        onClick={() => setShowSettings(prev => !prev)}
         className={`challenge-reminder-bell__button ${settings.enabled ? 'challenge-reminder-bell__button--enabled' : ''}`}
         aria-label={settings.enabled ? 'Reminders enabled' : 'Reminders disabled'}
       >

@@ -1,4 +1,8 @@
 /* Global Styles */
+:root {
+  --bottom-nav-height: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+
 body {
   margin: 0;
   background: #f5f5f5;
@@ -11,6 +15,18 @@ body {
 /* Main Container */
 .main-container {
   font-family: Arial, sans-serif;
+}
+
+.main-content {
+  min-height: 100vh;
+  padding-bottom: var(--bottom-nav-height);
+}
+
+/* Update panel positioning */
+.notification-panel--bottom {
+  bottom: var(--bottom-nav-height);
+  max-height: calc(100vh - var(--bottom-nav-height) - 4rem);
+  overflow-y: auto;
 }
 
 /* Header Styles */

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../../../amplify/data/resource";
 import { useNavigate } from 'react-router-dom';
-import { generateUrl } from '../../types/notifications';
+import { generateUrl, NOTIFICATION_CONFIGS } from '../../types/notifications';
 import './NotificationBell.css';
 
 interface NotificationBellProps {
@@ -61,20 +61,53 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
         });
       }
 
-      // Parse data only if it exists and is valid JSON
+      // Get the notification config for this type
+      if (!notification.type) {
+        console.error('No notification type provided');
+        return;
+      }
+
+      const config = NOTIFICATION_CONFIGS[notification.type];
+      if (!config) {
+        console.error('No config found for notification type:', notification.type);
+        return;
+      }
+
+      // Parse notification data
       if (notification.data) {
         try {
           const data = JSON.parse(notification.data);
-          if (data.urlPattern) {
-            const targetUrl = generateUrl(data.urlPattern, data);
-            navigate(targetUrl);
-          }
+          
+          // Generate target URL using the config's URL pattern
+          const targetUrl = generateUrl(config.urlPattern, data);
+          
+          // Log for debugging
+          console.log('Navigating to:', {
+            type: notification.type,
+            pattern: config.urlPattern,
+            data,
+            targetUrl
+          });
+
+          // Navigate to the generated URL
+          navigate(targetUrl);
         } catch (parseError) {
-          console.error('Error parsing notification data:', parseError);
+          console.error('Error parsing notification data:', {
+            error: parseError,
+            data: notification.data,
+            type: notification.type
+          });
         }
+      } else {
+        // Handle notifications without data (e.g., friend requests that just go to /friends)
+        navigate(config.urlPattern);
       }
     } catch (error) {
-      console.error('Error handling notification:', error);
+      console.error('Error handling notification:', {
+        error,
+        notificationId: notification.id,
+        type: notification.type
+      });
     }
   };
 
