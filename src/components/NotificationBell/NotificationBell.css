@@ -1,10 +1,20 @@
-/* src/components/NotificationBell/notificationBell.css */
-
-.header-notifications {
+.notification-container {
+  position: relative;
   display: flex;
   align-items: center;
-  margin-right: 1rem;
+}
+
+.notification-container--bottom .notification-panel {
+  bottom: 100%;
+  top: auto;
+  margin-bottom: 1rem;
+}
+
+.notification-trigger {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .notification-button {
@@ -54,13 +64,17 @@
   z-index: 50;
 }
 
+.notification-panel--bottom {
+  bottom: 100%;
+  top: auto;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
 .notification-header {
   padding: 1rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   background-color: #f8fafc;
-  display: flex;           /* Added */
-  justify-content: space-between;  /* Added */
-  align-items: center;     /* Added */
 }
 
 .notification-title {
@@ -68,27 +82,6 @@
   font-weight: 600;
   color: #1f2937;
   margin: 0;
-}
-.notification-close-button {
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  cursor: pointer;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  transition: all 0.2s ease;
-}
-.notification-close-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: #1f2937;
-}
-/* Accessibility focus styles */
-.notification-close-button:focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: 2px;
 }
 
 .notification-list {
@@ -175,23 +168,60 @@
   background-color: #f8fafc;
 }
 
+/* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .notification-panel {
     position: fixed;
-    top: auto;
-    bottom: 0;
+    bottom: 4rem; /* Adjust based on your bottom nav height */
     left: 0;
     right: 0;
+    top: auto;
     width: 100%;
     margin: 0;
     border-radius: 0.5rem 0.5rem 0 0;
-    max-height: 80vh;
+    max-height: calc(80vh - 4rem);
   }
 
   .notification-list {
-    max-height: 60vh;
+    max-height: calc(60vh - 4rem);
   }
-  .notification-close-button {
-    padding: 0.75rem;
-  }
+}
+
+/* Modal Styles for Health Placeholder */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 90%;
+  width: 24rem;
+  text-align: center;
+}
+
+.modal-close-button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: rgb(59 130 246);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.modal-close-button:hover {
+  background-color: rgb(37 99 235);
 }

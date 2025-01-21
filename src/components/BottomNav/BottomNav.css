@@ -1,0 +1,163 @@
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border-top: 1px solid rgb(229 231 235);
+    padding: 0.5rem 1rem;
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+    z-index: 50;
+  }
+  
+  .bottom-nav__container {
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .bottom-nav__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    color: rgb(107 114 128);
+    transition: all 0.2s ease;
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin: 0 0.25rem;
+  }
+  
+  .bottom-nav__item:hover {
+    color: rgb(59 130 246);
+    background-color: rgb(239 246 255);
+  }
+  
+  .bottom-nav__item--active {
+    color: rgb(59 130 246);
+  }
+  
+  .bottom-nav__icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .bottom-nav__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background-color: #ef4444;
+    color: white;
+    border-radius: 9999px;
+    min-width: 16px;
+    height: 16px;
+    padding: 2px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+  }
+  
+  .bottom-nav__icon-wrapper .notification-trigger {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .bottom-nav__icon-wrapper .notification-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.7rem;
+  }
+  
+  .bottom-nav__icon-wrapper .notification-icon {
+    display: none;
+  }
+  
+  .bottom-nav__icon {
+    transition: transform 0.2s ease;
+  }
+  
+  .bottom-nav__item--active .bottom-nav__icon {
+    transform: scale(1.1);
+  }
+  
+  .bottom-nav__label {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  /* Desktop Enhancements */
+  @media (min-width: 768px) {
+    .bottom-nav {
+      border-radius: 1rem 1rem 0 0;
+      margin: 0 1rem;
+      bottom: 1rem;
+    }
+  
+    .bottom-nav__container {
+      padding: 0.5rem 0;
+    }
+  
+    .bottom-nav__item {
+      padding: 0.75rem;
+      margin: 0 0.5rem;
+    }
+  }
+  
+  /* Modal Styles for Health Placeholder */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+  }
+  
+  .modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    max-width: 90%;
+    width: 24rem;
+    text-align: center;
+  }
+  
+  .modal-close-button {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: rgb(59 130 246);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .modal-close-button:hover {
+    background-color: rgb(37 99 235);
+  }
