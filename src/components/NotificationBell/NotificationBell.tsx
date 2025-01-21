@@ -14,7 +14,7 @@ interface NotificationBellProps {
 
 const client = generateClient<Schema>();
 
-const NotificationBell: React.FC<NotificationBellProps> = ({ 
+const NotificationBell: React.FC<NotificationBellProps> = ({
   userId,
   position = 'top',
   isOpen = false,
@@ -38,7 +38,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setNotifications(sortedNotifications);
-        
+
         // Update unread count
         const unreadCount = items.filter(n => !n.readAt).length;
         onUnreadCountChange?.(unreadCount);
@@ -77,10 +77,10 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
       if (notification.data) {
         try {
           const data = JSON.parse(notification.data);
-          
+
           // Generate target URL using the config's URL pattern
           const targetUrl = generateUrl(config.urlPattern, data);
-          
+
           // Log for debugging
           console.log('Navigating to:', {
             type: notification.type,
@@ -111,7 +111,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
     }
   };
 
-  const handleLoadMore = () => {
+  const handleLoadMore = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setVisibleCount(prev => prev + 5);
   };
 
@@ -137,7 +138,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
       <div className="notification-header">
         <h3 className="notification-title">Notifications</h3>
       </div>
-      
+
       <div className="notification-list">
         {visibleNotifications.length === 0 ? (
           <div className="notification-empty">
@@ -186,7 +187,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
                 tabIndex={0}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
-                    handleLoadMore();
+                    e.preventDefault();
+                    handleLoadMore;
                   }
                 }}
               >
