@@ -57,7 +57,10 @@
   right: 0;
   background: white;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  z-index: 50;
+  z-index: 45; /* Lower than bottom nav's z-index of 51 */
+  max-height: min(400px, calc(100vh - var(--bottom-nav-height) - 2rem));
+  bottom: calc(var(--bottom-nav-height) + 0.5rem);
+  transform: translateY(-0.5rem); /* Pull up slightly to avoid overlap */
 }
 
 /* Desktop styles */
@@ -66,10 +69,8 @@
     max-width: 24rem;
     left: auto;
     right: 1rem;
-    height: auto;
-    max-height: 80vh;
     border-radius: 0.5rem;
-    bottom: calc(var(--bottom-nav-height) + 1rem);
+    height: auto;
   }
 }
 
@@ -93,7 +94,7 @@
 }
 
 .notification-list {
-  max-height: 400px;
+  max-height: calc(100% - 3rem); /* Account for header */
   overflow-y: auto;
 }
 
