@@ -71,6 +71,7 @@
     right: 1rem;
     border-radius: 0.5rem;
     height: auto;
+    bottom: calc(var(--bottom-nav-height) + 1rem);
   }
 }
 
@@ -96,6 +97,7 @@
 .notification-list {
   max-height: calc(100% - 3rem); /* Account for header */
   overflow-y: auto;
+  padding-bottom: 0.5rem;
 }
 
 .notification-item {

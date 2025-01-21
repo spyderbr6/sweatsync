@@ -508,7 +508,9 @@ export async function getChallengeLeaderboard(challengeId: string) {
           challengeID: { eq: cId },
           or: [
             { status: { eq: 'ACTIVE' } },
-            { status: { eq: 'COMPLETED' } }
+            { status: { eq: 'COMPLETED' } }, 
+            { status: { eq: 'DROPPED' } }, 
+            { status: { eq: 'PENDING' } }
           ]
         }
       })

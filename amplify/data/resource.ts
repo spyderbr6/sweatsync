@@ -92,7 +92,7 @@ const schema = a.schema({
   ChallengeParticipant: a.model({
     challengeID: a.string().required(), //reference to Challenge model
     userID: a.string().required(),
-    status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED', 'PENDING']),
+    status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED', 'PENDING','DECLINED']),
     points: a.integer().default(0),
     workoutsCompleted: a.integer().default(0),
     joinedAt: a.datetime(),
