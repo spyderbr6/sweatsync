@@ -5,7 +5,7 @@ import type { Schema } from "../amplify/data/resource";
 import { Heart, MessageCircle, Share2, Trophy } from 'lucide-react';
 import { CommentSection } from './CommentSection';
 import { useUrlCache } from './urlCacheContext';
-import {PostChallenges} from './components/PostChallenges/postChallenges';
+import { PostChallenges } from './components/PostChallenges/postChallenges';
 
 const client = generateClient<Schema>();
 
@@ -104,7 +104,7 @@ const SinglePostPage: React.FC = () => {
     const [profilePictureUrl, setProfilePictureUrl] = useState<string>("/profileDefault.png");
     const [showChallenges, setShowChallenges] = useState(false);
 
-    
+
     // Fetch post data
     useEffect(() => {
         const fetchPost = async () => {
@@ -169,16 +169,16 @@ const SinglePostPage: React.FC = () => {
                 }
                 if (response.data?.userID) {
                     try {
-                      const userResult = await client.models.User.get({ id: response.data.userID });
-                      if (userResult.data?.pictureUrl) {
-                        const url = await getStorageUrl(userResult.data.pictureUrl);
-                        setProfilePictureUrl(url);
-                      }
+                        const userResult = await client.models.User.get({ id: response.data.userID });
+                        if (userResult.data?.pictureUrl) {
+                            const url = await getStorageUrl(userResult.data.pictureUrl);
+                            setProfilePictureUrl(url);
+                        }
                     } catch (error) {
-                      console.error('Error fetching user profile picture:', error);
-                      setProfilePictureUrl("/profileDefault.png");
+                        console.error('Error fetching user profile picture:', error);
+                        setProfilePictureUrl("/profileDefault.png");
                     }
-                  }
+                }
             } catch (err) {
                 console.error('Error fetching post:', err);
                 setError("Failed to load post");
@@ -260,6 +260,31 @@ const SinglePostPage: React.FC = () => {
             console.error("Error updating reaction:", error);
         }
     };
+
+//Date Calculator for displaying date time ago
+const getTimeAgo = (timestamp: string) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+    const intervals = {
+      year: 31536000,
+      month: 2592000,
+      week: 604800,
+      day: 86400,
+      hour: 3600,
+      minute: 60
+    };
+  
+    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+      const interval = Math.floor(seconds / secondsInUnit);
+      if (interval >= 1) {
+        return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
+      }
+    }
+  
+    return 'Just now';
+  };
 
     // Handle share
     const handleShare = async () => {
@@ -385,10 +410,10 @@ const SinglePostPage: React.FC = () => {
                             </div>
                         </div>
 
-                                                {/* Add PostChallenges component */}
-                                                {showChallenges && post?.id && (
+                        {/* Add PostChallenges component */}
+                        {showChallenges && post?.id && (
                             <div className="post__challenges-container">
-                                <PostChallenges 
+                                <PostChallenges
                                     postId={post.id}
                                     className="mt-4"
                                     onChallengeClick={(challengeId) => {
@@ -404,16 +429,14 @@ const SinglePostPage: React.FC = () => {
                                 <span className="post__username">{post.username}</span>{' '}
                                 {post.content}
                             </p>
-
-                            {/* Enhanced Comment Section */}
-                            <div className="mt-6 border-t border-gray-200 pt-4">
-                                <CommentSection
-                                    postId={post.id}
-                                    commentsLimit={10}
-                                    showInput = {true}
-                                    postOwnerId={post.userID || ''}
-                                />
-                            </div>
+                            <CommentSection
+                                postId={post.id}
+                                commentsLimit={10} // Number of comments to initially load
+                                showInput={true} // Control input visibility
+                                postOwnerId={post.userID || ''}
+                            />            <p className="post__timestamp">
+                                {getTimeAgo(post.createdAt)}
+                            </p>
                         </div>
                     </div>
                 </div>

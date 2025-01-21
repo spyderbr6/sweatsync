@@ -1,11 +1,11 @@
 // src/utils/challengeDailyPrompt.tsx
 import React, { useState } from 'react';
 import { Trophy } from 'lucide-react';
-import { useUser } from '../userContext';
+import { useUser } from '../../userContext';
 import { generateClient } from "aws-amplify/data";
-import type { Schema } from "../../amplify/data/resource";
+import type { Schema } from "../../../amplify/data/resource";
 import './challengeDailyPrompt.css';
-import { calculateNextSchedule } from './calculateNextSchedule';
+import { calculateNextSchedule } from '../../utils/calculateNextSchedule';
 
 const client = generateClient<Schema>();
 

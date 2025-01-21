@@ -508,7 +508,9 @@ export async function getChallengeLeaderboard(challengeId: string) {
           challengeID: { eq: cId },
           or: [
             { status: { eq: 'ACTIVE' } },
-            { status: { eq: 'COMPLETED' } }
+            { status: { eq: 'COMPLETED' } }, 
+            { status: { eq: 'DROPPED' } }, 
+            { status: { eq: 'PENDING' } }
           ]
         }
       })
@@ -781,7 +783,7 @@ export async function inviteFriendToChallenge(params: {
       body: `${challengeResult.data.title}: ${challengeResult.data.description.substring(0, 100)}${challengeResult.data.description.length > 100 ? '...' : ''}`,
       data: JSON.stringify({
         challengeId: params.challengeId,
-        challengeType: 'DAILY',
+        challengeType: challengeResult.data.challengeType,
         description: challengeResult.data.description.substring(0, 100), // Added for action handling
         creatorId: params.inviterId // Added to track who created the challenge
       })

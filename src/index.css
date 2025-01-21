@@ -1,4 +1,8 @@
 /* Global Styles */
+:root {
+  --bottom-nav-height: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+
 body {
   margin: 0;
   background: #f5f5f5;
@@ -13,6 +17,18 @@ body {
   font-family: Arial, sans-serif;
 }
 
+.main-content {
+  min-height: 100vh;
+  padding-bottom: var(--bottom-nav-height);
+}
+
+/* Update panel positioning */
+.notification-panel--bottom {
+  bottom: var(--bottom-nav-height);
+  max-height: calc(100vh - var(--bottom-nav-height) - 4rem);
+  overflow-y: auto;
+}
+
 /* Header Styles */
 .header-input-container {
   display: flex;
@@ -25,7 +41,8 @@ body {
   background-color: white;
   z-index: 1000;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  padding: 10px 20px;  /* Added horizontal padding */
+  padding: 10px 20px;
+  /* Added horizontal padding */
 }
 
 .header-container {
@@ -49,6 +66,7 @@ body {
 .no-shadow {
   box-shadow: none;
 }
+
 .header-notifications {
   display: flex;
   align-items: center;
@@ -69,7 +87,7 @@ body {
   .header-actions {
     gap: 0.5rem;
   }
-  
+
   .header-input-container {
     padding: 10px;
   }
@@ -80,7 +98,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-left:5%;
+  padding-left: 5%;
   padding-right: 5%;
 }
 
@@ -111,7 +129,8 @@ body {
 }
 
 .file-input {
-  display: none; /* Hide the default file input */
+  display: none;
+  /* Hide the default file input */
 }
 
 .create-button {
@@ -199,8 +218,10 @@ a:hover {
   border: 2px solid #ebe8e5;
   transition: border-color 0.2s ease;
 }
+
 .account-icon {
-  margin-left: 0;  /* Remove margin since we're using gap in header-actions */
+  margin-left: 0;
+  /* Remove margin since we're using gap in header-actions */
 }
 
 .account-button:hover .account-image {
@@ -216,7 +237,7 @@ a:hover {
   background-color: white;
   border-radius: 0.5rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-              0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
   padding: 0.5rem;
   transform-origin: top right;
   transform: scale(0.95);
@@ -337,12 +358,14 @@ a:hover {
   .text-input {
     width: 100%;
   }
+
   .account-icon img {
     top: 5px;
     height: 40px;
     width: 40px;
   }
-  .feed__content{
+
+  .feed__content {
     padding: 0;
   }
 }
@@ -352,14 +375,17 @@ a:hover {
     transform: translate(-50%, -50%) scale(0.5);
     opacity: 0;
   }
+
   20% {
     transform: translate(-50%, -50%) scale(1.2);
     opacity: 1;
   }
+
   80% {
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
   }
+
   100% {
     transform: translate(-50%, -50%) scale(1.5);
     opacity: 0;
@@ -416,8 +442,9 @@ a:hover {
   gap: 0.5rem;
   overflow-x: auto;
 }
+
 .feed__challenges::-webkit-scrollbar {
- display: none;
+  display: none;
 }
 
 .challenge-alert {
@@ -445,7 +472,7 @@ a:hover {
   flex-wrap: wrap;
   gap: 1rem;
   justify-content: center;
-max-width: 1620px;
+  max-width: 1620px;
 }
 
 .post {
@@ -457,17 +484,18 @@ max-width: 1620px;
   border: 1px solid rgb(229 231 235);
 }
 
-.post-single{
+.post-single {
   width: 60%;
-  }
+}
 
-  .single-post-container {
-    max-width: 800px;  /* Wider than feed posts for better detail */
-    margin: 2rem auto;
-    padding: 0 1rem;
-    background-color: rgb(249 250 251);
-    min-height: calc(100vh - 4rem);
-  }
+.single-post-container {
+  max-width: 800px;
+  /* Wider than feed posts for better detail */
+  margin: 2rem auto;
+  padding: 0 1rem;
+  background-color: rgb(249 250 251);
+  min-height: calc(100vh - 4rem);
+}
 
 .post__header {
   padding: .5rem;
@@ -486,10 +514,14 @@ max-width: 1620px;
   height: 3rem;
   border-radius: 9999px;
   align-items: center;
-  border-radius: 50%; /* Makes the image circular */
-  object-fit: cover; /* Ensures the image covers the container */
-  border: 2px solid #ddd; /* Optional: Adds a border around the picture */
-  transition: border-color 0.3s; /* Smooth border color transition */
+  border-radius: 50%;
+  /* Makes the image circular */
+  object-fit: cover;
+  /* Ensures the image covers the container */
+  border: 2px solid #ddd;
+  /* Optional: Adds a border around the picture */
+  transition: border-color 0.3s;
+  /* Smooth border color transition */
 }
 
 .post__username {
@@ -596,9 +628,12 @@ max-width: 1620px;
 
 .post__action-buttons {
   display: flex;
-  align-items: center; /* Center vertically */
-  justify-content: center; /* Center horizontally */
-  gap: 1rem; /* Space between buttons */
+  align-items: center;
+  /* Center vertically */
+  justify-content: center;
+  /* Center horizontally */
+  gap: 1rem;
+  /* Space between buttons */
 }
 
 .post__button {
@@ -650,7 +685,8 @@ max-width: 1620px;
 .post__challenge-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* Space between icon and text */
+  gap: 0.5rem;
+  /* Space between icon and text */
   padding: 0.5rem 1rem;
   background-color: rgb(255 237 213);
   border-radius: 9999px;
@@ -666,11 +702,12 @@ max-width: 1620px;
 
 .post__challenge-icon {
   color: rgb(249 115 22);
-  margin:0
+  margin: 0
 }
 
 .post__challenge-text {
-  text-align: center; /* Ensure text is centered within its container */
+  text-align: center;
+  /* Ensure text is centered within its container */
   font-size: 0.875rem;
   font-weight: 500;
   color: rgb(194 65 12);
@@ -744,7 +781,8 @@ max-width: 1620px;
   right: 1.5rem;
   width: 3.5rem;
   height: 3.5rem;
-  background-color: #3B82F6; /* blue-500 */
+  background-color: #3B82F6;
+  /* blue-500 */
   color: white;
   border-radius: 9999px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -758,7 +796,8 @@ max-width: 1620px;
 }
 
 .fab-button:hover {
-  background-color: #2563EB; /* blue-600 */
+  background-color: #2563EB;
+  /* blue-600 */
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   transform: translateY(-2px);
 }
@@ -804,7 +843,8 @@ max-width: 1620px;
   gap: 0.5rem;
   margin-bottom: 1rem;
   width: 100%;
-  align-items: flex-start; /* Align items to top for when textarea grows */
+  align-items: flex-start;
+  /* Align items to top for when textarea grows */
 }
 
 
@@ -817,8 +857,10 @@ max-width: 1620px;
   font-family: inherit;
   font-size: 0.875rem;
   line-height: 1.5;
-  resize: none; /* Prevents manual resizing */
-  overflow-y: hidden; /* Hides scrollbar */
+  resize: none;
+  /* Prevents manual resizing */
+  overflow-y: hidden;
+  /* Hides scrollbar */
   width: 100%;
   box-sizing: border-box;
 }
@@ -891,6 +933,7 @@ max-width: 1620px;
 .comment-section__view-all:hover {
   color: #2563eb;
 }
+
 .comment-section__edit-form {
   display: flex;
   gap: 0.5rem;
@@ -962,6 +1005,7 @@ max-width: 1620px;
   background-color: #ef4444;
   color: white;
 }
+
 .feed .comment-input-container {
   position: relative;
   flex-grow: 1;
@@ -1018,9 +1062,10 @@ max-width: 1620px;
 /* Mobile optimization */
 @media (max-width: 768px) {
 
-  
+
   .comment-section__input {
-    font-size: 1rem; /* Slightly larger for mobile */
+    font-size: 1rem;
+    /* Slightly larger for mobile */
     padding: 0.625rem;
   }
 }
