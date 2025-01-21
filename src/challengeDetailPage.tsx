@@ -15,7 +15,7 @@ import { removeParticipantFromChallenge, archiveChallenge, handleChallengeRespon
 import { useUser } from './userContext';
 import ActionMenu from './components/cardActionMenu/cardActionMenu';
 import { ActivityItem } from './components/challengeActivityItem/challengeActivityItem';
-import ChallengeDailyPrompt from './utils/challengeDailyPrompt';
+import ChallengeDailyPrompt from './components/ChallengeDailyPrompt/challengeDailyPrompt';
 import { useNavigate } from 'react-router-dom';
 import { getChallengeStyle, getChallengeIcon } from './styles/challengeStyles';
 import { ChallengeReminderBell } from './components/challengeReminderBell/challengeReminderBell';

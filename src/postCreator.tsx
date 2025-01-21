@@ -376,6 +376,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         </div>
 
         <div className="post-creator__form">
+
           <div className="post-creator__user-info">
             <img
               src={pictureUrl ?? '/profileDefault.png'}
@@ -385,16 +386,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             <span className="post-creator__username">{userAttributes?.preferred_username || 'Loading...'}</span>
           </div>
 
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Share details about your workout..."
-            className="post-creator__textarea"
-            rows={4}
-          />
-
           <div className="post-creator__available-challenges">
-            <h3 className="post-creator__section-title">Add to Active Challenges</h3>
+            <h3 className="post-creator__section-title">Tag Your Challenges!</h3>
             <div className="post-creator__challenge-tags">
               {availableChallenges.map(challenge => {
                 const selectability = challengeSelectability[challenge.id];
@@ -438,6 +431,17 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
               })}
             </div>
           </div>
+
+
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Share details about your workout..."
+            className="post-creator__textarea"
+            rows={4}
+          />
+
+
 
           <div className="post-creator__actions">
             <button
