@@ -207,18 +207,19 @@ export default function ChallengeDetailPage() {
             <div className="challenge-hero">
                 <div className="challenge-header">
                     <div>
-                        <h1 className="challenge-title">{challengeDetails.title}
-                            <div
-                                className="challenge-type-badge"
-                                style={{
-                                    backgroundColor: headerStyle.bgColor,
-                                    color: headerStyle.textColor,
-                                    borderColor: headerStyle.borderColor
-                                }}
-                            >
-                                {getChallengeIcon(challengeDetails?.challengeType, { size: 20 })}
-                                <span>{headerStyle.name}</span>
-                            </div></h1>
+                        <div
+                            className="challenge-type-badge"
+                            style={{
+                                backgroundColor: headerStyle.bgColor,
+                                color: headerStyle.textColor,
+                                borderColor: headerStyle.borderColor
+                            }}
+                        >
+                            {getChallengeIcon(challengeDetails?.challengeType, { size: 20 })}
+                            <span>{headerStyle.name}</span>
+                        </div>
+                        <h1 className="challenge-title">
+                            {challengeDetails.title}</h1>
                         <p className="challenge-description">{challengeDetails.description}</p>
                     </div>
                     <div className="challenge-actions">
