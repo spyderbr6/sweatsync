@@ -69,12 +69,7 @@ const BottomNav: React.FC = () => {
                                         )}
                                     </div>
                                     <span className="bottom-nav__label">{item.label}</span>
-                                    {userId && <NotificationBell
-                                        userId={userId}
-                                        isOpen={showNotifications}
-                                        position="bottom"
-                                        onUnreadCountChange={setUnreadCount}
-                                    />}
+
                                 </>
                             ) : (
                                 <>
@@ -86,7 +81,12 @@ const BottomNav: React.FC = () => {
                     ))}
                 </div>
             </nav>
-
+            {userId && <NotificationBell
+                                        userId={userId}
+                                        isOpen={showNotifications}
+                                        position="bottom"
+                                        onUnreadCountChange={setUnreadCount}
+                                    />}
             {/* Placeholder Health Modal */}
             {isHealthModalOpen && (
                 <div className="modal-overlay" onClick={() => setIsHealthModalOpen(false)}>
