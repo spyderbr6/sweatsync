@@ -71,8 +71,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                         title: getNotificationTitle(reminder.type as ReminderType),
                         body: await generateNotificationBody(reminder),
                         data: JSON.stringify({
-                            challengeId: reminder.challengeId,
-                            type: reminder.type
+                            challengeId: reminder.challengeId
                         })
                     });
 
@@ -134,6 +133,7 @@ async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']
         return false;
     }
 
+    
     try {
         const [challenge, preferencesResult] = await Promise.all([
             client.models.Challenge.get({ id: reminder.challengeId }),
