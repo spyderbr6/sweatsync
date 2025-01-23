@@ -77,7 +77,6 @@
 
 .notification-panel--bottom {
   bottom: var(--bottom-nav-height);
-  height: calc(100vh - var(--bottom-nav-height));
   overflow-y: auto;
 }
 
