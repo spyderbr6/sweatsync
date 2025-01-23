@@ -16,8 +16,8 @@ enum ReminderType {
     DAILY_POST = "DAILY_POST",
     GROUP_POST = "GROUP_POST",
     CREATOR_ROTATION = "CREATOR_ROTATION"
-  }
-  
+}
+
 type NotificationType = 'CHALLENGE_DAILY_REMINDER' | 'CHALLENGE_GROUP_REMINDER' | 'CHALLENGE_CREATOR_REMINDER';
 
 export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = async () => {
@@ -25,6 +25,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
         const now = new Date();
         const nowISOString = now.toISOString();
 
+        // Get all pending reminders due now
         const reminderResults = await client.models.ReminderSchedule.list({
             filter: {
                 and: [
@@ -34,6 +35,11 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
             }
         });
 
+        console.log('[Process] Found reminders:', {
+            count: reminderResults.data.length,
+            timestamp: nowISOString
+        });
+
         const processedReminders = await Promise.all(
             reminderResults.data.map(async (reminder) => {
                 if (!reminder.id || !reminder.userId || !reminder.challengeId || !reminder.type) {
@@ -41,6 +47,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                     return null;
                 }
 
+                // Validate reminder should still be sent
                 const shouldSend = await validateReminder(reminder);
                 if (!shouldSend) {
                     console.log('[Process] Reminder validation failed:', {
@@ -57,6 +64,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                 }
 
                 try {
+                    // Send notification
                     await client.queries.sendPushNotificationFunction({
                         type: getNotificationType(reminder.type as ReminderType),
                         userID: reminder.userId,
@@ -74,42 +82,28 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                         type: reminder.type
                     });
 
-                    const updates = {
+                    // Calculate next schedule based on preferences
+                    const nextSchedule = calculateNextSchedule(
+                        reminder.timePreference,
+                        reminder.secondPreference,
+                        nowISOString,
+                        reminder.timezone || 'UTC'
+                    );
+
+                    await client.models.ReminderSchedule.update({
                         id: reminder.id,
                         lastSent: nowISOString,
-                        status: reminder.repeatDaily ? 'PENDING' : 'SENT',
+                        status: 'PENDING',  // Keep pending for next schedule
+                        nextScheduled: nextSchedule,
                         updatedAt: nowISOString
-                    } as const;
-
-                    if (reminder.repeatDaily) {
-                        const nextScheduled = calculateNextSchedule(
-                            reminder.timePreference || '09:00',
-                            reminder.secondPreference,
-                            nowISOString,
-                            reminder.timezone || 'UTC'
-                        );
-
-                        console.log('[Process] Updating schedule:', {
-                            reminderId: reminder.id,
-                            nextScheduled,
-                            timezone: reminder.timezone || 'UTC'
-                        });
-
-                        await client.models.ReminderSchedule.update({
-                            ...updates,
-                            nextScheduled
-                        });
-                    } else {
-                        await client.models.ReminderSchedule.update(updates);
-                    }
+                    });
 
                     return reminder;
                 } catch (error) {
-                    console.error('[Process] Error handling reminder:', {
+                    console.error('[Process] Error processing reminder:', {
                         error,
                         reminderId: reminder.id,
-                        userId: reminder.userId,
-                        type: reminder.type
+                        userId: reminder.userId
                     });
                     return null;
                 }
@@ -123,6 +117,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
         });
 
         return true;
+
     } catch (error) {
         console.error('[Process] Error processing reminders:', error);
         return false;
@@ -181,11 +176,11 @@ async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']
 
         if (!Object.values(ReminderType).includes(reminderType)) {
             console.log('[Validation] Invalid reminder type:', {
-              type: reminderType,
-              validTypes: Object.values(ReminderType)
+                type: reminderType,
+                validTypes: Object.values(ReminderType)
             });
             return false;
-          }
+        }
 
         if (reminderType === 'GROUP_POST' && challenge.data.maxPostsPerDay != null) {
             const dailyPosts = await getPostsCount(reminder.challengeId, reminder.userId, 'day');
@@ -223,102 +218,56 @@ async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']
 }
 
 function calculateNextSchedule(
-    timePreference: string,
+    timePreference: string | null | undefined,
     secondPreference: string | null | undefined,
     currentTime: string,
-    timezone: string = 'UTC' // Default to UTC if no timezone specified
+    timezone: string = 'UTC'
 ): string {
-    try {
-        // Convert current time to user's timezone
-        const userNow = new Date(currentTime).toLocaleString('en-US', { timeZone: timezone });
-        const now = new Date(userNow);
+    const now = new Date(currentTime);
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
 
-        // Calculate next schedule for each time preference
-        const schedules: Date[] = [];
+    const times: Date[] = [];
 
-        // Helper to convert user's preferred time to UTC
-        const convertToUTC = (timeStr: string, baseDate: Date): Date => {
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            if (!Number.isNaN(hours) && !Number.isNaN(minutes)) {
-                // Create date in user's timezone
-                const localDate = new Date(baseDate);
-                localDate.setHours(hours, minutes, 0, 0);
-
-                // Convert to UTC string then back to Date to get UTC time
-                return new Date(
-                    new Date(localDate).toLocaleString('en-US', {
-                        timeZone: 'UTC',
-                        timeZoneName: 'short'
-                    })
-                );
-            }
-            throw new Error('Invalid time format');
-        };
-
-        // Get tomorrow's date in user's timezone
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        // Handle primary time
-        try {
-            const primarySchedule = convertToUTC(timePreference, tomorrow);
-            schedules.push(primarySchedule);
-            console.log('[Schedule] Primary time converted:', {
-                original: timePreference,
-                timezone,
-                utc: primarySchedule.toISOString()
-            });
-        } catch (error) {
-            console.error('[Schedule] Error converting primary time:', error);
+    // Add primary time
+    if (timePreference) {
+        const [primaryHours, primaryMinutes] = timePreference.split(':').map(Number);
+        if (!isNaN(primaryHours) && !isNaN(primaryMinutes)) {
+            const primaryTime = new Date(today);
+            primaryTime.setHours(primaryHours, primaryMinutes, 0, 0);
+            times.push(primaryTime);
         }
-
-        // Handle secondary time if it exists
-        if (secondPreference) {
-            try {
-                const secondarySchedule = convertToUTC(secondPreference, tomorrow);
-                schedules.push(secondarySchedule);
-                console.log('[Schedule] Secondary time converted:', {
-                    original: secondPreference,
-                    timezone,
-                    utc: secondarySchedule.toISOString()
-                });
-            } catch (error) {
-                console.error('[Schedule] Error converting secondary time:', error);
-            }
-        }
-
-        // Return the earliest next schedule
-        if (schedules.length > 0) {
-            const nextSchedule = schedules.sort((a, b) => a.getTime() - b.getTime())[0];
-            console.log('[Schedule] Selected next schedule:', {
-                timezone,
-                userTime: nextSchedule.toLocaleString('en-US', { timeZone: timezone }),
-                utc: nextSchedule.toISOString()
-            });
-            return nextSchedule.toISOString();
-        }
-
-        // Fallback to default 9 AM tomorrow if no valid times
-        console.log('[Schedule] Using fallback time');
-        const defaultSchedule = convertToUTC('09:00', tomorrow);
-        return defaultSchedule.toISOString();
-
-    } catch (error) {
-        console.error('[Schedule] Error in calculateNextSchedule:', {
-            error,
-            timePreference,
-            secondPreference,
-            timezone,
-            currentTime
-        });
-        // Ultimate fallback - 9 AM UTC tomorrow
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(9, 0, 0, 0);
-        return tomorrow.toISOString();
     }
-}
 
+    // Add secondary time
+    if (secondPreference) {
+        const [secondaryHours, secondaryMinutes] = secondPreference.split(':').map(Number);
+        const secondaryTime = new Date(today);
+        secondaryTime.setHours(secondaryHours, secondaryMinutes, 0, 0);
+        times.push(secondaryTime);
+    }
+
+    // Sort times chronologically
+    times.sort((a, b) => a.getTime() - b.getTime());
+
+    // Find next valid time
+    let nextTime = times.find(time => time > now);
+
+    // If no time found today, use first time tomorrow
+    if (!nextTime && times.length > 0) {
+        nextTime = new Date(times[0]);
+        nextTime.setDate(nextTime.getDate() + 1);
+    }
+
+    // Fallback to tomorrow at 9 AM if no valid times found
+    if (!nextTime) {
+        nextTime = new Date(today);
+        nextTime.setDate(nextTime.getDate() + 1);
+        nextTime.setHours(9, 0, 0, 0);
+    }
+
+    return nextTime.toISOString();
+}
 function getNotificationType(reminderType: ReminderType): NotificationType {
     const typeMap: Record<ReminderType, NotificationType> = {
         'DAILY_POST': 'CHALLENGE_DAILY_REMINDER',
