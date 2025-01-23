@@ -35,7 +35,10 @@ const BottomNav: React.FC = () => {
             id: 'notifications',
             label: 'Alerts',
             icon: Bell,
-            action: () => setShowNotifications(!showNotifications),
+            action: (e: React.MouseEvent) => {
+                e.stopPropagation(); //  <-- IMPORTANT: Stop the click from bubbling.
+                setShowNotifications(prev => !prev);
+            },
             isActive: showNotifications,
             badge: unreadCount > 0 ? unreadCount : undefined
         },
@@ -55,7 +58,7 @@ const BottomNav: React.FC = () => {
                     {navItems.map((item) => (
                         <button
                             key={item.id}
-                            onClick={item.action}
+                            onClick={(e) => item.action(e)} // pass the `e` to your action
                             className={`bottom-nav__item ${item.isActive ? 'bottom-nav__item--active' : ''
                                 }`}
                             aria-label={item.label}
