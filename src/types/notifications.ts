@@ -132,8 +132,6 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     requireInteraction: true,
     vibrate: [200, 100, 200]
   },
-
-  export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     ACHIEVEMENT_EARNED: {
       icon: '/icons/trophy-96.png',
       badge: '/icons/trophy-96.png',

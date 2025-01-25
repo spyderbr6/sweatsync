@@ -12,6 +12,8 @@ import {
     PersonalGoal,
     DailyLog
 } from "../types/personalStats";
+import { validateStreak, checkAndProcessAchievements } from './achievementsHandler';
+
 
 const client = generateClient<Schema>();
 
@@ -83,7 +85,7 @@ export async function createDailyLog(
             // Process achievements for each goal
             await Promise.all(activeGoals.map(async (goal) => {
                 // Validate if the log meets the goal's criteria
-                const isValid = await validateStreak(input.userID, goal.id, result.data!);
+                const isValid = await validateStreak(goal.id, result.data!);
                 
                 if (isValid) {
                     const streak = await calculateCurrentStreak(input.userID, goal.id);

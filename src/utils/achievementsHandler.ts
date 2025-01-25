@@ -1,75 +1,7 @@
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../../amplify/data/resource";
-import { PersonalGoal, DailyLog } from "../types/personalStats";
 
 const client = generateClient<Schema>();
-
-interface EarnedAchievement {
-  type: 'STREAK';
-  goalId: string;
-  streakDays: number;
-  message: string;
-}
-
-export async function checkAndProcessAchievements(
-  userId: string,
-  goalId: string,
-  currentStreak: number
-): Promise<void> {
-  try {
-    // Get the goal details
-    const goalResult = await client.models.PersonalGoal.get({ id: goalId });
-    const goal = goalResult.data;
-    
-    if (!goal?.achievementsEnabled || !goal.achievementThresholds) return;
-
-    const thresholds = goal.achievementThresholds as Array<{
-      streakDays: number;
-      message: string;
-      postToFeed: boolean;
-    }>;
-
-    // Find eligible achievements
-    const eligibleAchievements = thresholds.filter(threshold => 
-      threshold.streakDays === currentStreak && threshold.postToFeed
-    );
-
-    // Process each eligible achievement
-    for (const achievement of eligibleAchievements) {
-      // Check if this achievement was already posted
-      const existingPosts = await client.models.PostforWorkout.list({
-        filter: {
-          userID: { eq: userId },
-          challengeIds: { contains: goalId },
-          content: { contains: `Achieved ${achievement.streakDays} day streak` }
-        }
-      });
-
-      // If no existing post found, create one
-      if (existingPosts.data.length === 0) {
-        await createAchievementPost({
-          userId,
-          goalId,
-          streakDays: achievement.streakDays,
-          message: achievement.message,
-          goalName: goal.name,
-          goalType: goal.type
-        });
-      }
-    }
-  } catch (error) {
-    console.error('Error processing achievements:', error);
-  }
-}
-
-interface CreateAchievementPostParams {
-  userId: string;
-  goalId: string;
-  streakDays: number;
-  message: string;
-  goalName: string;
-  goalType: string;
-}
 
 async function createAchievementPost({
   userId,
@@ -78,9 +10,15 @@ async function createAchievementPost({
   message,
   goalName,
   goalType
-}: CreateAchievementPostParams): Promise<void> {
+}: {
+  userId: string;
+  goalId: string;
+  streakDays: number;
+  message: string;
+  goalName: string;
+  goalType: string;
+}): Promise<void> {
   try {
-    // Create the achievement post
     const postContent = `🏆 Achievement Unlocked: ${message}\n\nAchieved ${streakDays} day streak in ${goalName}! ${
       goalType === 'CALORIE' ? '🔥' : goalType === 'WEIGHT' ? '⚖️' : '🎯'
     }`;
@@ -89,16 +27,21 @@ async function createAchievementPost({
       content: postContent,
       userID: userId,
       username: (await client.models.User.get({ id: userId })).data?.preferred_username,
-      challengeIds: [goalId], // Store the goal ID in challengeIds for reference
+      challengeIds: [goalId],
       thumbsUp: 0,
       smiley: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      strong: 0,
+      fire: 0,
+      zap: 0,
+      fist: 0,
+      target: 0,
+      star: 0,
+      rocket: 0,
+      clap: 0,
+      trophy: 0
     });
 
-    // If URL is required for the post, you can add it later
     if (postResult.data?.id) {
-      // Optionally, you could create a notification for the user's followers
       await notifyFollowers(userId, postResult.data.id, goalName);
     }
 
@@ -114,7 +57,6 @@ async function notifyFollowers(
   goalName: string
 ): Promise<void> {
   try {
-    // Get user's followers
     const friendships = await client.models.Friend.list({
       filter: { friendUser: { eq: achieverId } }
     });
@@ -122,7 +64,6 @@ async function notifyFollowers(
     const achieverResult = await client.models.User.get({ id: achieverId });
     const achieverName = achieverResult.data?.preferred_username || 'Someone';
 
-    // Create notifications for each follower
     await Promise.all(
       friendships.data.map(friendship => 
         client.queries.sendPushNotificationFunction({
@@ -143,11 +84,55 @@ async function notifyFollowers(
   }
 }
 
-// Helper function to validate streak for a goal
-export async function validateStreak(
+export async function checkAndProcessAchievements(
   userId: string,
   goalId: string,
-  latestLog: DailyLog
+  currentStreak: number
+): Promise<void> {
+  try {
+    const goalResult = await client.models.PersonalGoal.get({ id: goalId });
+    const goal = goalResult.data;
+    
+    if (!goal?.achievementsEnabled || !goal.achievementThresholds) return;
+
+    const thresholds = goal.achievementThresholds as Array<{
+      streakDays: number;
+      message: string;
+      postToFeed: boolean;
+    }>;
+
+    const eligibleAchievements = thresholds.filter(threshold => 
+      threshold.streakDays === currentStreak && threshold.postToFeed
+    );
+
+    for (const achievement of eligibleAchievements) {
+      const existingPosts = await client.models.PostforWorkout.list({
+        filter: {
+          userID: { eq: userId },
+          challengeIds: { contains: goalId },
+          content: { contains: `Achieved ${achievement.streakDays} day streak` }
+        }
+      });
+
+      if (existingPosts.data.length === 0) {
+        await createAchievementPost({
+          userId,
+          goalId,
+          streakDays: achievement.streakDays,
+          message: achievement.message,
+          goalName: goal.name,
+          goalType: goal.type || 'CUSTOM'
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error processing achievements:', error);
+  }
+}
+
+export async function validateStreak(
+  goalId: string,
+  latestLog: Schema['DailyLog']['type']
 ): Promise<boolean> {
   try {
     const goalResult = await client.models.PersonalGoal.get({ id: goalId });
@@ -157,9 +142,9 @@ export async function validateStreak(
 
     switch (goal.type) {
       case 'CALORIE':
-        return latestLog.calories !== undefined && latestLog.calories <= goal.target;
+        return latestLog.calories != null && latestLog.calories <= goal.target;
       case 'WEIGHT':
-        return latestLog.weight !== undefined && latestLog.weight <= goal.target;
+        return latestLog.weight != null && latestLog.weight <= goal.target;
       default:
         return false;
     }
