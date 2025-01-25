@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../../../amplify/data/resource";
 import { useNavigate } from 'react-router-dom';
@@ -8,8 +8,16 @@ import './NotificationBell.css';
 interface NotificationBellProps {
   userId: string;
   position?: 'bottom' | 'top';
+  /** Whether the notification panel is currently open. */
   isOpen?: boolean;
+  /** Called whenever the unread count changes. */
   onUnreadCountChange?: (count: number) => void;
+  /**
+   * Called by the panel itself when it detects a click
+   * outside of its DOM. The parent (BottomNav) should
+   * toggle `isOpen` back to false in response.
+   */
+  onRequestClose?: () => void;
 }
 
 const client = generateClient<Schema>();
@@ -18,12 +26,16 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
   userId,
   position = 'top',
   isOpen = false,
-  onUnreadCountChange
+  onUnreadCountChange,
+  onRequestClose
 }) => {
   const [notifications, setNotifications] = useState<Schema["Notification"]["type"][]>([]);
   const [visibleCount, setVisibleCount] = useState<number>(5);
   const navigate = useNavigate();
+  /** Ref for the notification panel wrapper. */
+  const panelRef = useRef<HTMLDivElement>(null);
 
+  // Fetch notifications + track unread count
   useEffect(() => {
     if (!userId) return;
 
@@ -49,6 +61,30 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
     return () => subscription.unsubscribe();
   }, [userId, onUnreadCountChange]);
 
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      // If panelRef exists and click is outside of that container:
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(event.target as Node)
+      ) {
+        onRequestClose?.();
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isOpen, onRequestClose]);
+
+  // Don't render if panel is closed
+  if (!isOpen) return null;
+
+  // Handlers
   const handleNotificationClick = async (notification: Schema["Notification"]["type"]) => {
     if (!notification.id) return;
 
@@ -73,23 +109,11 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
         return;
       }
 
-      // Parse notification data
+      // Parse notification data & navigate
       if (notification.data) {
         try {
           const data = JSON.parse(notification.data);
-
-          // Generate target URL using the config's URL pattern
           const targetUrl = generateUrl(config.urlPattern, data);
-
-          // Log for debugging
-          console.log('Navigating to:', {
-            type: notification.type,
-            pattern: config.urlPattern,
-            data,
-            targetUrl
-          });
-
-          // Navigate to the generated URL
           navigate(targetUrl);
         } catch (parseError) {
           console.error('Error parsing notification data:', {
@@ -99,7 +123,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
           });
         }
       } else {
-        // Handle notifications without data (e.g., friend requests that just go to /friends)
+        // No data -> direct to config URL
         navigate(config.urlPattern);
       }
     } catch (error) {
@@ -112,7 +136,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
   };
 
   const handleLoadMore = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Don’t bubble up
     setVisibleCount(prev => prev + 5);
   };
 
@@ -127,31 +151,33 @@ const NotificationBell: React.FC<NotificationBellProps> = ({
     return `${Math.floor(seconds / 86400)}d ago`;
   };
 
-  if (!isOpen) return null;
-
-  // Get visible notifications
+  // Slicing notifications for "Load More"
   const visibleNotifications = notifications.slice(0, visibleCount);
   const hasMore = visibleCount < notifications.length;
 
   return (
-    <div className={`notification-panel ${position === 'bottom' ? 'notification-panel--bottom' : ''}`}>
+    <div
+      ref={panelRef}
+      className={`notification-panel ${
+        position === 'bottom' ? 'notification-panel--bottom' : ''
+      }`}
+    >
       <div className="notification-header">
         <h3 className="notification-title">Notifications</h3>
       </div>
 
       <div className="notification-list">
         {visibleNotifications.length === 0 ? (
-          <div className="notification-empty">
-            No new notifications
-          </div>
+          <div className="notification-empty">No new notifications</div>
         ) : (
           <>
             {visibleNotifications.map(notification => (
               <div
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
-                className={`notification-item ${notification.readAt ? 'notification-item--read' : ''} 
-                          ${notification.status === 'PENDING' ? 'notification-item--pending' : ''}`}
+                className={`notification-item ${
+                  notification.readAt ? 'notification-item--read' : ''
+                } ${notification.status === 'PENDING' ? 'notification-item--pending' : ''}`}
                 role="button"
                 tabIndex={0}
                 onKeyPress={(e) => {

@@ -18,7 +18,7 @@ async function getPostsCount(
 ): Promise<number> {
     const now = new Date();
     let startDate = new Date(now);
-    
+
     if (period === 'day') {
         startDate.setHours(0, 0, 0, 0);
     } else {
@@ -105,8 +105,8 @@ export async function updateChallengePoints(context: PointsUpdateContext): Promi
         const participant = participantResult.data[0];
         if (!participant) return false;
 
-        const challenge = await client.models.Challenge.get({ 
-            id: context.challengeId 
+        const challenge = await client.models.Challenge.get({
+            id: context.challengeId
         });
 
         if (!challenge.data) return false;
@@ -142,7 +142,7 @@ export async function updateChallengePoints(context: PointsUpdateContext): Promi
 interface ValidatePostContext {
     challengeId: string;
     userId: string;
-    postId: string; 
+    postId: string;
     timestamp: string;
     isDailyChallenge?: boolean;
     content?: string;
@@ -155,8 +155,8 @@ interface ValidationResult {
 
 export async function validateChallengePost(context: ValidatePostContext): Promise<ValidationResult> {
     try {
-        const challengeResult = await client.models.Challenge.get({ 
-            id: context.challengeId 
+        const challengeResult = await client.models.Challenge.get({
+            id: context.challengeId
         });
 
         if (!challengeResult.data) {
@@ -251,6 +251,51 @@ export async function validateChallengePost(context: ValidatePostContext): Promi
             };
         }
 
+        //Clear any pending reminders for the day
+        try {
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const endOfDay = new Date();
+            endOfDay.setHours(23, 59, 59, 999);
+
+            // Find all pending reminders for this user/challenge/day
+            const pendingReminders = await client.models.ReminderSchedule.list({
+                filter: {
+                    and: [
+                        { userId: { eq: context.userId } },
+                        { challengeId: { eq: context.challengeId } },
+                        { status: { eq: 'PENDING' } },
+                        { nextScheduled: { ge: startOfDay.toISOString() } },
+                        { nextScheduled: { le: endOfDay.toISOString() } }
+                    ]
+                }
+            });
+
+            // Cancel each found reminder
+            await Promise.all(pendingReminders.data.map(reminder =>
+                client.models.ReminderSchedule.update({
+                    id: reminder.id,
+                    status: 'CANCELLED',
+                    updatedAt: new Date().toISOString()
+                })
+            ));
+
+            console.log('[Validation] Cancelled pending reminders:', {
+                userId: context.userId,
+                challengeId: context.challengeId,
+                timestamp: context.timestamp
+            });
+
+        } catch (reminderError) {
+            // Log but don't fail the validation if reminder cancellation fails
+            console.error('[Validation] Failed to cancel reminders:', {
+                error: reminderError,
+                userId: context.userId,
+                challengeId: context.challengeId
+            });
+        }
+
 
 
         return {
@@ -270,44 +315,44 @@ export async function sendChallengePostNotifications(
     postId: string,
     challengeId: string,
     posterName: string,
-    posterId: string, 
+    posterId: string,
     challengeTitle: string
-  ) {
+) {
     const client = generateClient<Schema>();
-  
+
     try {
-      // Get all active participants
-      const participantsResult = await client.models.ChallengeParticipant.list({
-        filter: {
-          challengeID: { eq: challengeId },
-          status: { eq: 'ACTIVE' }
-        }
-      });
-  
-      if (!participantsResult.data?.length) return;
-    
-      // Prepare notification data
-      const notificationData = {
-        challengeId,
-        postId,
-      };
-  
-      // Send notification to each participant except the poster
-      const notificationPromises = participantsResult.data
-        .filter(participant => participant.userID !== posterId) // Exclude poster
-        .map(participant => 
-          client.queries.sendPushNotificationFunction({
-            type: 'CHALLENGE_POST',
-            userID: participant.userID,
-            title: `New Workout against ${challengeTitle}`,
-            body: `${posterName} just completed a workout in your challenge, don't let them pull ahead!`,
-            data: JSON.stringify(notificationData)
-          })
-        );
-  
-      await Promise.all(notificationPromises);
-  
+        // Get all active participants
+        const participantsResult = await client.models.ChallengeParticipant.list({
+            filter: {
+                challengeID: { eq: challengeId },
+                status: { eq: 'ACTIVE' }
+            }
+        });
+
+        if (!participantsResult.data?.length) return;
+
+        // Prepare notification data
+        const notificationData = {
+            challengeId,
+            postId,
+        };
+
+        // Send notification to each participant except the poster
+        const notificationPromises = participantsResult.data
+            .filter(participant => participant.userID !== posterId) // Exclude poster
+            .map(participant =>
+                client.queries.sendPushNotificationFunction({
+                    type: 'CHALLENGE_POST',
+                    userID: participant.userID,
+                    title: `New Workout against ${challengeTitle}`,
+                    body: `${posterName} just completed a workout in your challenge, don't let them pull ahead!`,
+                    data: JSON.stringify(notificationData)
+                })
+            );
+
+        await Promise.all(notificationPromises);
+
     } catch (error) {
-      console.error('Error sending challenge post notifications:', error);
+        console.error('Error sending challenge post notifications:', error);
     }
-  }
+}
