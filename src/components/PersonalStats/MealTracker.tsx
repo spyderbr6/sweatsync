@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Cookie } from 'lucide-react';
 import { useUser } from '../../userContext';
 import { DailyLog, DailyMeals, Meal } from '../../types/personalStats';
@@ -166,8 +166,8 @@ export function MealTracker() {
               {icon}
               <h3>{label}</h3>
               <span className="meal-calories">
-                {((todayLog?.meals as DailyMeals)?.[key] || [])
-                  .reduce((sum, meal) => sum + meal.calories, 0)} cal
+                {(((todayLog?.meals as DailyMeals)?.[key]) ?? [])
+                  .reduce((sum, meal) => sum + (meal?.calories ?? 0), 0)} cal
               </span>
             </div>
 
@@ -201,16 +201,16 @@ export function MealTracker() {
 
       {(isAddingMeal || editingMeal) && (
         <MealForm
-          onSubmit={handleAddMeal}
-          onClose={() => {
-            setIsAddingMeal(false);
-            setEditingMeal(null);
-          }}
-          editingMeal={editingMeal ? 
-            (todayLog?.meals as DailyMeals)[editingMeal.type][editingMeal.index] 
-            : undefined}
-          mealType={editingMeal?.type}
-        />
+        onSubmit={handleAddMeal}
+        onClose={() => {
+          setIsAddingMeal(false);
+          setEditingMeal(null);
+        }}
+        editingMeal={editingMeal ? 
+          ((todayLog?.meals ?? {}) as DailyMeals)[editingMeal.type]?.[editingMeal.index] 
+          : undefined}
+        mealType={editingMeal?.type}
+      />
       )}
     </div>
   );

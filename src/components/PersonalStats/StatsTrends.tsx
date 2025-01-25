@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+// src/components/PersonalStats/StatsTrends.tsx
+import { useState, useEffect, useMemo } from 'react';
 import {
   LineChart,
   Line,

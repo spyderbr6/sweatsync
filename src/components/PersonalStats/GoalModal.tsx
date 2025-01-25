@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Scale, Utensils, Trophy } from 'lucide-react';
 import { 
   GoalType, 
+  GoalStatus,
   CreatePersonalGoalInput, 
   UpdatePersonalGoalInput,
   PersonalGoal 
@@ -38,15 +39,16 @@ export function GoalModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<Partial<CreatePersonalGoalInput>>({
+  const [formData, setFormData] = useState<CreatePersonalGoalInput>({
     type: existingGoal?.type || GoalType.CALORIE,
     name: existingGoal?.name || '',
     target: existingGoal?.target || 0,
     achievementsEnabled: existingGoal?.achievementsEnabled ?? true,
     achievementThresholds: existingGoal?.achievementThresholds || DEFAULT_ACHIEVEMENTS,
-    status: 'ACTIVE',
+    status: GoalStatus.ACTIVE,
     startDate: existingGoal?.startDate || new Date().toISOString(),
-    endDate: existingGoal?.endDate
+    endDate: existingGoal?.endDate,
+    userID: userId || ''
   });
 
   const validateForm = (): boolean => {
@@ -83,7 +85,7 @@ export function GoalModal({
           target: formData.target!,
           achievementsEnabled: formData.achievementsEnabled!,
           achievementThresholds: formData.achievementThresholds,
-          status: 'ACTIVE',
+          status: GoalStatus.ACTIVE,
           startDate: formData.startDate!,
           endDate: formData.endDate
         };
