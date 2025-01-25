@@ -66,7 +66,6 @@ export async function getActiveGoals(
     }
 }
 
-// Daily Log Operations
 export async function createDailyLog(
     input: CreateDailyLogInput
 ): Promise<DailyLog | null> {
@@ -76,6 +75,31 @@ export async function createDailyLog(
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         });
+
+        if (result.data) {
+            // Get all active goals for the user
+            const activeGoals = await getActiveGoals(input.userID);
+            
+            // Process achievements for each goal
+            await Promise.all(activeGoals.map(async (goal) => {
+                // Validate if the log meets the goal's criteria
+                const isValid = await validateStreak(input.userID, goal.id, result.data!);
+                
+                if (isValid) {
+                    const streak = await calculateCurrentStreak(input.userID, goal.id);
+                    // Check for any achievements based on the current streak
+                    await checkAndProcessAchievements(input.userID, goal.id, streak);
+                    
+                    // Update the goal's streak count
+                    await updatePersonalGoal({
+                        id: goal.id,
+                        streakCount: streak,
+                        bestStreak: Math.max(streak, goal.bestStreak || 0)
+                    });
+                }
+            }));
+        }
+
         return result.data as DailyLog;
     } catch (error) {
         console.error('Error creating daily log:', error);

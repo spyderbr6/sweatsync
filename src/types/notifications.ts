@@ -133,6 +133,27 @@ export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
     vibrate: [200, 100, 200]
   },
 
+  export const NOTIFICATION_CONFIGS: Record<string, NotificationConfig> = {
+    ACHIEVEMENT_EARNED: {
+      icon: '/icons/trophy-96.png',
+      badge: '/icons/trophy-96.png',
+      urlPattern: '/post/{postId}',
+      actions: [
+        { 
+          title: 'View', 
+          action: 'view',
+          urlPattern: '/post/{postId}'
+        },
+        {
+          title: 'Congratulate',
+          action: 'congratulate',
+          urlPattern: '/post/{postId}'
+        }
+      ],
+      requireInteraction: true,
+      vibrate: [200, 100, 200]
+    },
+
   CHALLENGE_CREATOR_REMINDER: {
     icon: '/icons/target-96.png',
     badge: '/icons/target-96.png',
