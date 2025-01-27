@@ -98,40 +98,56 @@ export async function createDailyLog(
     input: CreateDailyLogInput
 ): Promise<DailyLog | null> {
     try {
+        console.log('Creating daily log with input:', input);
         const result = await client.models.DailyLog.create({
             ...input,
+            meals: JSON.stringify(input.meals), // Stringify the meals JSON
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         });
 
-        if (result.data) {
-            // Get all active goals for the user
-            const activeGoals = await getActiveGoals(input.userID);
-            
-            // Process achievements for each goal
-            await Promise.all(activeGoals.map(async (goal) => {
-                // Validate if the log meets the goal's criteria
-                const isValid = await validateStreak(goal.id, result.data!);
-                
-                if (isValid) {
-                    const streak = await calculateCurrentStreak(input.userID, goal.id);
-                    // Check for any achievements based on the current streak
-                    await checkAndProcessAchievements(input.userID, goal.id, streak);
-                    
-                    // Update the goal's streak count
-                    await updatePersonalGoal({
-                        id: goal.id,
-                        streakCount: streak,
-                        bestStreak: Math.max(streak, goal.bestStreak || 0)
-                    });
-                }
-            }));
+        console.log('Daily log creation result:', result);
+        
+        if (result.errors && result.errors.length > 0) {
+            console.error('Errors during daily log creation:', result.errors);
+            throw new Error(result.errors[0].message);
         }
 
-        return result.data as DailyLog;
+        if (!result.data) {
+            console.error('No data returned from daily log creation');
+            return null;
+        }
+
+        // Get all active goals for the user
+        const activeGoals = await getActiveGoals(input.userID);
+        
+        // Process achievements for each goal
+        await Promise.all(activeGoals.map(async (goal) => {
+            // Validate if the log meets the goal's criteria
+            const isValid = await validateStreak(goal.id, result.data!);
+            
+            if (isValid) {
+                const streak = await calculateCurrentStreak(input.userID, goal.id);
+                // Check for any achievements based on the current streak
+                await checkAndProcessAchievements(input.userID, goal.id, streak);
+                
+                // Update the goal's streak count
+                await updatePersonalGoal({
+                    id: goal.id,
+                    streakCount: streak,
+                    bestStreak: Math.max(streak, goal.bestStreak || 0)
+                });
+            }
+        }));
+
+        // Parse meals back to object when returning
+        return {
+            ...result.data,
+            meals: result.data.meals ? JSON.parse(result.data.meals as string) : null
+        } as DailyLog;
     } catch (error) {
-        console.error('Error creating daily log:', error);
-        return null;
+        console.error('Full error creating daily log:', error);
+        throw error;
     }
 }
 
@@ -139,14 +155,28 @@ export async function updateDailyLog(
     input: UpdateDailyLogInput
 ): Promise<DailyLog | null> {
     try {
+        console.log('Updating daily log with input:', input);
         const result = await client.models.DailyLog.update({
             ...input,
+            meals: input.meals ? JSON.stringify(input.meals) : null,
             updatedAt: new Date().toISOString()
         });
-        return result.data as DailyLog;
+
+        console.log('Daily log update result:', result);
+
+        if (!result.data) {
+            console.error('No data returned from daily log update');
+            return null;
+        }
+
+        // Parse meals back to object when returning
+        return {
+            ...result.data,
+            meals: result.data.meals ? JSON.parse(result.data.meals as string) : null
+        } as DailyLog;
     } catch (error) {
         console.error('Error updating daily log:', error);
-        return null;
+        throw error;
     }
 }
 
@@ -155,16 +185,27 @@ export async function getDailyLogs(
     dateRange: DateRangeInput
 ): Promise<DailyLog[]> {
     try {
-        const result = await client.models.DailyLog.listLogsByDate({
-            userID: userId,
-            date: {
-                between: [dateRange.startDate, dateRange.endDate]
+        console.log('Fetching daily logs for user:', userId, 'range:', dateRange);
+        // Query using index defined pattern
+        const result = await client.models.DailyLog.list({
+            filter: {
+                userID: { eq: userId },
+                date: { between: [dateRange.startDate, dateRange.endDate] }
             }
         });
-        return result.data as DailyLog[];
+
+        console.log('Daily logs result:', result);
+
+        // Parse meals JSON for each log
+        const logs = result.data?.map(log => ({
+            ...log,
+            meals: log.meals ? JSON.parse(log.meals as string) : null
+        })) || [];
+
+        return logs as DailyLog[];
     } catch (error) {
         console.error('Error fetching daily logs:', error);
-        return [];
+        throw error;
     }
 }
 
@@ -178,17 +219,18 @@ export async function calculateCurrentStreak(
     currentDate.setHours(0, 0, 0, 0);
 
     let streak = 0;
-    //const logs: DailyLog[] = [];
-
+    
     try {
         while (true) {
             const dateStr = currentDate.toISOString().split('T')[0];
-            const result = await client.models.DailyLog.listLogsByDate({
-                userID: userId,
-                date: { eq: dateStr }
+            const result = await client.models.DailyLog.list({
+                filter: {
+                    userID: { eq: userId },
+                    date: { eq: dateStr }
+                }
             });
 
-            const log = result.data[0] as DailyLog;
+            const log = result.data[0];
             if (!log) break;
 
             // Check if goal was met for this day
@@ -205,9 +247,8 @@ export async function calculateCurrentStreak(
         return 0;
     }
 }
-
 // Helper function to check if a goal was met for a given day
-async function checkGoalMet(log: DailyLog, goalId: string): Promise<boolean> {
+async function checkGoalMet(log: Schema['DailyLog']['type'], goalId: string): Promise<boolean> {
     try {
         const goalResult = await client.models.PersonalGoal.get({
             id: goalId
@@ -217,9 +258,9 @@ async function checkGoalMet(log: DailyLog, goalId: string): Promise<boolean> {
 
         switch (goal.type) {
             case 'CALORIE':
-                return log.calories !== undefined && log.calories <= goal.target;
+                return log.calories != null && log.calories <= goal.target;
             case 'WEIGHT':
-                return log.weight !== undefined && log.weight <= goal.target;
+                return log.weight != null && log.weight <= goal.target;
             case 'CUSTOM':
                 // Implement custom goal logic here
                 return false;

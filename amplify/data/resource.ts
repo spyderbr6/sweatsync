@@ -220,7 +220,7 @@ const schema = a.schema({
     createdAt: a.datetime().required(),
     updatedAt: a.datetime().required()
   }).authorization((allow) => [
-    allow.owner()
+    allow.publicApiKey()
   ]).secondaryIndexes((index) => [
     // Index for querying logs by date range
     index('userID')
