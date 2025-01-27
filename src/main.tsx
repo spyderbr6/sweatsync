@@ -22,6 +22,7 @@ import { OnboardingFlow } from './components/OnboardingFlow/OnboardingFlow';
 import { useServiceWorkerUpdate } from './hooks/useServiceWorkerUpdate';
 import BottomNav from "./components/BottomNav/BottomNav";
 import { PostCreationProvider } from "./postCreationContext.tsx";
+import { PersonalStatsPage } from "./components/PersonalStats/PersonalStats.tsx";
 
 
 Amplify.configure(outputs);
@@ -61,6 +62,7 @@ function AuthenticatedApp() {
             <Route path="/Challenges" element={<ChallengesPage />} />
             <Route path="/challenge/:challengeId" element={<ChallengeDetailPage />} />
             <Route path="/post/:postId" element={<SinglePostPage />} />
+            <Route path="/health" element={<PersonalStatsPage/>} />
           </Routes>
           <BottomNav />
           {updateAvailable && <UpdateNotification onUpdate={handleUpdate} />}
