@@ -65,17 +65,28 @@ export function GoalModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId || !validateForm()) return;
+    if (!userId) {
+      console.error('No userId available');
+      return;
+    }
+    
+    if (!validateForm()) {
+      console.error('Form validation failed');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
+      console.log('Form data before submission:', formData);
+      
       if (existingGoal) {
         const updateInput: UpdatePersonalGoalInput = {
           id: existingGoal.id,
           ...formData
         };
+        console.log('Updating goal with:', updateInput);
         await updatePersonalGoal(updateInput);
       } else {
         const createInput: CreatePersonalGoalInput = {
@@ -89,14 +100,20 @@ export function GoalModal({
           startDate: formData.startDate!,
           endDate: formData.endDate
         };
-        await createPersonalGoal(createInput);
+        console.log('Creating new goal with:', createInput);
+        const result = await createPersonalGoal(createInput);
+        console.log('Goal creation result:', result);
+
+        if (!result) {
+          throw new Error('Failed to create goal');
+        }
       }
 
       onSuccess();
       onClose();
     } catch (err) {
-      console.error('Error saving goal:', err);
-      setError('Failed to save goal. Please try again.');
+      console.error('Full error details:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save goal. Please try again.');
     } finally {
       setLoading(false);
     }

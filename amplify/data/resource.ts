@@ -201,7 +201,7 @@ const schema = a.schema({
     updatedAt: a.datetime().required()
   }).authorization((allow) =>[
     allow.owner(),
-    allow.publicApiKey().to(['read'])
+    allow.publicApiKey()
   ]).secondaryIndexes((index) => [
     // Index for querying active goals by type
     index("userID")

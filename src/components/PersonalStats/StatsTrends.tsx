@@ -84,31 +84,33 @@ export function StatsTrends({ goalType, target }: StatsTrendsProps) {
     loadData();
   }, [userId, dateRange, goalType, target]);
 
-  // Helper function to format logs for chart display
-  const formatLogsForChart = (
-    logs: DailyLog[],
-    type: GoalType,
-    targetValue?: number
-  ): ChartData[] => {
-    // Create a map of all dates in range
-    const dateMap = new Map<string, ChartData>();
-    let currentDate = new Date(dateRange.startDate);
-    const endDate = new Date(dateRange.endDate);
+ // Helper function to format logs for chart display
+ const formatLogsForChart = (
+  logs: DailyLog[] | null,
+  type: GoalType,
+  targetValue?: number
+): ChartData[] => {
+  // Create a map of all dates in range
+  const dateMap = new Map<string, ChartData>();
+  let currentDate = new Date(dateRange.startDate);
+  const endDate = new Date(dateRange.endDate);
 
-    while (currentDate <= endDate) {
-      const dateStr = currentDate.toISOString().split('T')[0];
-      dateMap.set(dateStr, {
-        date: dateStr,
-        value: 0,
-        target: targetValue
-      });
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
+  // Fill in all dates in range with default values
+  while (currentDate <= endDate) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    dateMap.set(dateStr, {
+      date: dateStr,
+      value: 0,
+      target: targetValue
+    });
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
 
-    // Fill in actual values from logs
+  // Fill in actual values from logs if they exist
+  if (logs) {
     logs.forEach(log => {
       const value = type === GoalType.CALORIE ? log.calories : log.weight;
-      if (value !== undefined && dateMap.has(log.date)) {
+      if (value !== undefined && value !== null && dateMap.has(log.date)) {
         dateMap.set(log.date, {
           date: log.date,
           value,
@@ -116,10 +118,10 @@ export function StatsTrends({ goalType, target }: StatsTrendsProps) {
         });
       }
     });
+  }
 
-    return Array.from(dateMap.values());
-  };
-
+  return Array.from(dateMap.values());
+};
   const navigateTime = (direction: 'forward' | 'backward') => {
     const newDate = new Date(currentDate);
     switch (timeRange) {

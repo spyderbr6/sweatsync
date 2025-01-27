@@ -22,17 +22,32 @@ export async function createPersonalGoal(
     input: CreatePersonalGoalInput
 ): Promise<PersonalGoal | null> {
     try {
+        console.log('Creating personal goal with input:', input);
         const result = await client.models.PersonalGoal.create({
             ...input,
+            // Stringify JSON fields
+            achievementThresholds: input.achievementThresholds ? JSON.stringify(input.achievementThresholds) : null,
             streakCount: 0,
             bestStreak: 0,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         });
+        console.log('Create goal result:', result);
+        
+        if (result.errors && result.errors.length > 0) {
+            console.error('Errors during goal creation:', result.errors);
+            throw new Error(result.errors[0].message);
+        }
+        
+        if (!result.data) {
+            console.error('No data returned from goal creation');
+            return null;
+        }
+        
         return result.data as PersonalGoal;
     } catch (error) {
-        console.error('Error creating personal goal:', error);
-        return null;
+        console.error('Full error creating personal goal:', error);
+        throw error;
     }
 }
 
@@ -56,15 +71,26 @@ export async function getActiveGoals(
     filter?: GoalFilterInput
 ): Promise<PersonalGoal[]> {
     try {
+        console.log('Fetching active goals for user:', userId);
         const result = await client.models.PersonalGoal.listGoalsByType({
             userID: userId,
             //status: { eq: filter?.status || 'ACTIVE' },
             type: filter?.type ? { eq: filter.type } : undefined
         });
-        return result.data as PersonalGoal[];
+        console.log('Goals result:', result);
+
+        // Parse JSON fields in the results
+        const goals = result.data?.map(goal => ({
+            ...goal,
+            achievementThresholds: goal.achievementThresholds ? 
+                JSON.parse(goal.achievementThresholds as string) : 
+                null
+        })) || [];
+
+        return goals as PersonalGoal[];
     } catch (error) {
         console.error('Error fetching active goals:', error);
-        return [];
+        throw error;
     }
 }
 

@@ -43,7 +43,8 @@ export function MealTracker() {
         endDate: today
       });
 
-      if (logs.length > 0) {
+      // Check if logs exists and has items
+      if (logs && logs.length > 0) {
         setTodayLog(logs[0]);
       } else {
         // Create new log for today
@@ -57,7 +58,12 @@ export function MealTracker() {
             snacks: []
           }
         });
-        setTodayLog(newLog);
+        
+        if (newLog) {
+          setTodayLog(newLog);
+        } else {
+          setError('Failed to create daily log');
+        }
       }
     } catch (err) {
       setError('Failed to load meal data');
