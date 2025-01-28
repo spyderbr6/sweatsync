@@ -46,8 +46,8 @@ const BottomNav: React.FC = () => {
             id: 'health',
             label: 'Health',
             icon: Activity,
-            action: () => setIsHealthModalOpen(true),
-            isActive: false
+            action: () => navigate('/health'),
+            isActive: location.pathname === '/health'
         }
     ];
 
