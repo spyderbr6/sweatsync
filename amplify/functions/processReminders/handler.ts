@@ -86,7 +86,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                         reminder.timePreference,
                         reminder.secondPreference,
                         nowISOString,
-                        reminder.timezone || 'UTC'
+                        reminder.lastSent // Pass the last sent time
                     );
 
                     await client.models.ReminderSchedule.update({
@@ -221,53 +221,49 @@ function calculateNextSchedule(
     timePreference: string | null | undefined,
     secondPreference: string | null | undefined,
     currentTime: string,
-    timezone: string = 'UTC'
+    lastScheduledTime: string | null // Add this parameter
 ): string {
     const now = new Date(currentTime);
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
+    const currentHour = now.getUTCHours();
+    const currentMinutes = now.getUTCMinutes();
 
-    const times: Date[] = [];
+    // Parse the times
+    const primaryTime = timePreference ? timePreference.split(':').map(Number) : null;
+    const secondaryTime = secondPreference ? secondPreference.split(':').map(Number) : null;
 
-    // Add primary time
-    if (timePreference) {
-        const [primaryHours, primaryMinutes] = timePreference.split(':').map(Number);
-        if (!isNaN(primaryHours) && !isNaN(primaryMinutes)) {
-            const primaryTime = new Date(today);
-            primaryTime.setHours(primaryHours, primaryMinutes, 0, 0);
-            times.push(primaryTime);
+    // If last scheduled was primary, next should be secondary (if it exists)
+    if (lastScheduledTime === timePreference && secondaryTime) {
+        const [hours, minutes] = secondaryTime;
+        const nextTime = new Date(now);
+        nextTime.setUTCHours(hours, minutes, 0, 0);
+        
+        // If secondary time has passed today, schedule for tomorrow
+        if (nextTime <= now) {
+            nextTime.setDate(nextTime.getDate() + 1);
         }
+        return nextTime.toISOString();
     }
 
-    // Add secondary time
-    if (secondPreference) {
-        const [secondaryHours, secondaryMinutes] = secondPreference.split(':').map(Number);
-        const secondaryTime = new Date(today);
-        secondaryTime.setHours(secondaryHours, secondaryMinutes, 0, 0);
-        times.push(secondaryTime);
+    // Default to primary time for next schedule
+    if (primaryTime) {
+        const [hours, minutes] = primaryTime;
+        const nextTime = new Date(now);
+        nextTime.setUTCHours(hours, minutes, 0, 0);
+        
+        // If primary time has passed today, schedule for tomorrow
+        if (nextTime <= now) {
+            nextTime.setDate(nextTime.getDate() + 1);
+        }
+        return nextTime.toISOString();
     }
 
-    // Sort times chronologically
-    times.sort((a, b) => a.getTime() - b.getTime());
-
-    // Find next valid time
-    let nextTime = times.find(time => time > now);
-
-    // If no time found today, use first time tomorrow
-    if (!nextTime && times.length > 0) {
-        nextTime = new Date(times[0]);
-        nextTime.setDate(nextTime.getDate() + 1);
-    }
-
-    // Fallback to tomorrow at 9 AM if no valid times found
-    if (!nextTime) {
-        nextTime = new Date(today);
-        nextTime.setDate(nextTime.getDate() + 1);
-        nextTime.setHours(9, 0, 0, 0);
-    }
-
-    return nextTime.toISOString();
+    // Fallback to next day at 9 AM UTC if no times set
+    const fallback = new Date(now);
+    fallback.setDate(fallback.getDate() + 1);
+    fallback.setUTCHours(9, 0, 0, 0);
+    return fallback.toISOString();
 }
+
 function getNotificationType(reminderType: ReminderType): NotificationType {
     const typeMap: Record<ReminderType, NotificationType> = {
         'DAILY_POST': 'CHALLENGE_DAILY_REMINDER',
