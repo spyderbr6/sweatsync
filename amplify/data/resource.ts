@@ -139,7 +139,7 @@ const schema = a.schema({
     updatedAt: a.datetime().required(),
     lowercasename: a.string().required(),
     hasCompletedOnboarding: a.boolean().default(false),
-    reminderPreferences: a.json()
+    reminderPreferences: a.json() //{ "primaryTime" : { "S" : "09:00" }, "timezone" : { "S" : "UST" }, "enabled" : { "BOOL" : true }, "secondaryTime" : { "S" : "19:00" } }
   }).authorization((allow) => [allow.publicApiKey()]),
 
   //PUSH NOTIFICATION SETUP
