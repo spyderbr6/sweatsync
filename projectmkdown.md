@@ -99,6 +99,8 @@
                 └── MealForm.tsx
                 └── MealTracker.css
                 └── MealTracker.tsx
+                └── PersonalStats.css
+                └── PersonalStats.tsx
                 └── StatsTrends.css
                 └── StatsTrends.tsx
             └── 📁PostChallenges
