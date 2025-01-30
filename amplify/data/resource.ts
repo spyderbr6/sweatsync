@@ -24,7 +24,9 @@ const schema = a.schema({
     rocket: a.integer().default(0),    // 🚀
     clap: a.integer().default(0),      // 👏
     trophy: a.integer().default(0),  //trophy
-    challengeIds: a.string().array() // Store as JSON array of IDs
+    challengeIds: a.string().array(), // Store as JSON array of IDs
+
+    postType: a.enum(['workout' , 'meal' ,'weight'])
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Reaction: a.model({
@@ -54,6 +56,16 @@ const schema = a.schema({
     description: a.string().required(),
     reward: a.string(),
     challengeType: a.enum(['none', 'PUBLIC', 'GROUP', 'PERSONAL', 'FRIENDS', 'DAILY']),
+
+    // Activity tracking flags
+    trackWorkouts: a.boolean().default(true),  // Most challenges will track workouts
+    trackMeals: a.boolean().default(false),    // Optional meal tracking
+    trackWeight: a.boolean().default(false),   // Optional weight tracking
+
+    // Frequency settings for tracked activities
+    requireWeeklyWeighIn: a.boolean().default(false),
+    weighInDay: a.string(), // e.g., "MONDAY", only used if requireWeeklyWeighIn is true
+
     status: a.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED', 'DRAFT', 'CANCELLED']),
     startAt: a.datetime().required(),
     endAt: a.datetime().required(),
@@ -93,6 +105,12 @@ const schema = a.schema({
     challengeID: a.string().required(), //reference to Challenge model
     userID: a.string().required(),
     status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED', 'PENDING', 'DECLINED']),
+
+    // Personal tracking goals - only used if challenge has respective tracking enabled
+    targetWeight: a.float(),
+    startingWeight: a.float(),
+    calorieGoal: a.integer(),
+
     points: a.integer().default(0),
     workoutsCompleted: a.integer().default(0),
     joinedAt: a.datetime(),
@@ -199,7 +217,7 @@ const schema = a.schema({
     status: a.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED']),
     createdAt: a.datetime().required(),
     updatedAt: a.datetime().required()
-  }).authorization((allow) =>[
+  }).authorization((allow) => [
     allow.owner(),
     allow.publicApiKey()
   ]).secondaryIndexes((index) => [
@@ -207,7 +225,7 @@ const schema = a.schema({
     index("userID")
       .sortKeys(['type'])
       .queryField('listGoalsByType')
-      .name ('byUserAndType')
+      .name('byUserAndType')
   ]),
 
   DailyLog: a.model({
