@@ -1,21 +1,74 @@
+//src/components/PersonalStats/MealTracker.tsx
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Cookie } from 'lucide-react';
 import { useUser } from '../../userContext';
 import { DailyLog, DailyMeals, Meal } from '../../types/personalStats';
 import { createDailyLog, getDailyLogs, updateDailyLog } from '../../utils/personalStatsOperations';
 import { MealForm } from './MealForm';
-import './MealTracker.css';
+import { Button, IconButton } from './UIComponents';
+
+interface MealSectionProps {
+  label: string;
+  icon: JSX.Element;
+  meals: Meal[];
+  onEdit: (index: number) => void;
+  onDelete: (index: number) => void;
+}
+
+const MealSection: React.FC<MealSectionProps> = ({
+  label,
+  icon,
+  meals,
+  onEdit,
+  onDelete
+}) => (
+  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2">
+        {icon}
+        <h3 className="font-medium text-gray-900 dark:text-white">{label}</h3>
+      </div>
+      <span className="text-sm text-gray-500 dark:text-gray-300">
+        {meals.reduce((sum, meal) => sum + meal.calories, 0)} cal
+      </span>
+    </div>
+
+    <div className="space-y-2">
+      {meals.map((meal, index) => (
+        <div
+          key={index}
+          className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-md shadow-xs"
+        >
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white">{meal.name}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-300">
+              {meal.calories} cal · {meal.time}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <IconButton onClick={() => onEdit(index)} variant="secondary">
+              <Edit2 size={16} />
+            </IconButton>
+            <IconButton onClick={() => onDelete(index)} variant="danger">
+              <Trash2 size={16} />
+            </IconButton>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 export function MealTracker() {
   const { userId } = useUser();
-  const [todayLog, setTodayLog] = useState<DailyLog | null>(null);
+  const [todayLog, setTodayLog] = useState<DailyLog | undefined>();
   const [isAddingMeal, setIsAddingMeal] = useState(false);
   const [editingMeal, setEditingMeal] = useState<{
     type: keyof DailyMeals;
     index: number;
-  } | null>(null);
+  } | undefined>();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>();
 
   const mealTypes: Array<{
     key: keyof DailyMeals;
@@ -43,11 +96,9 @@ export function MealTracker() {
         endDate: today
       });
 
-      // Check if logs exists and has items
       if (logs && logs.length > 0) {
         setTodayLog(logs[0]);
       } else {
-        // Create new log for today
         const newLog = await createDailyLog({
           userID: userId,
           date: today,
@@ -58,7 +109,7 @@ export function MealTracker() {
             snacks: []
           }
         });
-        
+
         if (newLog) {
           setTodayLog(newLog);
         } else {
@@ -89,7 +140,6 @@ export function MealTracker() {
         [mealType]: [...(currentMeals[mealType] || []), meal]
       };
 
-      // Calculate total calories
       const totalCalories = Object.values(updatedMeals)
         .flat()
         .reduce((sum, meal) => sum + meal.calories, 0);
@@ -125,7 +175,6 @@ export function MealTracker() {
         [mealType]: (currentMeals[mealType] ?? []).filter((_, i) => i !== index)
       };
 
-      // Recalculate total calories
       const totalCalories = Object.values(updatedMeals)
         .flat()
         .reduce((sum, meal) => sum + meal.calories, 0);
@@ -146,77 +195,55 @@ export function MealTracker() {
   };
 
   if (loading) {
-    return <div className="meal-tracker-loading">Loading meal tracker...</div>;
-  }
-
-  if (error) {
-    return <div className="meal-tracker-error">{error}</div>;
+    return (
+      <div className="flex justify-center items-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
   }
 
   return (
-    <div className="meal-tracker">
-      <div className="meal-tracker-header">
-        <h2>Today's Meals</h2>
-        <button 
-          className="add-meal-button"
-          onClick={() => setIsAddingMeal(true)}
-        >
-          <Plus size={20} /> Add Meal
-        </button>
-      </div>
-
-      <div className="meal-sections">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {mealTypes.map(({ key, label, icon }) => (
-          <div key={key} className="meal-section">
-            <div className="meal-section-header">
-              {icon}
-              <h3>{label}</h3>
-              <span className="meal-calories">
-                {(((todayLog?.meals as DailyMeals)?.[key]) ?? [])
-                  .reduce((sum, meal) => sum + (meal?.calories ?? 0), 0)} cal
-              </span>
-            </div>
-
-            <div className="meal-list">
-                              {(((todayLog?.meals as DailyMeals)?.[key]) ?? []).map((meal, index) => (
-                <div key={index} className="meal-item">
-                  <div className="meal-item-info">
-                    <span className="meal-name">{meal.name}</span>
-                    <span className="meal-calories">{meal.calories} cal</span>
-                  </div>
-                  <div className="meal-item-actions">
-                    <button
-                      className="meal-action-button"
-                      onClick={() => setEditingMeal({ type: key, index })}
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      className="meal-action-button delete"
-                      onClick={() => handleDeleteMeal(key, index)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <MealSection
+            key={key}
+            label={label}
+            icon={icon}
+            meals={(todayLog?.meals as DailyMeals)?.[key] || []}
+            onEdit={(index) => setEditingMeal({ type: key, index })}
+            onDelete={(index) => handleDeleteMeal(key, index)}
+          />
         ))}
       </div>
 
+      <Button
+        onClick={() => setIsAddingMeal(true)}
+        variant="primary"
+        className="w-full md:w-auto"
+      >
+        <Plus size={18} className="mr-2" />
+        Add Meal
+      </Button>
+
       {(isAddingMeal || editingMeal) && (
         <MealForm
-        onSubmit={handleAddMeal}
-        onClose={() => {
-          setIsAddingMeal(false);
-          setEditingMeal(null);
-        }}
-        editingMeal={editingMeal ? 
-          ((todayLog?.meals ?? {}) as DailyMeals)[editingMeal.type]?.[editingMeal.index] 
-          : undefined}
-        mealType={editingMeal?.type}
-      />
+          onSubmit={handleAddMeal}
+          onClose={() => {
+            setIsAddingMeal(false);
+            setEditingMeal(undefined);
+          }}
+          editingMeal={editingMeal
+            ? ((todayLog?.meals ?? {}) as DailyMeals)[editingMeal.type]?.[editingMeal.index]
+            : undefined}
+          mealType={editingMeal?.type}
+        />
+      )}
+
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-md">
+          {error}
+        </div>
       )}
     </div>
   );
