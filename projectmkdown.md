@@ -103,9 +103,16 @@
                 └── PersonalStats.tsx
                 └── StatsTrends.css
                 └── StatsTrends.tsx
+                └── UIComponents.tsx
+                └── WeightTracker.tsx
             └── 📁PostChallenges
                 └── postChallenges.css
                 └── postChallenges.tsx
+            └── 📁PostForms
+                └── MealForm.tsx
+                └── types.ts
+                └── WeightForm.tsx
+                └── WorkoutForm.tsx
             └── 📁TaggableCommentInput
                 └── TaggableCommentInput.tsx
             └── 📁UpdateNotification
@@ -140,6 +147,7 @@
         └── 📁types
             └── notifications.ts
             └── personalStats.ts
+            └── posts.ts
         └── urlCacheContext.tsx
         └── useChallengeDetail.ts
         └── userContext.tsx

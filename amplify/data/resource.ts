@@ -26,7 +26,10 @@ const schema = a.schema({
     trophy: a.integer().default(0),  //trophy
     challengeIds: a.string().array(), // Store as JSON array of IDs
 
-    postType: a.enum(['workout' , 'meal' ,'weight'])
+    postType: a.enum(['workout', 'meal', 'weight']),
+    weightData: a.json(), // Store as { weight: number, previousWeight?: number }
+    mealData: a.json() // Store as { name: string, calories: number, time: string }
+
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Reaction: a.model({
@@ -127,6 +130,7 @@ const schema = a.schema({
     challengeId: a.string(),
     userId: a.string(),
     timestamp: a.datetime(),
+    postType: a.enum(['workout', 'meal', 'weight']),
     validated: a.boolean().default(false),
     validationComment: a.string(),
     points: a.integer().default(0)
