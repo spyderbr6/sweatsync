@@ -5,6 +5,7 @@ import { rotateCreator } from "../functions/rotateCreator/resource";
 import { challengeCleanup } from "../functions/challengeCleanup/resource";
 import { sendPushNotificationFunction } from "../functions/sendNotificationFunction/resource";
 import { processReminders } from "../functions/processReminders/resource";
+import { imageAnalysis } from "../functions/imageAnalysis/resource";
 
 const schema = a.schema({
   PostforWorkout: a.model({
@@ -291,6 +292,16 @@ const schema = a.schema({
     .handler(a.handler.function(processReminders))
     .authorization((allow) => [allow.publicApiKey()]),
 
+    imageAnalysis: a
+    .query()
+    .arguments({
+      imageUrl: a.string().required(), 
+      args:a.string()
+    })
+    .returns(a.json())
+    .handler(a.handler.function(imageAnalysis))
+    .authorization((allow) => [allow.publicApiKey()]),
+
 
 }).authorization((allow) => [
   /**
@@ -301,7 +312,8 @@ const schema = a.schema({
   allow.resource(rotateCreator).to(["query", "listen", "mutate"]),
   allow.resource(challengeCleanup).to(["query", "listen", "mutate"]),
   allow.resource(sendPushNotificationFunction).to(["query", "listen", "mutate"]),
-  allow.resource(processReminders).to(["query", "listen", "mutate"])
+  allow.resource(processReminders).to(["query", "listen", "mutate"]),
+  allow.resource(imageAnalysis).to(["query", "listen", "mutate"])
 ]);
 
 

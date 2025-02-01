@@ -1,6 +1,7 @@
 // src/utils/imageAnalysis.ts
 import OpenAI from 'openai';
 import { PostType } from '../types/posts';
+//import {secret} from '@aws-amplify/backend';
 
 interface ImageAnalysisResult {
   type: PostType;
@@ -28,6 +29,7 @@ export async function analyzeImage(file: File): Promise<ImageAnalysisResult> {
     
     const openai = new OpenAI({
       apiKey: import.meta.env.OPENAI_API_KEY,
+      //apiKey: secret('OPENAI_API_KEY')
     });
 
     const response = await openai.chat.completions.create({
