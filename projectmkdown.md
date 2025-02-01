@@ -63,12 +63,21 @@
         └── commentOperations.tsx
         └── CommentSection.tsx
         └── 📁components
+            └── 📁BottomNav
+                └── BottomNav.css
+                └── BottomNav.tsx
             └── 📁cardActionMenu
                 └── cardActionMenu.css
                 └── cardActionMenu.tsx
             └── 📁challengeActivityItem
                 └── challengeActivityItem.tsx
                 └── challengeActivityStyle.css
+            └── 📁ChallengeDailyPrompt
+                └── challengeDailyPrompt.css
+                └── challengeDailyPrompt.tsx
+            └── 📁challengeReminderBell
+                └── challengeReminderBell.css
+                └── challengeReminderBell.tsx
             └── 📁FeedbackModal
                 └── feedbackModal.css
                 └── feedbackModal.tsx
@@ -77,14 +86,33 @@
                 └── NotificationBell.tsx
             └── 📁notificationPreferences
                 └── notificationPreferences.tsx
+                └── reminderPreferences.css
+                └── reminderPreferences.tsx
             └── 📁OnboardingFlow
                 └── IOSInstructions.css
                 └── IOSInstructions.tsx
                 └── OnboardingFlow.css
                 └── OnboardingFlow.tsx
+            └── 📁PersonalStats
+                └── GoalModal.css
+                └── GoalModal.tsx
+                └── MealForm.tsx
+                └── MealTracker.css
+                └── MealTracker.tsx
+                └── PersonalStats.css
+                └── PersonalStats.tsx
+                └── StatsTrends.css
+                └── StatsTrends.tsx
+                └── UIComponents.tsx
+                └── WeightTracker.tsx
             └── 📁PostChallenges
                 └── postChallenges.css
                 └── postChallenges.tsx
+            └── 📁PostForms
+                └── MealForm.tsx
+                └── types.ts
+                └── WeightForm.tsx
+                └── WorkoutForm.tsx
             └── 📁TaggableCommentInput
                 └── TaggableCommentInput.tsx
             └── 📁UpdateNotification
@@ -106,6 +134,7 @@
         └── LandingPage.css
         └── LandingPage.tsx
         └── main.tsx
+        └── postCreationContext.tsx
         └── postCreator.css
         └── postCreator.tsx
         └── profile.tsx
@@ -117,14 +146,17 @@
             └── promptAction.css
         └── 📁types
             └── notifications.ts
+            └── personalStats.ts
+            └── posts.ts
         └── urlCacheContext.tsx
         └── useChallengeDetail.ts
         └── userContext.tsx
         └── 📁utils
-            └── challengeDailyPrompt.css
-            └── challengeDailyPrompt.tsx
+            └── achievementsHandler.ts
+            └── calculateNextSchedule.ts
             └── githubUtils.ts
             └── imageUploadUtils.ts
+            └── personalStatsOperations.ts
             └── profilePictureUploader.ts
             └── promptAction.tsx
             └── shareAction.tsx
@@ -138,6 +170,7 @@
     └── package-lock.json
     └── package.json
     └── projectmkdown.md
+    └── todo
     └── tsconfig.json
     └── tsconfig.node.json
     └── vite.config.ts

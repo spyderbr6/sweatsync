@@ -1,10 +1,20 @@
-/* src/components/NotificationBell/notificationBell.css */
-
-.header-notifications {
+.notification-container {
+  position: relative;
   display: flex;
   align-items: center;
-  margin-right: 1rem;
+}
+
+.notification-container--bottom .notification-panel {
+  bottom: 100%;
+  top: auto;
+  margin-bottom: 1rem;
+}
+
+.notification-trigger {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .notification-button {
@@ -42,25 +52,38 @@
 }
 
 .notification-panel {
-  position: absolute;
-  top: 100%;
+  position: fixed;
+  left: 0;
   right: 0;
-  width: 320px;
   background: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  margin-top: 0.5rem;
-  z-index: 50;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 45; /* Lower than bottom nav's z-index of 51 */
+  max-height: min(400px, calc(100vh - var(--bottom-nav-height) - 2rem));
+  bottom: calc(var(--bottom-nav-height) + 0.5rem);
+  transform: translateY(-0.5rem); /* Pull up slightly to avoid overlap */
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+  .notification-panel {
+    max-width: 24rem;
+    left: auto;
+    right: 1rem;
+    border-radius: 0.5rem;
+    height: auto;
+    bottom: calc(var(--bottom-nav-height) + 1rem);
+  }
+}
+
+.notification-panel--bottom {
+  bottom: var(--bottom-nav-height);
+  overflow-y: auto;
 }
 
 .notification-header {
   padding: 1rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   background-color: #f8fafc;
-  display: flex;           /* Added */
-  justify-content: space-between;  /* Added */
-  align-items: center;     /* Added */
 }
 
 .notification-title {
@@ -69,31 +92,11 @@
   color: #1f2937;
   margin: 0;
 }
-.notification-close-button {
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  cursor: pointer;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  transition: all 0.2s ease;
-}
-.notification-close-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: #1f2937;
-}
-/* Accessibility focus styles */
-.notification-close-button:focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: 2px;
-}
 
 .notification-list {
-  max-height: 400px;
+  max-height: calc(100% - 3rem); /* Account for header */
   overflow-y: auto;
+  padding-bottom: 0.5rem;
 }
 
 .notification-item {
@@ -175,23 +178,56 @@
   background-color: #f8fafc;
 }
 
+/* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .notification-panel {
-    position: fixed;
     top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
     width: 100%;
-    margin: 0;
     border-radius: 0.5rem 0.5rem 0 0;
-    max-height: 80vh;
+    max-height: calc(80vh - 4rem);
   }
 
+
   .notification-list {
-    max-height: 60vh;
+    max-height: calc(60vh - 4rem);
   }
-  .notification-close-button {
-    padding: 0.75rem;
-  }
+}
+
+/* Modal Styles for Health Placeholder */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 90%;
+  width: 24rem;
+  text-align: center;
+}
+
+.modal-close-button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: rgb(59 130 246);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.modal-close-button:hover {
+  background-color: rgb(37 99 235);
 }

@@ -1,10 +1,11 @@
 // src/utils/challengeDailyPrompt.tsx
 import React, { useState } from 'react';
 import { Trophy } from 'lucide-react';
-import { useUser } from '../userContext';
+import { useUser } from '../../userContext';
 import { generateClient } from "aws-amplify/data";
-import type { Schema } from "../../amplify/data/resource";
+import type { Schema } from "../../../amplify/data/resource";
 import './challengeDailyPrompt.css';
+import { calculateNextSchedule } from '../../utils/calculateNextSchedule';
 
 const client = generateClient<Schema>();
 
@@ -56,7 +57,8 @@ const ChallengeDailyPrompt: React.FC<ChallengeDailyPromptProps> = ({
         createdBy: userId,
         createdAt: today.toISOString(),
         updatedAt: today.toISOString(),
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        trackWorkouts: true
       });
 
       if (result.data?.id) {
@@ -70,42 +72,68 @@ const ChallengeDailyPrompt: React.FC<ChallengeDailyPromptProps> = ({
           }
         });
 
-            // Create participant entries and reminders
-            const participantPromises = participants.data
-                .filter(participant => participant.userID)
-                .map(participant => 
-                    Promise.all([
-                        // Create participant entry
-                        client.models.ChallengeParticipant.create({
-                            challengeID: result.data!.id,
-                            userID: participant.userID!,
-                            status: 'ACTIVE',
-                            points: 0,
-                            workoutsCompleted: 0,
-                            joinedAt: now,
-                            updatedAt: now
-                        }),
-                        // Create reminder
-                        client.models.ReminderSchedule.create({
-                            userId: participant.userID!,
-                            challengeId: result.data!.id,
-                            type: 'DAILY_POST',
-                            scheduledTime: now,
-                            repeatDaily: false, // Daily challenges only need one reminder
-                            status: 'PENDING',
-                            createdAt: now,
-                            updatedAt: now,
-                            nextScheduled: tomorrow.toISOString() // Set to end of daily challenge
-                        })
-                    ])
-                );
+        // Create participant entries and reminders
+        const participantPromises = participants.data
+          .filter(participant => participant.userID)
+          .map(participant =>
+            Promise.all([
+              // Create participant entry
+              client.models.ChallengeParticipant.create({
+                challengeID: result.data!.id,
+                userID: participant.userID!,
+                status: 'ACTIVE',
+                points: 0,
+                workoutsCompleted: 0,
+                joinedAt: now,
+                updatedAt: now
+              })
+            ])
+          );
 
-            await Promise.all(participantPromises);
+        await Promise.all(participantPromises);
 
         // Add notification for all participants
         try {
           const notificationPromises = participants.data.map(async (participant) => {
             if (!participant.userID) return;
+
+            const userResult = await client.models.User.get({ id: participant.userID });
+            let primaryTime = '09:00'; // Default time
+            let secondaryTime = null;
+            let timezone = 'UTC'; // Default timezone
+
+            if (userResult.data?.reminderPreferences === 'string') {
+              try {
+        
+                const preferences = JSON.parse(userResult.data.reminderPreferences);
+                primaryTime = preferences.primaryTime || '09:00';
+                secondaryTime = preferences.secondaryTime || null;
+                timezone = preferences.timezone || 'UTC';
+        
+              } catch (error) {
+                console.error('[Challenge] Error parsing user reminder preferences:', {
+                  error,
+                  user: userResult.data.id,
+                  reminderPreferences: userResult.data.reminderPreferences
+                });
+              }
+            }
+
+            // Create reminder
+            client.models.ReminderSchedule.create({
+              userId: participant.userID!,
+              challengeId: result.data!.id,
+              type: 'DAILY_POST',
+              scheduledTime: calculateNextSchedule(primaryTime, secondaryTime, new Date().toISOString(), timezone),
+              repeatDaily: false, // Daily challenges only need one reminder
+              timePreference: primaryTime, // Default time,
+              secondPreference: secondaryTime, // Default time,
+              timezone: timezone,
+              status: 'PENDING',
+              createdAt: now,
+              updatedAt: now,
+              nextScheduled: tomorrow.toISOString() // Set to end of daily challenge
+            })
 
 
             // Then trigger push notification with correct payload

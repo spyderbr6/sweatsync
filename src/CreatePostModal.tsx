@@ -17,6 +17,13 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
     navigate('/');
   };
 
+  const handleOverlayClick = (event: React.MouseEvent) => {
+    // Prevent closing the modal if clicking on the modal itself
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
+
   const modalStyles = {
     overlay: {
       position: 'fixed' as const,
@@ -58,7 +65,7 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
   };
 
   return (
-    <div style={modalStyles.overlay}>
+    <div style={modalStyles.overlay} onClick={handleOverlayClick}>
       <div style={modalStyles.content}>
         <button 
           onClick={onClose}

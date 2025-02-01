@@ -19,7 +19,6 @@ webpush.setVapidDetails(
   env.VAPID_PUBLIC_KEY,
   env.VAPID_PRIVATE_KEY
 );
-console.log(env.VAPID_EMAIL, env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
 
 type AppSyncEvent = {
   typeName: string;

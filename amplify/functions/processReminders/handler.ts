@@ -12,7 +12,12 @@ Amplify.configure(resourceConfig, libraryOptions);
 
 const client = generateClient<Schema>();
 
-type ReminderType = 'DAILY_POST' | 'GROUP_POST' | 'CREATOR_ROTATION';
+enum ReminderType {
+    DAILY_POST = "DAILY_POST",
+    GROUP_POST = "GROUP_POST",
+    CREATOR_ROTATION = "CREATOR_ROTATION"
+}
+
 type NotificationType = 'CHALLENGE_DAILY_REMINDER' | 'CHALLENGE_GROUP_REMINDER' | 'CHALLENGE_CREATOR_REMINDER';
 
 export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = async () => {
@@ -20,6 +25,7 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
         const now = new Date();
         const nowISOString = now.toISOString();
 
+        // Get all pending reminders due now
         const reminderResults = await client.models.ReminderSchedule.list({
             filter: {
                 and: [
@@ -29,15 +35,26 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
             }
         });
 
+        console.log('[Process] Found reminders:', {
+            count: reminderResults.data.length,
+            timestamp: nowISOString
+        });
+
         const processedReminders = await Promise.all(
             reminderResults.data.map(async (reminder) => {
                 if (!reminder.id || !reminder.userId || !reminder.challengeId || !reminder.type) {
-                    console.error('Invalid reminder data:', reminder);
+                    console.error('[Process] Invalid reminder data:', reminder);
                     return null;
                 }
 
+                // Validate reminder should still be sent
                 const shouldSend = await validateReminder(reminder);
                 if (!shouldSend) {
+                    console.log('[Process] Reminder validation failed:', {
+                        reminderId: reminder.id,
+                        type: reminder.type
+                    });
+
                     await client.models.ReminderSchedule.update({
                         id: reminder.id,
                         status: 'CANCELLED',
@@ -47,61 +64,80 @@ export const handler: EventBridgeHandler<"Scheduled Event", null, boolean> = asy
                 }
 
                 try {
+                    // Send notification
                     await client.queries.sendPushNotificationFunction({
                         type: getNotificationType(reminder.type as ReminderType),
                         userID: reminder.userId,
                         title: getNotificationTitle(reminder.type as ReminderType),
                         body: await generateNotificationBody(reminder),
                         data: JSON.stringify({
-                            challengeId: reminder.challengeId,
-                            type: reminder.type
+                            challengeId: reminder.challengeId
                         })
                     });
 
-                    const updates = {
+                    console.log('[Process] Notification sent:', {
+                        reminderId: reminder.id,
+                        userId: reminder.userId,
+                        type: reminder.type
+                    });
+
+                    // Calculate next schedule based on preferences
+                    const nextSchedule = calculateNextSchedule(
+                        reminder.timePreference,
+                        reminder.secondPreference,
+                        nowISOString,
+                        reminder.lastSent // Pass the last sent time
+                    );
+
+                    await client.models.ReminderSchedule.update({
                         id: reminder.id,
                         lastSent: nowISOString,
-                        status: reminder.repeatDaily ? 'PENDING' : 'SENT',
+                        status: 'PENDING',  // Keep pending for next schedule
+                        nextScheduled: nextSchedule,
                         updatedAt: nowISOString
-                    } as const;
-
-                    if (reminder.repeatDaily && reminder.timePreference) {
-                        const nextScheduled = calculateNextSchedule(reminder.timePreference, nowISOString);
-                        await client.models.ReminderSchedule.update({
-                            ...updates,
-                            nextScheduled
-                        });
-                    } else {
-                        await client.models.ReminderSchedule.update(updates);
-                    }
+                    });
 
                     return reminder;
                 } catch (error) {
-                    console.error('Error processing reminder:', error);
+                    console.error('[Process] Error processing reminder:', {
+                        error,
+                        reminderId: reminder.id,
+                        userId: reminder.userId
+                    });
                     return null;
                 }
             })
         );
 
         const successCount = processedReminders.filter(Boolean).length;
-        console.log(`Successfully processed ${successCount} of ${reminderResults.data.length} reminders`);
-        
+        console.log('[Process] Reminder processing complete:', {
+            total: reminderResults.data.length,
+            successful: successCount
+        });
+
         return true;
+
     } catch (error) {
-        console.error('Error processing reminders:', error);
+        console.error('[Process] Error processing reminders:', error);
         return false;
     }
 };
 
 async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']['type']>): Promise<boolean> {
     if (!reminder.challengeId || !reminder.userId || !reminder.type) {
+        console.log('[Validation] Failed basic validation:', {
+            hasChallenge: !!reminder.challengeId,
+            hasUser: !!reminder.userId,
+            hasType: !!reminder.type
+        });
         return false;
     }
 
+    
     try {
         const [challenge, preferencesResult] = await Promise.all([
             client.models.Challenge.get({ id: reminder.challengeId }),
-            client.models.ChallengeReminderPreferences.list({
+            client.models.ReminderSchedule.list({
                 filter: {
                     and: [
                         { challengeId: { eq: reminder.challengeId } },
@@ -111,23 +147,48 @@ async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']
             })
         ]);
 
+        console.log('[Validation] Challenge and preferences:', {
+            challengeId: reminder.challengeId,
+            userId: reminder.userId,
+            challengeFound: !!challenge.data,
+            challengeStatus: challenge.data?.status,
+            preferencesCount: preferencesResult.data.length,
+        });
+
         if (!challenge.data || challenge.data.status !== 'ACTIVE') {
+            console.log('[Validation] Challenge inactive or not found');
             return false;
         }
 
         const preference = preferencesResult.data[0];
+        console.log('[Validation] Preference check:', {
+            preferenceFound: !!preference,
+            enabled: preference?.enabled,
+            reminderTypes: preference?.type
+        });
+
         if (!preference?.enabled) {
+            console.log('[Validation] Preferences disabled');
             return false;
         }
 
         const reminderType = reminder.type as ReminderType;
-        const validTypes = preference.reminderTypes as ReminderType[] || ['DAILY_POST'];
-        if (!validTypes.includes(reminderType)) {
+
+        if (!Object.values(ReminderType).includes(reminderType)) {
+            console.log('[Validation] Invalid reminder type:', {
+                type: reminderType,
+                validTypes: Object.values(ReminderType)
+            });
             return false;
         }
 
         if (reminderType === 'GROUP_POST' && challenge.data.maxPostsPerDay != null) {
             const dailyPosts = await getPostsCount(reminder.challengeId, reminder.userId, 'day');
+            console.log('[Validation] Group post check:', {
+                maxPostsPerDay: challenge.data.maxPostsPerDay,
+                currentDailyPosts: dailyPosts,
+                withinLimit: dailyPosts < challenge.data.maxPostsPerDay
+            });
             if (dailyPosts >= challenge.data.maxPostsPerDay) {
                 return false;
             }
@@ -135,6 +196,10 @@ async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']
 
         if (reminderType === 'DAILY_POST') {
             const dailyPosts = await getPostsCount(reminder.challengeId, reminder.userId, 'day');
+            console.log('[Validation] Daily post check:', {
+                dailyPosts,
+                needsReminder: dailyPosts === 0
+            });
             if (dailyPosts > 0) {
                 return false;
             }
@@ -142,32 +207,61 @@ async function validateReminder(reminder: NonNullable<Schema['ReminderSchedule']
 
         return true;
     } catch (error) {
-        console.error('Error validating reminder:', error);
+        console.error('[Validation] Error validating reminder:', {
+            error,
+            reminderId: reminder.id,
+            challengeId: reminder.challengeId,
+            userId: reminder.userId
+        });
         return false;
     }
 }
 
-function calculateNextSchedule(timePreference: string, currentTime: string): string {
-    try {
-        const now = new Date(currentTime);
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+function calculateNextSchedule(
+    timePreference: string | null | undefined,
+    secondPreference: string | null | undefined,
+    currentTime: string,
+    lastScheduledTime: string | null // Add this parameter
+): string {
+    const now = new Date(currentTime);
+    const currentHour = now.getUTCHours();
+    const currentMinutes = now.getUTCMinutes();
 
-        const [hours, minutes] = timePreference.split(':').map(Number);
-        if (Number.isNaN(hours) || Number.isNaN(minutes)) {
-            tomorrow.setHours(9, 0, 0, 0);
-        } else {
-            tomorrow.setHours(hours, minutes, 0, 0);
+    // Parse the times
+    const primaryTime = timePreference ? timePreference.split(':').map(Number) : null;
+    const secondaryTime = secondPreference ? secondPreference.split(':').map(Number) : null;
+
+    // If last scheduled was primary, next should be secondary (if it exists)
+    if (lastScheduledTime === timePreference && secondaryTime) {
+        const [hours, minutes] = secondaryTime;
+        const nextTime = new Date(now);
+        nextTime.setUTCHours(hours, minutes, 0, 0);
+        
+        // If secondary time has passed today, schedule for tomorrow
+        if (nextTime <= now) {
+            nextTime.setDate(nextTime.getDate() + 1);
         }
-
-        return tomorrow.toISOString();
-    } catch (error) {
-        console.error('Error calculating next schedule:', error);
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(9, 0, 0, 0);
-        return tomorrow.toISOString();
+        return nextTime.toISOString();
     }
+
+    // Default to primary time for next schedule
+    if (primaryTime) {
+        const [hours, minutes] = primaryTime;
+        const nextTime = new Date(now);
+        nextTime.setUTCHours(hours, minutes, 0, 0);
+        
+        // If primary time has passed today, schedule for tomorrow
+        if (nextTime <= now) {
+            nextTime.setDate(nextTime.getDate() + 1);
+        }
+        return nextTime.toISOString();
+    }
+
+    // Fallback to next day at 9 AM UTC if no times set
+    const fallback = new Date(now);
+    fallback.setDate(fallback.getDate() + 1);
+    fallback.setUTCHours(9, 0, 0, 0);
+    return fallback.toISOString();
 }
 
 function getNotificationType(reminderType: ReminderType): NotificationType {

@@ -1,13 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MessageSquarePlus, LogOut, User, Users, Trophy, RefreshCw } from 'lucide-react';
-import { CreatePostModal } from './CreatePostModal';
+import { MessageSquarePlus, LogOut, User, Users, Trophy, RefreshCw } from 'lucide-react';
 import { useUser } from './userContext';
 import { useUrlCache } from './urlCacheContext';
 import ChallengeFeedHeader from './challengeFeedHeader';
 import FeedbackModal from './components/FeedbackModal/feedbackModal';
-import NotificationBell from './components/NotificationBell/NotificationBell';
 
 interface HeaderProps {
   updateAvailable?: boolean;
@@ -17,10 +15,9 @@ interface HeaderProps {
 function Header({ updateAvailable, onUpdate }: HeaderProps) {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const { signOut } = useAuthenticator();
-  const { userAttributes, userId } = useUser();
+  const { userAttributes } = useUser();
   const { getStorageUrl } = useUrlCache();
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("/profileDefault.png");
   const { pictureUrl } = useUser();
@@ -143,9 +140,6 @@ function Header({ updateAvailable, onUpdate }: HeaderProps) {
           </div>
           <div className="header-actions">
 
-            <div className="header-notifications">
-              {userId && <NotificationBell userId={userId} />}
-            </div>
             <div className="account-menu" ref={dropdownRef}>
               <button
                 ref={buttonRef}
@@ -193,19 +187,6 @@ function Header({ updateAvailable, onUpdate }: HeaderProps) {
       </main>
 
       <ChallengeFeedHeader />
-
-      <button
-        onClick={() => setIsPostModalOpen(true)}
-        className="fab-button"
-        aria-label="Create new post"
-      >
-        <Plus />
-      </button>
-
-      <CreatePostModal
-        isOpen={isPostModalOpen}
-        onClose={() => setIsPostModalOpen(false)}
-      />
 
       <FeedbackModal
         isOpen={showFeedbackModal}

@@ -5,6 +5,7 @@ import { rotateCreator } from "../functions/rotateCreator/resource";
 import { challengeCleanup } from "../functions/challengeCleanup/resource";
 import { sendPushNotificationFunction } from "../functions/sendNotificationFunction/resource";
 import { processReminders } from "../functions/processReminders/resource";
+import { imageAnalysis } from "../functions/imageAnalysis/resource";
 
 const schema = a.schema({
   PostforWorkout: a.model({
@@ -13,7 +14,7 @@ const schema = a.schema({
     username: a.string(),
     userID: a.string(),
     thumbsUp: a.integer().default(0),
-    smiley: a.integer().default(0),
+    smiley: a.integer().default(0), // serving as challenge count
     // Add new emoji counts
     strong: a.integer().default(0),    // 💪
     fire: a.integer().default(0),      // 🔥
@@ -24,7 +25,12 @@ const schema = a.schema({
     rocket: a.integer().default(0),    // 🚀
     clap: a.integer().default(0),      // 👏
     trophy: a.integer().default(0),  //trophy
-    challengeIds: a.string().array() // Store as JSON array of IDs
+    challengeIds: a.string().array(), // Store as JSON array of IDs
+
+    postType: a.enum(['workout', 'meal', 'weight']),
+    weightData: a.json(), // Store as { weight: number, previousWeight?: number }
+    mealData: a.json() // Store as { name: string, calories: number, time: string }
+
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Reaction: a.model({
@@ -54,6 +60,16 @@ const schema = a.schema({
     description: a.string().required(),
     reward: a.string(),
     challengeType: a.enum(['none', 'PUBLIC', 'GROUP', 'PERSONAL', 'FRIENDS', 'DAILY']),
+
+    // Activity tracking flags
+    trackWorkouts: a.boolean().default(true),  // Most challenges will track workouts
+    trackMeals: a.boolean().default(false),    // Optional meal tracking
+    trackWeight: a.boolean().default(false),   // Optional weight tracking
+
+    // Frequency settings for tracked activities
+    requireWeeklyWeighIn: a.boolean().default(false),
+    weighInDay: a.string(), // e.g., "MONDAY", only used if requireWeeklyWeighIn is true
+
     status: a.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED', 'DRAFT', 'CANCELLED']),
     startAt: a.datetime().required(),
     endAt: a.datetime().required(),
@@ -92,7 +108,13 @@ const schema = a.schema({
   ChallengeParticipant: a.model({
     challengeID: a.string().required(), //reference to Challenge model
     userID: a.string().required(),
-    status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED', 'PENDING']),
+    status: a.enum(['ACTIVE', 'COMPLETED', 'DROPPED', 'PENDING', 'DECLINED']),
+
+    // Personal tracking goals - only used if challenge has respective tracking enabled
+    targetWeight: a.float(),
+    startingWeight: a.float(),
+    calorieGoal: a.integer(),
+
     points: a.integer().default(0),
     workoutsCompleted: a.integer().default(0),
     joinedAt: a.datetime(),
@@ -109,6 +131,7 @@ const schema = a.schema({
     challengeId: a.string(),
     userId: a.string(),
     timestamp: a.datetime(),
+    postType: a.enum(['workout', 'meal', 'weight']),
     validated: a.boolean().default(false),
     validationComment: a.string(),
     points: a.integer().default(0)
@@ -138,8 +161,8 @@ const schema = a.schema({
     createdAt: a.datetime().required(),
     updatedAt: a.datetime().required(),
     lowercasename: a.string().required(),
-    hasCompletedOnboarding: a.boolean().default(false), 
-    reminderPreferences: a.json()
+    hasCompletedOnboarding: a.boolean().default(false),
+    reminderPreferences: a.json() //{ "primaryTime" : { "S" : "09:00" }, "timezone" : { "S" : "UST" }, "enabled" : { "BOOL" : true }, "secondaryTime" : { "S" : "19:00" } }
   }).authorization((allow) => [allow.publicApiKey()]),
 
   //PUSH NOTIFICATION SETUP
@@ -174,24 +197,60 @@ const schema = a.schema({
     scheduledTime: a.datetime().required(),  // When to send the reminder
     repeatDaily: a.boolean().default(true),  // If this should repeat
     timePreference: a.string(),  // Store time as "HH:mm" format
+    secondPreference: a.string(),  // Store time as "HH:mm" format
+    timezone: a.string(),  // Store IANA timezone, e.g., "America/New_York"
     status: a.enum(['PENDING', 'SENT', 'CANCELLED']),
     lastSent: a.datetime(),  // Track last reminder
     nextScheduled: a.datetime(),  // Next scheduled reminder
+    enabled: a.boolean().default(false),
     createdAt: a.datetime().required(),
     updatedAt: a.datetime().required()
   }).authorization((allow) => [allow.publicApiKey()]),
 
-  ChallengeReminderPreferences: a.model({
-    userId: a.string().required(),
-    challengeId: a.string().required(),
-    enabled: a.boolean().default(true),
-    primaryTime: a.string(),        // Optional override of default time
-    secondaryTime: a.string(),      // Optional second reminder time
-    reminderTypes: a.string().array(),
+  PersonalGoal: a.model({
+    userID: a.string().required(),
+    type: a.enum(['CALORIE', 'WEIGHT', 'CUSTOM']),
+    name: a.string().required(),
+    target: a.float().required(),
+    currentValue: a.float(),
+    startDate: a.datetime().required(),
+    endDate: a.datetime(),
+    streakCount: a.integer().default(0),
+    bestStreak: a.integer().default(0),
+    achievementsEnabled: a.boolean().default(true),
+    achievementThresholds: a.json(), // Store as stringified JSON
+    status: a.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED']),
     createdAt: a.datetime().required(),
     updatedAt: a.datetime().required()
-}).authorization((allow) => [allow.publicApiKey()]),
+  }).authorization((allow) => [
+    allow.owner(),
+    allow.publicApiKey()
+  ]).secondaryIndexes((index) => [
+    // Index for querying active goals by type
+    index("userID")
+      .sortKeys(['type'])
+      .queryField('listGoalsByType')
+      .name('byUserAndType')
+  ]),
 
+  DailyLog: a.model({
+    userID: a.string().required(),
+    date: a.string().required(), // YYYY-MM-DD format
+    weight: a.float(),
+    calories: a.float(),
+    meals: a.json(), // Store as stringified JSON
+    notes: a.string(),
+    createdAt: a.datetime().required(),
+    updatedAt: a.datetime().required()
+  }).authorization((allow) => [
+    allow.publicApiKey()
+  ]).secondaryIndexes((index) => [
+    // Index for querying logs by date range
+    index('userID')
+      .sortKeys(['date'])
+      .queryField('listLogsByDate')
+      .name('byUserAndDate')
+  ]),
 
   rotateCreator: a
     .query()
@@ -223,7 +282,7 @@ const schema = a.schema({
     .handler(a.handler.function(sendPushNotificationFunction))
     .authorization((allow) => [allow.publicApiKey()]),
 
-    processReminders: a
+  processReminders: a
     .query()
     .arguments({
       startTime: a.string().required(),  // ISO timestamp to process
@@ -231,6 +290,16 @@ const schema = a.schema({
     })
     .returns(a.boolean())
     .handler(a.handler.function(processReminders))
+    .authorization((allow) => [allow.publicApiKey()]),
+
+    imageAnalysis: a
+    .query()
+    .arguments({
+      imageUrl: a.string().required(), 
+      args:a.string()
+    })
+    .returns(a.json())
+    .handler(a.handler.function(imageAnalysis))
     .authorization((allow) => [allow.publicApiKey()]),
 
 
@@ -243,7 +312,8 @@ const schema = a.schema({
   allow.resource(rotateCreator).to(["query", "listen", "mutate"]),
   allow.resource(challengeCleanup).to(["query", "listen", "mutate"]),
   allow.resource(sendPushNotificationFunction).to(["query", "listen", "mutate"]),
-  allow.resource(processReminders).to(["query", "listen", "mutate"])
+  allow.resource(processReminders).to(["query", "listen", "mutate"]),
+  allow.resource(imageAnalysis).to(["query", "listen", "mutate"])
 ]);
 
 

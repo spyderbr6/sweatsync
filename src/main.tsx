@@ -20,6 +20,9 @@ import { UrlCacheProvider } from './urlCacheContext';
 import UpdateNotification from './components/UpdateNotification/UpdateNotification';
 import { OnboardingFlow } from './components/OnboardingFlow/OnboardingFlow';
 import { useServiceWorkerUpdate } from './hooks/useServiceWorkerUpdate';
+import BottomNav from "./components/BottomNav/BottomNav";
+import { PostCreationProvider } from "./postCreationContext.tsx";
+import { PersonalStatsPage } from "./components/PersonalStats/PersonalStats.tsx";
 
 
 Amplify.configure(outputs);
@@ -48,20 +51,25 @@ function AuthenticatedApp() {
 
   return (
 
-        <DataVersionProvider>
-          <>
+    <DataVersionProvider>
+      <PostCreationProvider>
+        <main className="main-content">
           <Header updateAvailable={updateAvailable} onUpdate={forceUpdate} />
           <Routes>
-              <Route path="/" element={<App />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/friends" element={<FriendsPage />} />
-              <Route path="/Challenges" element={<ChallengesPage />} />
-              <Route path="/challenge/:challengeId" element={<ChallengeDetailPage />} />
-              <Route path="/post/:postId" element={<SinglePostPage />} />
-            </Routes>
-            {updateAvailable && <UpdateNotification onUpdate={handleUpdate} />}
-          </>
-        </DataVersionProvider>
+            <Route path="/" element={<App />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/friends" element={<FriendsPage />} />
+            <Route path="/Challenges" element={<ChallengesPage />} />
+            <Route path="/challenge/:challengeId" element={<ChallengeDetailPage />} />
+            <Route path="/post/:postId" element={<SinglePostPage />} />
+            <Route path="/health" element={<PersonalStatsPage/>} />
+          </Routes>
+          <BottomNav />
+          {updateAvailable && <UpdateNotification onUpdate={handleUpdate} />}
+        </main>
+      </PostCreationProvider>
+
+    </DataVersionProvider>
 
   );
 }
@@ -69,26 +77,26 @@ function AuthenticatedApp() {
 function LoginPage() {
   return (
     <div className="login-container">
-      <div 
+      <div
         className="login-background"
         style={{ backgroundImage: 'url("/workout-background.jpg")' }}
         aria-hidden="true"
       />
       <div className="login-form-container">
         <Authenticator
-          signUpAttributes={['preferred_username']}
+          signUpAttributes={['preferred_username', 'phone_number']}
           components={{
             Header() {
               return (
-                <div style={{ textAlign: 'center', padding: '1rem', marginBottom: '1rem',   background: 'rgba(255, 255, 255)' }}>
-                  <img 
-                    src="/logo.png" 
-                    alt="SweatSync Logo" 
-                    style={{ 
-                      height: '50px', 
+                <div style={{ textAlign: 'center', padding: '1rem', marginBottom: '1rem', background: 'rgba(255, 255, 255)' }}>
+                  <img
+                    src="/logo.png"
+                    alt="SweatSync Logo"
+                    style={{
+                      height: '50px',
                       width: 'auto',
-                      marginBottom: '1rem'            
-                    }} 
+                      marginBottom: '1rem'
+                    }}
                   />
                 </div>
               );
@@ -102,10 +110,17 @@ function LoginPage() {
                 placeholder: 'Enter your preferred username',
                 order: 1
               },
+              phone_number: {
+                label: 'Phone Number',
+                isRequired: true,
+                dialCode: '+1',
+                placeholder: 'Enter your phone number',
+                order: 2
+              }
             },
           }}
         >
-           <Navigate to="/" replace />
+          <Navigate to="/" replace />
         </Authenticator>
       </div>
     </div>
@@ -113,11 +128,11 @@ function LoginPage() {
 }
 
 function AuthenticatedRoutes() {
-  const { authStatus} = useAuthenticator(context => [
+  const { authStatus } = useAuthenticator(context => [
     context.authStatus
     //context.user
   ]);
-  
+
   // Add loading state
   const [isLoading, setIsLoading] = useState(true);
 
@@ -136,13 +151,13 @@ function AuthenticatedRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route 
-        path="/*" 
+      <Route
+        path="/*"
         element={
-          authStatus === 'authenticated' 
-            ? <AuthenticatedApp /> 
+          authStatus === 'authenticated'
+            ? <AuthenticatedApp />
             : <LandingPage />
-        } 
+        }
       />
     </Routes>
   );
@@ -152,10 +167,10 @@ function AppWrapper() {
   return (
     <Router>
       <Authenticator.Provider>
-      <UrlCacheProvider>
-      <UserProvider>
-        <AuthenticatedRoutes />
-        </UserProvider>
+        <UrlCacheProvider>
+          <UserProvider>
+            <AuthenticatedRoutes />
+          </UserProvider>
         </UrlCacheProvider>
       </Authenticator.Provider>
     </Router>

@@ -20,6 +20,8 @@
     width: 90%;
     text-align: center;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Important for smooth scrolling on iOS */
   }
   
   .ios-modal h2 {
