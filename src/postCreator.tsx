@@ -1,6 +1,6 @@
 // src/postCreator.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, X } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../amplify/data/resource";
 import { PostData, WorkoutPostData, MealPostData, WeightPostData } from './types/posts';
@@ -47,7 +47,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     type: 'workout',
     content: '',
     url: '',
-    challengeIds: []
+    challengeIds: [],
+    smiley: 0
   });
 
   const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
@@ -111,6 +112,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   // Helper function to get measurement data based on post type
   const getMeasurementData = () => {
     switch (postData.type) {
+      case 'workout':
+        return {};
       case 'weight':
         return postData.weight?.value 
           ? { weight: postData.weight.value }
@@ -140,7 +143,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     setPostData(prev => ({
       ...prev,
       ...updates,
-      type: 'workout'
+      type: 'workout', 
+      smiley: (updates.challengeIds || prev.challengeIds).length
     }));
   };
 
@@ -152,7 +156,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         content: updates.content ?? prev.content,
         url: updates.url ?? prev.url,
         challengeIds: updates.challengeIds ?? prev.challengeIds,
-        meal
+        meal, 
+        smiley: (updates.challengeIds || prev.challengeIds).length
       };
     });
   };
@@ -165,7 +170,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         content: updates.content ?? prev.content,
         url: updates.url ?? prev.url,
         challengeIds: updates.challengeIds ?? prev.challengeIds,
-        weight
+        weight, 
+        smiley: (updates.challengeIds || prev.challengeIds).length
       };
     });
   };
@@ -181,6 +187,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     }
   };
   
+  /*
   const handleRemoveImage = () => {
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -192,20 +199,27 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       type: 'workout',
       content: '',
       url: '',
-      challengeIds: []
+      challengeIds: [],
+      smiley: 0
     });
   };
+  */
 
   const toggleChallenge = (challengeId: string) => {
     const selectability = challengeSelectability[challengeId];
     if (!selectability?.canSelect) return;
   
-    setPostData(prev => ({
-      ...prev,
-      challengeIds: prev.challengeIds.includes(challengeId)
+    setPostData(prev => {
+      const newChallengeIds = prev.challengeIds.includes(challengeId)
         ? prev.challengeIds.filter(id => id !== challengeId)
-        : [...prev.challengeIds, challengeId]
-    }));
+        : [...prev.challengeIds, challengeId];
+      
+      return {
+        ...prev,
+        challengeIds: newChallengeIds,
+        smiley: newChallengeIds.length, // update smiley with the count
+      };
+    });
   };
 
   const handleSubmit = async () => {
@@ -254,7 +268,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         username: userAttributes?.preferred_username || '',
         userID: userId,
         challengeIds: postData.challengeIds,
-        postType: postData.type
+        postType: postData.type,
+        smiley: postData.challengeIds.length
       };
   
       // Add type-specific data
@@ -280,7 +295,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         type: 'workout',
         content: '',
         url: '',
-        challengeIds: []
+        challengeIds: [],
+        smiley: 0
       });
       setFile(null);
       setPreviewUrl(null);
@@ -350,7 +366,7 @@ const renderForm = () => {
                 disabled={!selectability?.canSelect}
                 className={`
                   flex items-center gap-2 px-3 py-2 rounded-full
-                  transition-colors duration-200
+                  transition-colors duration-200 relative z-10
                 `}
                 style={{
                   backgroundColor: style.bgColor,
@@ -362,9 +378,11 @@ const renderForm = () => {
                 <IconComponent size={16} />
                 <span className="text-sm font-medium">{challenge.title}</span>
               </button>
-  
+          
               {!selectability?.canSelect && selectability?.reason && (
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                <div 
+                  className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20"
+                >
                   {selectability.reason}
                 </div>
               )}
@@ -409,13 +427,6 @@ const renderForm = () => {
                 alt="Preview"
                 className="w-full h-64 object-cover rounded-lg"
               />
-              <button
-                onClick={handleRemoveImage}
-                className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
-                aria-label="Remove image"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
             </>
           )}
         </div>

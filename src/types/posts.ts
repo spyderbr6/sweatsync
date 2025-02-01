@@ -6,6 +6,7 @@ export interface BasePostData {
   content: string;
   url: string;
   challengeIds: string[];
+  smiley: number;
 }
 
 export interface Exercise {

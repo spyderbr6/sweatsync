@@ -57,7 +57,8 @@ const ChallengeDailyPrompt: React.FC<ChallengeDailyPromptProps> = ({
         createdBy: userId,
         createdAt: today.toISOString(),
         updatedAt: today.toISOString(),
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        trackWorkouts: true
       });
 
       if (result.data?.id) {
