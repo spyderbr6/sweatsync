@@ -1,6 +1,6 @@
 // src/postCreator.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, X } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../amplify/data/resource";
 import { PostData, WorkoutPostData, MealPostData, WeightPostData } from './types/posts';
@@ -187,6 +187,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     }
   };
   
+  /*
   const handleRemoveImage = () => {
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -202,6 +203,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       smiley: 0
     });
   };
+  */
 
   const toggleChallenge = (challengeId: string) => {
     const selectability = challengeSelectability[challengeId];
@@ -425,13 +427,6 @@ const renderForm = () => {
                 alt="Preview"
                 className="w-full h-64 object-cover rounded-lg"
               />
-              <button
-                onClick={handleRemoveImage}
-                className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
-                aria-label="Remove image"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
             </>
           )}
         </div>
