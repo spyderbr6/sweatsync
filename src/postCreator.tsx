@@ -11,7 +11,7 @@ import { WorkoutForm } from './components/PostForms/WorkoutForm';
 import { MealForm } from './components/PostForms/MealForm';
 import { WeightForm } from './components/PostForms/WeightForm';
 import { listChallenges } from './challengeOperations';
-import { validateChallengePost } from './challengeRules';
+import { validateChallengePost, ValidatePostContext } from './challengeRules';
 import { getChallengeStyle} from './styles/challengeStyles';
 
 const client = generateClient<Schema>();
@@ -56,24 +56,27 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   useEffect(() => {
     const loadAndValidateChallenges = async () => {
       if (!userId) return;
-
+  
       try {
         const activeChallenges = await listChallenges(userId);
         setAvailableChallenges(activeChallenges);
-
+  
         const selectabilityMap: Record<string, ChallengeSelectability> = {};
-
+  
         await Promise.all(activeChallenges.map(async (challenge) => {
           try {
-            const validationResult = await validateChallengePost({
+            const validationContext: ValidatePostContext = {
               challengeId: challenge.id,
               userId,
               postId: 'pending',
               timestamp: new Date().toISOString(),
               postType: postData.type,
-              content: postData.content
-            });
-
+              content: postData.content,
+              measurementData: getMeasurementData()
+            };
+  
+            const validationResult = await validateChallengePost(validationContext);
+  
             selectabilityMap[challenge.id] = {
               id: challenge.id,
               canSelect: validationResult.isValid,
@@ -88,33 +91,57 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             };
           }
         }));
-
+  
         setChallengeSelectability(selectabilityMap);
       } catch (error) {
         console.error("Error loading challenges:", error);
       }
     };
-
+  
     loadAndValidateChallenges();
-  }, [userId, postData.type]);
+  }, [
+    userId, 
+    postData.type,
+    postData.content,
+    // Include relevant measurement data based on type
+    ...(postData.type === 'weight' ? [(postData as WeightPostData).weight?.value] : []),
+    ...(postData.type === 'meal' ? [JSON.stringify((postData as MealPostData).meal)] : [])
+  ]);
+
+  // Helper function to get measurement data based on post type
+  const getMeasurementData = () => {
+    switch (postData.type) {
+      case 'weight':
+        return postData.weight?.value 
+          ? { weight: postData.weight.value }
+          : undefined;
+  
+      case 'meal': {
+        const meal = (postData as MealPostData).meal;
+        if (meal?.name && meal?.calories && meal?.time) {
+          return {
+            mealDetails: {
+              name: meal.name,
+              calories: meal.calories,
+              time: meal.time
+            }
+          };
+        }
+        return undefined;
+      }
+  
+      default:
+        return undefined;
+    }
+  };
 
   // Type-safe update handlers
   const handleWorkoutUpdate = (updates: Partial<WorkoutPostData>) => {
-    setPostData(prev => {
-      if (prev.type !== 'workout') {
-        return {
-          type: 'workout',
-          content: updates.content ?? '',
-          url: updates.url ?? '',
-          challengeIds: updates.challengeIds ?? [],
-          exercise: updates.exercise
-        };
-      }
-      return {
-        ...prev,
-        ...updates
-      };
-    });
+    setPostData(prev => ({
+      ...prev,
+      ...updates,
+      type: 'workout'
+    }));
   };
 
   const handleMealUpdate = (updates: Partial<MealPostData>) => {
@@ -129,7 +156,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       };
     });
   };
-
+  
   const handleWeightUpdate = (updates: Partial<WeightPostData>) => {
     setPostData(prev => {
       const weight = updates.weight ?? { value: 0, unit: 'lbs', time: '' };
@@ -151,18 +178,9 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       const url = URL.createObjectURL(selectedFile);
       setPreviewUrl(url);
       setStep('details');
-
-      // Here we'll later add AI analysis to determine post type
-      // For now, defaulting to workout
-      setPostData(prev => ({
-        type: 'workout',
-        content: prev.content,
-        url: url,
-        challengeIds: prev.challengeIds
-      }));
     }
   };
-
+  
   const handleRemoveImage = () => {
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -179,6 +197,9 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   };
 
   const toggleChallenge = (challengeId: string) => {
+    const selectability = challengeSelectability[challengeId];
+    if (!selectability?.canSelect) return;
+  
     setPostData(prev => ({
       ...prev,
       challengeIds: prev.challengeIds.includes(challengeId)
@@ -192,54 +213,69 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       onError?.(new Error("Missing required data for post"));
       return;
     }
-
+  
     try {
       setLoading(true);
-
+  
       // Validate selected challenges
       if (postData.challengeIds.length > 0) {
-        const validationPromises = postData.challengeIds.map(challengeId =>
-          validateChallengePost({
-            challengeId,
-            userId,
-            postId: 'pending',
-            timestamp: new Date().toISOString(),
-            postType: postData.type!,
-            content: postData.content
-          })
+        const validationContext: ValidatePostContext = {
+          challengeId: postData.challengeIds[0], // Validate first challenge
+          userId,
+          postId: 'pending',
+          timestamp: new Date().toISOString(),
+          postType: postData.type,
+          content: postData.content,
+          measurementData: getMeasurementData()
+        };
+  
+        const validationResults = await Promise.all(
+          postData.challengeIds.map(challengeId => 
+            validateChallengePost({
+              ...validationContext,
+              challengeId
+            })
+          )
         );
-
-        const validationResults = await Promise.all(validationPromises);
+  
         const invalidResults = validationResults.filter(result => !result.isValid);
-
         if (invalidResults.length > 0) {
           throw new Error(invalidResults.map(r => r.message).join(', '));
         }
       }
-
+  
       // Upload image
       const { originalPath } = await uploadImageWithThumbnails(file, 'picture-submissions', 1200);
-
-      // Create post based on type
-      const result = await client.models.PostforWorkout.create({
-        content: postData.content,
+  
+      // Create base post data
+      const basePostData = {
+        content: postData.content || '',
         url: originalPath,
         username: userAttributes?.preferred_username || '',
         userID: userId,
         challengeIds: postData.challengeIds,
-        postType: postData.type,
+        postType: postData.type
+      };
+  
+      // Add type-specific data
+      const postDataWithMeasurements = {
+        ...basePostData,
         ...(postData.type === 'meal' && {
           mealData: JSON.stringify((postData as MealPostData).meal)
         }),
         ...(postData.type === 'weight' && {
           weightData: JSON.stringify((postData as WeightPostData).weight)
         })
-      });
-
+      };
+  
+      // Create post
+      const result = await client.models.PostforWorkout.create(postDataWithMeasurements);
+  
       if (!result.data) {
         throw new Error("Failed to create post");
       }
-
+  
+      // Reset form state
       setPostData({
         type: 'workout',
         content: '',
@@ -251,7 +287,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       setStep('initial');
       incrementVersion();
       onSuccess();
-
+  
     } catch (error) {
       console.error("Error creating post:", error);
       onError?.(error instanceof Error ? error : new Error("Failed to create post"));
@@ -260,36 +296,36 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     }
   };
 
-  const renderForm = () => {
-    switch (postData.type) {
-      case 'workout':
-        return (
-          <WorkoutForm
-            data={postData}
-            onChange={handleWorkoutUpdate}
-            isSubmitting={loading}
-          />
-        );
-      case 'meal':
-        return (
-          <MealForm
-            data={postData}
-            onChange={handleMealUpdate}
-            isSubmitting={loading}
-          />
-        );
-      case 'weight':
-        return (
-          <WeightForm
-            data={postData}
-            onChange={handleWeightUpdate}
-            isSubmitting={loading}
-          />
-        );
-      default:
-        return null;
-    }
-  };
+const renderForm = () => {
+  switch (postData.type) {
+    case 'workout':
+      return (
+        <WorkoutForm
+          data={postData as WorkoutPostData}
+          onChange={handleWorkoutUpdate}
+          isSubmitting={loading}
+        />
+      );
+    case 'meal':
+      return (
+        <MealForm
+          data={postData as MealPostData}
+          onChange={handleMealUpdate}
+          isSubmitting={loading}
+        />
+      );
+    case 'weight':
+      return (
+        <WeightForm
+          data={postData as WeightPostData}
+          onChange={handleWeightUpdate}
+          isSubmitting={loading}
+        />
+      );
+    default:
+      return null;
+  }
+};
 
 
   const renderChallengeSelection = () => (

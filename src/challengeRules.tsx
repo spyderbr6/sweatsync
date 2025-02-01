@@ -6,6 +6,23 @@ import {calculateNextSchedule} from "./utils/calculateNextSchedule";
 
 const client = generateClient<Schema>();
 
+export interface ValidatePostContext {
+    challengeId: string;
+    userId: string;
+    postId: string;
+    timestamp: string;
+    postType: 'workout' | 'meal' | 'weight';
+    content?: string;
+    measurementData?: {
+        weight?: number;
+        mealDetails?: {
+            name: string;
+            calories: number;
+            time: string;
+        };
+    };
+}
+
 interface ValidationResult {
     isValid: boolean;
     message: string;
@@ -164,27 +181,7 @@ export async function updateChallengePoints(context: PointsUpdateContext): Promi
 }
 
 
-export interface ValidatePostContext {
-    challengeId: string;
-    userId: string;
-    postId: string;
-    timestamp: string;
-    postType: 'workout' | 'meal' | 'weight';
-    content?: string;
-    measurementData?: {
-        weight?: number;
-        mealDetails?: {
-            name: string;
-            calories: number;
-            time: string;
-        };
-    };
-}
 
-interface ValidationResult {
-    isValid: boolean;
-    message: string;
-}
 
 export async function validateChallengePost(context: ValidatePostContext): Promise<ValidationResult> {
     try {
@@ -519,12 +516,6 @@ async function validateWeightPost(
                 message: "Already completed weigh-in for this week"
             };
         }
-    } else if (challenge.requireWeeklyWeighIn) {
-        // Handle case where weighInDay is not set but weekly weigh-in is required
-        return {
-            isValid: false,
-            message: "Challenge configuration error: weigh-in day not set"
-        };
     }
 
     return {
