@@ -27,7 +27,7 @@ export async function analyzeImage(file: File): Promise<ImageAnalysisResult> {
     const base64Image = await fileToBase64(file);
     
     const openai = new OpenAI({
-      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+      apiKey: import.meta.env.OPENAI_API_KEY,
     });
 
     const response = await openai.chat.completions.create({
