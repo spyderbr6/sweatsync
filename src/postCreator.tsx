@@ -47,7 +47,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     type: 'workout',
     content: '',
     url: '',
-    challengeIds: []
+    challengeIds: [],
+    smiley: 0
   });
 
   const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
@@ -111,6 +112,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   // Helper function to get measurement data based on post type
   const getMeasurementData = () => {
     switch (postData.type) {
+      case 'workout':
+        return {};
       case 'weight':
         return postData.weight?.value 
           ? { weight: postData.weight.value }
@@ -140,7 +143,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     setPostData(prev => ({
       ...prev,
       ...updates,
-      type: 'workout'
+      type: 'workout', 
+      smiley: (updates.challengeIds || prev.challengeIds).length
     }));
   };
 
@@ -152,7 +156,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         content: updates.content ?? prev.content,
         url: updates.url ?? prev.url,
         challengeIds: updates.challengeIds ?? prev.challengeIds,
-        meal
+        meal, 
+        smiley: (updates.challengeIds || prev.challengeIds).length
       };
     });
   };
@@ -165,7 +170,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         content: updates.content ?? prev.content,
         url: updates.url ?? prev.url,
         challengeIds: updates.challengeIds ?? prev.challengeIds,
-        weight
+        weight, 
+        smiley: (updates.challengeIds || prev.challengeIds).length
       };
     });
   };
@@ -192,7 +198,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       type: 'workout',
       content: '',
       url: '',
-      challengeIds: []
+      challengeIds: [],
+      smiley: 0
     });
   };
 
@@ -200,12 +207,17 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     const selectability = challengeSelectability[challengeId];
     if (!selectability?.canSelect) return;
   
-    setPostData(prev => ({
-      ...prev,
-      challengeIds: prev.challengeIds.includes(challengeId)
+    setPostData(prev => {
+      const newChallengeIds = prev.challengeIds.includes(challengeId)
         ? prev.challengeIds.filter(id => id !== challengeId)
-        : [...prev.challengeIds, challengeId]
-    }));
+        : [...prev.challengeIds, challengeId];
+      
+      return {
+        ...prev,
+        challengeIds: newChallengeIds,
+        smiley: newChallengeIds.length, // update smiley with the count
+      };
+    });
   };
 
   const handleSubmit = async () => {
@@ -254,7 +266,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         username: userAttributes?.preferred_username || '',
         userID: userId,
         challengeIds: postData.challengeIds,
-        postType: postData.type
+        postType: postData.type,
+        smiley: postData.challengeIds.length
       };
   
       // Add type-specific data
@@ -280,7 +293,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
         type: 'workout',
         content: '',
         url: '',
-        challengeIds: []
+        challengeIds: [],
+        smiley: 0
       });
       setFile(null);
       setPreviewUrl(null);

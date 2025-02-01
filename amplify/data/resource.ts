@@ -13,7 +13,7 @@ const schema = a.schema({
     username: a.string(),
     userID: a.string(),
     thumbsUp: a.integer().default(0),
-    smiley: a.integer().default(0),
+    smiley: a.integer().default(0), // serving as challenge count
     // Add new emoji counts
     strong: a.integer().default(0),    // 💪
     fire: a.integer().default(0),      // 🔥
