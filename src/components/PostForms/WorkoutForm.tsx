@@ -14,6 +14,8 @@ export const WorkoutForm: React.FC<BaseFormProps<WorkoutPostData>> = ({
   onChange,
   isSubmitting
 }) => {
+  
+  /*
   // Initialize exercise object with required fields if it doesn't exist
   const updateExercise = (updates: Partial<WorkoutPostData['exercise']>) => {
     const currentExercise = data.exercise || { type: '' };
@@ -25,6 +27,7 @@ export const WorkoutForm: React.FC<BaseFormProps<WorkoutPostData>> = ({
       }
     });
   };
+  */
 
   return (
     <div className="space-y-4">
@@ -37,7 +40,7 @@ export const WorkoutForm: React.FC<BaseFormProps<WorkoutPostData>> = ({
           disabled={isSubmitting}
         />
       </div>
-
+{/*
       <div>
         <label 
           htmlFor="exerciseType" 
@@ -101,6 +104,8 @@ export const WorkoutForm: React.FC<BaseFormProps<WorkoutPostData>> = ({
           </select>
         </div>
       </div>
+      */}
     </div>
+    
   );
 };
