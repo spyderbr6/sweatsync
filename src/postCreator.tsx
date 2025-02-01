@@ -350,7 +350,7 @@ const renderForm = () => {
                 disabled={!selectability?.canSelect}
                 className={`
                   flex items-center gap-2 px-3 py-2 rounded-full
-                  transition-colors duration-200
+                  transition-colors duration-200 relative z-10
                 `}
                 style={{
                   backgroundColor: style.bgColor,
@@ -362,9 +362,11 @@ const renderForm = () => {
                 <IconComponent size={16} />
                 <span className="text-sm font-medium">{challenge.title}</span>
               </button>
-  
+          
               {!selectability?.canSelect && selectability?.reason && (
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                <div 
+                  className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20"
+                >
                   {selectability.reason}
                 </div>
               )}
