@@ -1,6 +1,6 @@
 //src/createChallengeModal.tsx
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X,Dumbbell,Utensils, Scale } from 'lucide-react';
 import { useDataVersion } from './dataVersionContext';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../amplify/data/resource";
@@ -22,16 +22,23 @@ const isValidChallengeType = (type: ChallengeType): boolean => {
 
 
 interface ChallengeFormData {
-    // Base challenge fields
+    // Existing base fields
     title: string;
     description: string;
-    challengeType: ChallengeType;  // Using the enum
+    challengeType: ChallengeType;
     totalWorkouts: number;
     startDate: string;
     endDate: string;
     basePointsPerWorkout: number;
 
-    // Group challenge specific fields - Make required fields non-optional
+    // New tracking flags
+    trackWorkouts: boolean;
+    trackMeals: boolean;
+    trackWeight: boolean;
+    requireWeeklyWeighIn: boolean;
+    weighInDay?: string;
+
+    // Existing group rules
     groupRules: {
         maxPostsPerDay: number;
         maxPostsPerWeek: number;
@@ -44,6 +51,7 @@ interface ChallengeFormData {
 export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChallengeModalProps) {
     const { userId } = useUser();
     const [formData, setFormData] = useState<ChallengeFormData>({
+        // Existing defaults
         title: '',
         description: '',
         challengeType: ChallengeType.NONE,
@@ -51,6 +59,14 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         basePointsPerWorkout: 10,
+
+        // New tracking defaults
+        trackWorkouts: true,
+        trackMeals: false,
+        trackWeight: false,
+        requireWeeklyWeighIn: false,
+        weighInDay: 'MONDAY',
+
         groupRules: {
             maxPostsPerDay: 1,
             maxPostsPerWeek: 5,
@@ -171,27 +187,34 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                 throw new Error('Please select a valid challenge type');
             }
 
-            const now = new Date().toISOString();
+            // Validate tracking options
+            if (formData.trackWeight && formData.requireWeeklyWeighIn && !formData.weighInDay) {
+                throw new Error('Please select a weigh-in day');
+            }
 
-
-            const totalWorkouts = formData.challengeType === ChallengeType.GROUP
-                ? calculateTotalWorkouts()
-                : formData.totalWorkouts;
+            const now = new Date().toISOString()
 
             // Create challenge with all fields in one operation
             const challengeResult = await client.models.Challenge.create({
                 title: formData.title,
                 description: formData.description,
                 challengeType: formData.challengeType,
-                totalWorkouts,
+                totalWorkouts: formData.totalWorkouts,
                 startAt: new Date(formData.startDate).toISOString(),
                 endAt: new Date(formData.endDate).toISOString(),
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                createdAt: now,
+                updatedAt: now,
                 createdBy: userId,
                 status: 'ACTIVE',
                 basePointsPerWorkout: formData.basePointsPerWorkout,
                 isActive: true,
+
+                // Add new tracking fields
+                trackWorkouts: formData.trackWorkouts,
+                trackMeals: formData.trackMeals,
+                trackWeight: formData.trackWeight,
+                requireWeeklyWeighIn: formData.requireWeeklyWeighIn,
+                weighInDay: formData.requireWeeklyWeighIn ? formData.weighInDay : undefined,
 
                 // Add group-specific fields if it's a group challenge
                 ...(formData.challengeType === ChallengeType.GROUP && {
@@ -234,7 +257,7 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                     nextScheduled: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
                 })
             ]);
-            
+
 
             onSuccess();
             incrementVersion();
@@ -374,6 +397,146 @@ export function CreateChallengeModal({ isOpen, onClose, onSuccess }: CreateChall
                         {formData.challengeType === ChallengeType.NONE && (
                             <p className="form-helper-text">Please select a challenge type</p>
                         )}
+                    </div>
+
+                    {/* Workout tracking options section*/}
+                    <div className="tracking-options-section">
+                        <h3 className="form-section-title">Challenge Activities</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                            Select which activities participants need to track in this challenge
+                        </p>
+
+                        <div className="space-y-4">
+                            {/* Workout Tracking - Default */}
+                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <Dumbbell className="w-5 h-5 text-blue-600" />
+                                    <div>
+                                        <label className="font-medium text-gray-900">
+                                            Track Workouts
+                                        </label>
+                                        <p className="text-sm text-gray-500">
+                                            Participants post their exercise activities
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="trackWorkouts"
+                                        name="trackWorkouts"
+                                        checked={formData.trackWorkouts}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            trackWorkouts: e.target.checked
+                                        }))}
+                                        className="form-checkbox h-5 w-5 text-blue-600"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Meal Tracking Option */}
+                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <Utensils className="w-5 h-5 text-green-600" />
+                                    <div>
+                                        <label className="font-medium text-gray-900">
+                                            Track Meals
+                                        </label>
+                                        <p className="text-sm text-gray-500">
+                                            Participants log their daily meals
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="trackMeals"
+                                        name="trackMeals"
+                                        checked={formData.trackMeals}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            trackMeals: e.target.checked
+                                        }))}
+                                        className="form-checkbox h-5 w-5 text-blue-600"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Weight Tracking Option */}
+                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <Scale className="w-5 h-5 text-purple-600" />
+                                    <div>
+                                        <label className="font-medium text-gray-900">
+                                            Track Weight
+                                        </label>
+                                        <p className="text-sm text-gray-500">
+                                            Participants track their weight progress
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="trackWeight"
+                                        name="trackWeight"
+                                        checked={formData.trackWeight}
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            trackWeight: e.target.checked,
+                                            // Reset weigh-in settings if unchecked
+                                            requireWeeklyWeighIn: e.target.checked ? prev.requireWeeklyWeighIn : false
+                                        }))}
+                                        className="form-checkbox h-5 w-5 text-blue-600"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Weekly Weigh-in Settings - Only show if weight tracking is enabled */}
+                            {formData.trackWeight && (
+                                <div className="ml-8 mt-2 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="requireWeeklyWeighIn"
+                                            name="requireWeeklyWeighIn"
+                                            checked={formData.requireWeeklyWeighIn}
+                                            onChange={(e) => setFormData(prev => ({
+                                                ...prev,
+                                                requireWeeklyWeighIn: e.target.checked
+                                            }))}
+                                            className="form-checkbox h-4 w-4 text-blue-600"
+                                        />
+                                        <label htmlFor="requireWeeklyWeighIn" className="text-sm text-gray-700">
+                                            Require weekly weigh-ins
+                                        </label>
+                                    </div>
+
+                                    {formData.requireWeeklyWeighIn && (
+                                        <div className="flex items-center gap-3">
+                                            <label htmlFor="weighInDay" className="text-sm text-gray-700">
+                                                Weigh-in day:
+                                            </label>
+                                            <select
+                                                id="weighInDay"
+                                                name="weighInDay"
+                                                value={formData.weighInDay}
+                                                onChange={(e) => setFormData(prev => ({
+                                                    ...prev,
+                                                    weighInDay: e.target.value
+                                                }))}
+                                                className="form-select text-sm"
+                                            >
+                                                {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map(day => (
+                                                    <option key={day} value={day}>{day.charAt(0) + day.slice(1).toLowerCase()}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Group-specific rules */}
