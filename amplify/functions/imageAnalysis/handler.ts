@@ -21,6 +21,7 @@ interface ImageAnalysisResult {
       unit?: 'lbs' | 'kg';
     };
   };
+  matches_description?: boolean;  // New field for description validation
 }
 
 export async function handler(event: APIGatewayEvent, context: Context) {
@@ -31,7 +32,7 @@ export async function handler(event: APIGatewayEvent, context: Context) {
     }
 
     const body = JSON.parse(event.body);
-    const base64Image = body.base64Image;
+    const { base64Image, args } = body;  // Now also extracting args
 
     if (!base64Image) {
       throw new Error('Missing base64Image in request body');
@@ -44,11 +45,14 @@ export async function handler(event: APIGatewayEvent, context: Context) {
     }
 
     const openai = new OpenAI({ apiKey: openAiApiKey });
-    console.log('OPENAI_API_KEY', process.env.OPENAI_API_KEY);
 
-    // 3. Create a structured prompt for GPT-4 Vision
+    // 3. Create prompt incorporating user description if provided
+    const descriptionPrompt = args 
+      ? `The user describes this as: "${args}". Verify if this description matches what you see in the image.`
+      : '';
+
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4-vision-preview',
       messages: [
         {
           role: 'user',
@@ -56,6 +60,8 @@ export async function handler(event: APIGatewayEvent, context: Context) {
             {
               type: 'text',
               text: `Analyze this image and identify if it's a workout, meal, or weight tracking photo. 
+              ${descriptionPrompt}
+
               Provide a detailed analysis in a structured JSON format with the following requirements:
 
               1. Determine the type ('workout', 'meal', or 'weight')
@@ -63,6 +69,7 @@ export async function handler(event: APIGatewayEvent, context: Context) {
               3. For meals: List the visible food items and estimate total calories
               4. For weight tracking: Try to read any visible weight values
               5. Provide a brief descriptive content suggestion
+              ${args ? '6. Include "matches_description": true/false based on if the image matches the user description' : ''}
 
               Return ONLY a JSON object matching this structure:
               {
@@ -72,7 +79,7 @@ export async function handler(event: APIGatewayEvent, context: Context) {
                   "exercise": { "type": "string", "intensity": "low"|"medium"|"high" },
                   "meal": { "name": "string", "foods": ["string"], "calories": number },
                   "weight": { "value": number, "unit": "lbs"|"kg" }
-                }
+                }${args ? ',\n"matches_description": boolean' : ''}
               }`
             },
             {

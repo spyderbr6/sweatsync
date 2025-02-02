@@ -8,7 +8,8 @@ export const imageAnalysis = defineFunction({
     environment: {
         // This references the secret you stored in Amplify named "OPENAI_API_KEY"
         OPENAI_API_KEY: secret('OPENAI_API_KEY')
-    }
+    },
+    timeoutSeconds: 30,  // Increase timeout to 30 seconds
+    memoryMB: 512       // Also increasing memory to ensure enough resources
 });
-console.log('OPENAI_API_KEY', process.env.OPENAI_API_KEY);
 
