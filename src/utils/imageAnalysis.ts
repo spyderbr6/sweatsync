@@ -1,7 +1,9 @@
 // src/utils/imageAnalysis.ts
-import OpenAI from 'openai';
+import { generateClient } from "aws-amplify/api";
+import type { Schema } from "../../amplify/data/resource";
 import { PostType } from '../types/posts';
-//import {secret} from '@aws-amplify/backend';
+
+const client = generateClient<Schema>();
 
 interface ImageAnalysisResult {
   type: PostType;
@@ -27,43 +29,30 @@ export async function analyzeImage(file: File): Promise<ImageAnalysisResult> {
   try {
     const base64Image = await fileToBase64(file);
     
-    const openai = new OpenAI({
-      apiKey: import.meta.env.OPENAI_API_KEY,
-      //apiKey: secret('OPENAI_API_KEY')
+    // Call our Lambda function via Amplify client
+    const response = await client.queries.imageAnalysis({
+      imageUrl: base64Image,
+      args: '' // Optional arguments if needed
     });
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Analyze this image and determine if it's a workout, meal, or weight tracking photo. " +
-                    "Return a JSON response with the type and relevant details like exercise type, " +
-                    "food items, calories estimate, or weight value. Format: " +
-                    "{ type: 'workout'|'meal'|'weight', suggestedData: {...} }"
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: base64Image
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 300,
-    });
+    if (!response.data) {
+      throw new Error('No response data from image analysis');
+    }
 
-    // Parse the response
-    const result = JSON.parse(response.choices[0].message.content || '{}');
+    // Parse and validate the response
+    const result = response.data as ImageAnalysisResult;
     
-    return {
-      type: result.type || 'workout',
-      suggestedData: result.suggestedData || {}
-    };
+    // Validate the type
+    if (!['workout', 'meal', 'weight'].includes(result.type)) {
+      console.warn('Invalid type received from analysis, defaulting to workout');
+      return {
+        type: 'workout',
+        suggestedData: {}
+      };
+    }
+
+    return result;
+
   } catch (error) {
     console.error('Error analyzing image:', error);
     // Default to workout type if analysis fails
@@ -74,7 +63,7 @@ export async function analyzeImage(file: File): Promise<ImageAnalysisResult> {
   }
 }
 
-// Helper function to convert File to base64
+// Keep our existing helper function
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
