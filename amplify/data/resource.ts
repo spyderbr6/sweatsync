@@ -295,7 +295,7 @@ const schema = a.schema({
     imageAnalysis: a
     .query()
     .arguments({
-      imageUrl: a.string().required(), 
+      base64Image: a.string().required(), 
       args:a.string()
     })
     .returns(a.json())
