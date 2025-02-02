@@ -23,16 +23,17 @@ interface ImageAnalysisResult {
       unit?: 'lbs' | 'kg';
     };
   };
+  matches_description?: boolean;
 }
 
-export async function analyzeImage(file: File): Promise<ImageAnalysisResult> {
+export async function analyzeImage(file: File, description?: string): Promise<ImageAnalysisResult> {
   try {
     const base64Image = await fileToBase64(file);
     
     // Call our Lambda function via Amplify client
     const response = await client.queries.imageAnalysis({
       imageUrl: base64Image,
-      args: '' // Optional arguments if needed
+      args: description || ''  // Pass through description if provided
     });
 
     if (!response.data) {
