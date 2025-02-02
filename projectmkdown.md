@@ -10,6 +10,9 @@
             └── 📁challengeCleanup
                 └── handler.ts
                 └── resource.ts
+            └── 📁imageAnalysis
+                └── handler.ts
+                └── resource.ts
             └── 📁processReminders
                 └── handler.ts
                 └── resource.ts
@@ -155,6 +158,7 @@
             └── achievementsHandler.ts
             └── calculateNextSchedule.ts
             └── githubUtils.ts
+            └── imageAnalysis.ts
             └── imageUploadUtils.ts
             └── personalStatsOperations.ts
             └── profilePictureUploader.ts
