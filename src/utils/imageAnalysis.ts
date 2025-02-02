@@ -32,7 +32,7 @@ export async function analyzeImage(file: File, description?: string): Promise<Im
     
     // Call our Lambda function via Amplify client
     const response = await client.queries.imageAnalysis({
-      imageUrl: base64Image,
+      base64Image: base64Image,
       args: description || ''  // Pass through description if provided
     });
 

@@ -31,6 +31,8 @@ export async function handler(event: APIGatewayEvent, context: Context) {
       throw new Error('Missing request body');
     }
 
+    console.log('Received event:', event, event.body);
+
     const body = JSON.parse(event.body);
     const { base64Image, args } = body; // Now also extracting args
 
