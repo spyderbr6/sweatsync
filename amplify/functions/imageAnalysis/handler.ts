@@ -21,7 +21,7 @@ interface ImageAnalysisResult {
       unit?: 'lbs' | 'kg';
     };
   };
-  matches_description?: boolean;  // New field for description validation
+  matches_description?: boolean; // New field for description validation
 }
 
 export async function handler(event: APIGatewayEvent, context: Context) {
@@ -32,7 +32,7 @@ export async function handler(event: APIGatewayEvent, context: Context) {
     }
 
     const body = JSON.parse(event.body);
-    const { base64Image, args } = body;  // Now also extracting args
+    const { base64Image, args } = body; // Now also extracting args
 
     if (!base64Image) {
       throw new Error('Missing base64Image in request body');
@@ -41,21 +41,25 @@ export async function handler(event: APIGatewayEvent, context: Context) {
     // 2. Initialize OpenAI client
     const openAiApiKey = process.env.OPENAI_API_KEY;
     if (!openAiApiKey) {
-      throw new Error("OPENAI_API_KEY not configured");
+      throw new Error('OPENAI_API_KEY not configured');
     }
 
     const openai = new OpenAI({ apiKey: openAiApiKey });
 
     // 3. Create prompt incorporating user description if provided
-    const descriptionPrompt = args 
+    const descriptionPrompt = args
       ? `The user describes this as: "${args}". Verify if this description matches what you see in the image.`
       : '';
 
+    // Since the OpenAI SDK expects each message’s content to be a string,
+    // but we need to send a structured (multimodal) payload,
+    // we use a type assertion (casting to `any`) to bypass type checking.
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        {
+        ({
           role: 'user',
+          // NOTE: The type for content is normally string. We are bypassing it here.
           content: [
             {
               type: 'text',
@@ -89,7 +93,7 @@ export async function handler(event: APIGatewayEvent, context: Context) {
               }
             }
           ]
-        }
+        } as any)
       ],
       max_tokens: 500,
     });
@@ -103,13 +107,32 @@ export async function handler(event: APIGatewayEvent, context: Context) {
     let parsedResult: ImageAnalysisResult;
     try {
       parsedResult = JSON.parse(content);
-      
+
+      // Debug logging
+      console.log('Parsed result:', parsedResult);
+
       // Validate the type field
       if (!['workout', 'meal', 'weight'].includes(parsedResult.type)) {
         throw new Error('Invalid post type in response');
       }
+
+      // Remove null fields from suggestedData.
+      // We cast the keys array so that TypeScript knows they are keys of suggestedData.
+      if (parsedResult.suggestedData) {
+        (Object.keys(parsedResult.suggestedData) as Array<
+          keyof ImageAnalysisResult['suggestedData']
+        >).forEach((key) => {
+          if (parsedResult.suggestedData[key] === null) {
+            delete parsedResult.suggestedData[key];
+          }
+        });
+      }
     } catch (error) {
-      console.error('Error parsing GPT-4 Vision response:', content);
+      console.error('Error parsing GPT-4 Vision response.', {
+        error,
+        content,
+        contentType: typeof content,
+      });
       throw new Error('Failed to parse GPT-4 Vision response');
     }
 
@@ -120,13 +143,12 @@ export async function handler(event: APIGatewayEvent, context: Context) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        data: parsedResult
+        data: parsedResult,
       }),
     };
-
   } catch (error: any) {
     console.error('Error in image analysis:', error);
-    
+
     return {
       statusCode: error.statusCode || 500,
       headers: {
