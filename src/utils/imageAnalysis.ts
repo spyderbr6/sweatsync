@@ -28,31 +28,28 @@ interface ImageAnalysisResult {
 
 export async function analyzeImage(file: File, description?: string): Promise<ImageAnalysisResult> {
   try {
-    console.log('Description:', file);
-
     const base64Image = await fileToBase64(file);
     
-    console.log('Calling imageAnalysis with base64Image length:', base64Image.length);
+    console.log('Calling imageAnalysis with payload size:', base64Image.length);
 
-    // Call our Lambda function via Amplify client
     const response = await client.queries.imageAnalysis({
-      base64Image: base64Image,
-      args: description || ''  // Pass through description if provided
+      base64Image,
+      args: description || ''
     });
 
-    console.log('Got response:', response);  // Add this log
+    console.log('Response received:', response);
 
-
+    // Handle the response.data properly
     if (!response.data) {
-      throw new Error('No response data from image analysis');
+      throw new Error('No data received from analysis');
     }
 
-    // Parse and validate the response
-    const result = response.data as ImageAnalysisResult;
+    // Parse the data which should be our ImageAnalysisResult
+    const result = response.data as unknown as ImageAnalysisResult;
     
     // Validate the type
     if (!['workout', 'meal', 'weight'].includes(result.type)) {
-      console.warn('Invalid type received from analysis, defaulting to workout');
+      console.warn('Invalid type received from analysis:', result.type);
       return {
         type: 'workout',
         suggestedData: {}
@@ -71,14 +68,15 @@ export async function analyzeImage(file: File, description?: string): Promise<Im
   }
 }
 
-// Keep our existing helper function
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        resolve(reader.result.split(',')[1]);
+        // Remove the data URL prefix
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
       } else {
         reject(new Error('Failed to convert file to base64'));
       }
