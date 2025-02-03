@@ -6,6 +6,7 @@ import { rotateCreator } from './functions/rotateCreator/resource';
 import { challengeCleanup } from './functions/challengeCleanup/resource';
 import { sendPushNotificationFunction } from './functions/sendNotificationFunction/resource';
 import { processReminders } from './functions/processReminders/resource';
+import { imageAnalysis } from './functions/imageAnalysis/resource';
 
 defineBackend({
   auth,
@@ -14,5 +15,6 @@ defineBackend({
   rotateCreator,
   challengeCleanup,
   sendPushNotificationFunction,
-  processReminders
+  processReminders, 
+  imageAnalysis
 });

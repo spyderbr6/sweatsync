@@ -13,6 +13,7 @@ import { WeightForm } from './components/PostForms/WeightForm';
 import { listChallenges } from './challengeOperations';
 import { validateChallengePost, ValidatePostContext } from './challengeRules';
 import { getChallengeStyle} from './styles/challengeStyles';
+import { analyzeImage } from './utils/imageAnalysis';
 
 const client = generateClient<Schema>();
 
@@ -177,15 +178,77 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   };
 
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
       const url = URL.createObjectURL(selectedFile);
       setPreviewUrl(url);
-      setStep('details');
+  
+      try {
+        setLoading(true);
+        // Analyze the image
+        const analysis = await analyzeImage(selectedFile);
+  
+        // Create a new state object based on analysis.type
+        setPostData((prevData) => {
+          const commonData = {
+            content: analysis.suggestedData.content || '',
+            url: prevData.url, // preserve the URL if needed
+            challengeIds: prevData.challengeIds, // keep any selected challenges
+            smiley: prevData.challengeIds.length, // recalc or preserve count
+          };
+  
+          if (analysis.type === 'meal') {
+            return {
+              type: 'meal',
+              ...commonData,
+              // Ensure that meal is defined
+              meal:
+                analysis.suggestedData.meal ?? {
+                  name: '',
+                  foods: [],
+                  calories: 0,
+                },
+            } as MealPostData;
+          } else if (analysis.type === 'weight') {
+            return {
+              type: 'weight',
+              ...commonData,
+              // Ensure that weight is defined
+              weight:
+                analysis.suggestedData.weight ?? {
+                  value: 0,
+                  unit: 'lbs', // or 'kg' if preferred
+                  time: '', // you may want to set a default or current timestamp
+                },
+            } as WeightPostData;
+          } else {
+            // default to workout
+            return {
+              type: 'workout',
+              ...commonData,
+              // Ensure that exercise is defined (if required by your union)
+              exercise:
+                analysis.suggestedData.exercise ?? {
+                  type: '',
+                  intensity: 'medium', // adjust default intensity as needed
+                },
+            } as WorkoutPostData;
+          }
+        });
+      } catch (error) {
+        console.error('Error analyzing image:', error);
+        // Optionally, default to workout type if analysis fails
+      } finally {
+        setLoading(false);
+        setStep('details');
+      }
     }
   };
+  
   
   /*
   const handleRemoveImage = () => {
