@@ -32,7 +32,7 @@ export async function analyzeImage(file: File, description?: string): Promise<Im
     
     console.log('Calling imageAnalysis with payload size:', base64Image.length);
 
-    const response = await client.queries.imageAnalysis({
+    const response = await client.mutations.imageAnalysis({
       base64Image,
       args: description || ''
     });

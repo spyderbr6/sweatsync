@@ -293,7 +293,7 @@ const schema = a.schema({
     .authorization((allow) => [allow.publicApiKey()]),
 
     imageAnalysis: a
-    .query()
+    .mutation()
     .arguments({
       base64Image: a.string().required(), 
       args:a.string()
