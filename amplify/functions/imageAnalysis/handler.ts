@@ -27,22 +27,21 @@ interface ImageAnalysisResult {
 export async function handler(event: APIGatewayEvent, context: Context) {
   try {
 
-    // Add debug logging
-    console.log('Received event:', JSON.stringify(event, null, 2));
-    console.log('Event body type:', typeof event.body);
-    console.log('Event body:', event.body);
+    // Log the incoming event for debugging
+    console.log('Event:', {
+      body: event.body ? JSON.stringify(event.body) : 'no body',
+      headers: event.headers,
+      isBase64Encoded: event.isBase64Encoded
+    });
 
-    // 1. Validate input
-    if (!event.body) {
+    // Check if event.body exists and handle both string and object cases
+    const requestBody = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+    
+    if (!requestBody) {
       throw new Error('Missing request body');
     }
 
-    console.log('Received event:', event, event.body);
-
-    const body = JSON.parse(event.body);
-    console.log('Parsed body:', body);  // Add this log
-
-    const { base64Image, args } = body; // Now also extracting args
+    const { base64Image, args } = requestBody;
 
     if (!base64Image) {
       throw new Error('Missing base64Image in request body');
@@ -147,15 +146,8 @@ export async function handler(event: APIGatewayEvent, context: Context) {
     }
 
     // 5. Return the structured response
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: parsedResult,
-      }),
-    };
+    return parsedResult;  // Don't wrap in {statusCode, body, headers}
+
   } catch (error: any) {
     console.error('Error in image analysis:', error);
 
