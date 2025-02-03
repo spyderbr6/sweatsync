@@ -68,8 +68,8 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
 
               1. Determine the type ('workout', 'meal', or 'weight')
               2. For workouts: Identify the type of exercise and estimate intensity
-              3. For meals: List the visible food items and estimate total calories
-              4. For weight tracking: Try to read any visible weight values
+              3. For meals: List the visible food items and estimate total calories based on portion size and components of the meal.
+              4. For weight tracking: Try to read any visible weight values. Your accuracy on weight measurement must be high.
               5. Provide a brief descriptive content suggestion
               ${args ? '6. Include "matches_description": true/false based on if the image matches the user description' : ''}
 

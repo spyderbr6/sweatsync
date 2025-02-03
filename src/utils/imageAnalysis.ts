@@ -40,33 +40,20 @@ export async function analyzeImage(file: File, description?: string): Promise<Im
 
     console.log('Response received:', response);
 
-    // Parse the first layer of JSON (from the response.data string)
+    // Parse the response.data string into our ImageAnalysisResult
     if (typeof response.data === 'string') {
-      const parsedResponse = JSON.parse(response.data);
-      
-      // Parse the body which is another JSON string
-      const parsedBody = JSON.parse(parsedResponse.body);
+      const result = JSON.parse(response.data) as ImageAnalysisResult;
 
-      // If there's an error in the body
-      if (parsedBody.error) {
-        throw new Error(parsedBody.error);
+      // Validate the type
+      if (!['workout', 'meal', 'weight'].includes(result.type)) {
+        console.warn('Invalid type received from analysis:', result.type);
+        return {
+          type: 'workout',
+          suggestedData: {}
+        };
       }
 
-      // If we have data, it should be our analysis result
-      if (parsedBody.data) {
-        const result = parsedBody.data as ImageAnalysisResult;
-        
-        // Validate the type
-        if (!['workout', 'meal', 'weight'].includes(result.type)) {
-          console.warn('Invalid type received from analysis:', result.type);
-          return {
-            type: 'workout',
-            suggestedData: {}
-          };
-        }
-
-        return result;
-      }
+      return result;
     }
 
     throw new Error('Invalid response format from analysis');
