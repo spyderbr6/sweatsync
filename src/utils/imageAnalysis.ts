@@ -28,13 +28,20 @@ interface ImageAnalysisResult {
 
 export async function analyzeImage(file: File, description?: string): Promise<ImageAnalysisResult> {
   try {
+    console.log('Description:', file);
+
     const base64Image = await fileToBase64(file);
     
+    console.log('Calling imageAnalysis with base64Image length:', base64Image.length);
+
     // Call our Lambda function via Amplify client
     const response = await client.queries.imageAnalysis({
       base64Image: base64Image,
       args: description || ''  // Pass through description if provided
     });
+
+    console.log('Got response:', response);  // Add this log
+
 
     if (!response.data) {
       throw new Error('No response data from image analysis');

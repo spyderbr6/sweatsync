@@ -26,6 +26,12 @@ interface ImageAnalysisResult {
 
 export async function handler(event: APIGatewayEvent, context: Context) {
   try {
+
+    // Add debug logging
+    console.log('Received event:', JSON.stringify(event, null, 2));
+    console.log('Event body type:', typeof event.body);
+    console.log('Event body:', event.body);
+
     // 1. Validate input
     if (!event.body) {
       throw new Error('Missing request body');
@@ -34,6 +40,8 @@ export async function handler(event: APIGatewayEvent, context: Context) {
     console.log('Received event:', event, event.body);
 
     const body = JSON.parse(event.body);
+    console.log('Parsed body:', body);  // Add this log
+
     const { base64Image, args } = body; // Now also extracting args
 
     if (!base64Image) {
