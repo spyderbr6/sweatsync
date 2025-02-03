@@ -104,7 +104,16 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
 
     let parsedResult: ImageAnalysisResult;
     try {
-      parsedResult = JSON.parse(content) as ImageAnalysisResult;
+
+
+      const cleanedContent = content
+      .replace(/```json\n?/g, '')  // Remove opening ```json
+      .replace(/```\n?/g, '')      // Remove closing ```
+      .trim();                     // Remove any extra whitespace
+
+    console.log('Cleaned content:', cleanedContent);  // Add debug log
+
+      parsedResult = JSON.parse(cleanedContent) as ImageAnalysisResult;
       
       // Add debug logging
       console.log('Parsed result:', parsedResult);
