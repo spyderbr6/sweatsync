@@ -24,51 +24,40 @@ interface ImageAnalysisResult {
   matches_description?: boolean; // New field for description validation
 }
 
-export async function handler(event: APIGatewayEvent, context: Context) {
+interface AppSyncEvent {
+  arguments: {
+    base64Image: string;
+    args?: string;
+  };
+}
+
+export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult> => {
   try {
-
-    // Log the incoming event for debugging
-    console.log('Event:', {
-      body: event.body ? JSON.stringify(event.body) : 'no body',
-      headers: event.headers,
-      isBase64Encoded: event.isBase64Encoded
-    });
-
-    // Check if event.body exists and handle both string and object cases
-    const requestBody = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-    
-    if (!requestBody) {
-      throw new Error('Missing request body');
-    }
-
-    const { base64Image, args } = requestBody;
+    // No longer need to parse event.body since AppSync provides arguments directly
+    const { base64Image, args } = event.arguments;
 
     if (!base64Image) {
-      throw new Error('Missing base64Image in request body');
+      throw new Error('Missing base64Image in request');
     }
 
-    // 2. Initialize OpenAI client
+    // Initialize OpenAI client
     const openAiApiKey = process.env.OPENAI_API_KEY;
     if (!openAiApiKey) {
-      throw new Error('OPENAI_API_KEY not configured');
+      throw new Error("OPENAI_API_KEY not configured");
     }
 
     const openai = new OpenAI({ apiKey: openAiApiKey });
 
-    // 3. Create prompt incorporating user description if provided
-    const descriptionPrompt = args
+    // Create prompt incorporating user description if provided
+    const descriptionPrompt = args 
       ? `The user describes this as: "${args}". Verify if this description matches what you see in the image.`
       : '';
 
-    // Since the OpenAI SDK expects each message’s content to be a string,
-    // but we need to send a structured (multimodal) payload,
-    // we use a type assertion (casting to `any`) to bypass type checking.
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4-vision-preview',
       messages: [
-        ({
+        {
           role: 'user',
-          // NOTE: The type for content is normally string. We are bypassing it here.
           content: [
             {
               type: 'text',
@@ -102,12 +91,12 @@ export async function handler(event: APIGatewayEvent, context: Context) {
               }
             }
           ]
-        } as any)
+        }
       ],
       max_tokens: 500,
     });
 
-    // 4. Parse and validate the response
+    // Parse and validate the response
     const content = response.choices[0]?.message?.content;
     if (!content) {
       throw new Error('No content in GPT-4 Vision response');
@@ -115,50 +104,40 @@ export async function handler(event: APIGatewayEvent, context: Context) {
 
     let parsedResult: ImageAnalysisResult;
     try {
-      parsedResult = JSON.parse(content);
-
-      // Debug logging
+      parsedResult = JSON.parse(content) as ImageAnalysisResult;
+      
+      // Add debug logging
       console.log('Parsed result:', parsedResult);
-
+      
       // Validate the type field
       if (!['workout', 'meal', 'weight'].includes(parsedResult.type)) {
         throw new Error('Invalid post type in response');
       }
 
-      // Remove null fields from suggestedData.
-      // We cast the keys array so that TypeScript knows they are keys of suggestedData.
+      // Remove null fields from suggestedData
       if (parsedResult.suggestedData) {
-        (Object.keys(parsedResult.suggestedData) as Array<
-          keyof ImageAnalysisResult['suggestedData']
-        >).forEach((key) => {
-          if (parsedResult.suggestedData[key] === null) {
-            delete parsedResult.suggestedData[key];
+        Object.keys(parsedResult.suggestedData).forEach(key => {
+          const typedKey = key as keyof typeof parsedResult.suggestedData;
+          if (parsedResult.suggestedData[typedKey] === null) {
+            delete parsedResult.suggestedData[typedKey];
           }
         });
       }
+
+      // Return the result directly - no need to wrap in response structure
+      return parsedResult;
+
     } catch (error) {
-      console.error('Error parsing GPT-4 Vision response.', {
+      console.error('Error parsing GPT-4 Vision response:', {
         error,
         content,
-        contentType: typeof content,
+        contentType: typeof content
       });
-      throw new Error('Failed to parse GPT-4 Vision response');
+      throw error;
     }
 
-    // 5. Return the structured response
-    return parsedResult;  // Don't wrap in {statusCode, body, headers}
-
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in image analysis:', error);
-
-    return {
-      statusCode: error.statusCode || 500,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        error: error.message || 'Internal server error',
-      }),
-    };
+    throw error; // AppSync will handle error formatting
   }
-}
+};
