@@ -207,51 +207,6 @@ const schema = a.schema({
     updatedAt: a.datetime().required()
   }).authorization((allow) => [allow.publicApiKey()]),
 
-  PersonalGoal: a.model({
-    userID: a.string().required(),
-    type: a.enum(['CALORIE', 'WEIGHT', 'CUSTOM']),
-    name: a.string().required(),
-    target: a.float().required(),
-    currentValue: a.float(),
-    startDate: a.datetime().required(),
-    endDate: a.datetime(),
-    streakCount: a.integer().default(0),
-    bestStreak: a.integer().default(0),
-    achievementsEnabled: a.boolean().default(true),
-    achievementThresholds: a.json(), // Store as stringified JSON
-    status: a.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED']),
-    createdAt: a.datetime().required(),
-    updatedAt: a.datetime().required()
-  }).authorization((allow) => [
-    allow.owner(),
-    allow.publicApiKey()
-  ]).secondaryIndexes((index) => [
-    // Index for querying active goals by type
-    index("userID")
-      .sortKeys(['type'])
-      .queryField('listGoalsByType')
-      .name('byUserAndType')
-  ]),
-
-  DailyLog: a.model({
-    userID: a.string().required(),
-    date: a.string().required(), // YYYY-MM-DD format
-    weight: a.float(),
-    calories: a.float(),
-    meals: a.json(), // Store as stringified JSON
-    notes: a.string(),
-    createdAt: a.datetime().required(),
-    updatedAt: a.datetime().required()
-  }).authorization((allow) => [
-    allow.publicApiKey()
-  ]).secondaryIndexes((index) => [
-    // Index for querying logs by date range
-    index('userID')
-      .sortKeys(['date'])
-      .queryField('listLogsByDate')
-      .name('byUserAndDate')
-  ]),
-
   rotateCreator: a
     .query()
     .arguments({
