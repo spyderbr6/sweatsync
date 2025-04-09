@@ -97,17 +97,7 @@
                 └── OnboardingFlow.css
                 └── OnboardingFlow.tsx
             └── 📁PersonalStats
-                └── GoalModal.css
-                └── GoalModal.tsx
-                └── MealForm.tsx
-                └── MealTracker.css
-                └── MealTracker.tsx
-                └── PersonalStats.css
                 └── PersonalStats.tsx
-                └── StatsTrends.css
-                └── StatsTrends.tsx
-                └── UIComponents.tsx
-                └── WeightTracker.tsx
             └── 📁PostChallenges
                 └── postChallenges.css
                 └── postChallenges.tsx
@@ -149,18 +139,15 @@
             └── promptAction.css
         └── 📁types
             └── notifications.ts
-            └── personalStats.ts
             └── posts.ts
         └── urlCacheContext.tsx
         └── useChallengeDetail.ts
         └── userContext.tsx
         └── 📁utils
-            └── achievementsHandler.ts
             └── calculateNextSchedule.ts
             └── githubUtils.ts
             └── imageAnalysis.ts
             └── imageUploadUtils.ts
-            └── personalStatsOperations.ts
             └── profilePictureUploader.ts
             └── promptAction.tsx
             └── shareAction.tsx
