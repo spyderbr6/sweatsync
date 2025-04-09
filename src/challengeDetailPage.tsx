@@ -19,6 +19,7 @@ import ChallengeDailyPrompt from './components/ChallengeDailyPrompt/challengeDai
 import { useNavigate } from 'react-router-dom';
 import { getChallengeStyle, getChallengeIcon } from './styles/challengeStyles';
 import { ChallengeReminderBell } from './components/challengeReminderBell/challengeReminderBell';
+import { ChallengeGoalComponent } from './components/challengeGoal/challengeGoalComponent';
 
 type RouteParams = {
     challengeId: string;
@@ -201,6 +202,15 @@ export default function ChallengeDetailPage() {
                     onSuccess={() => {
                         refreshData();
                     }}
+                />
+            )}
+            {challengeDetails.userParticipation?.status === 'ACTIVE' && (
+                <ChallengeGoalComponent
+                    challengeId={challengeId || ''}
+                    trackWeight={!!challengeDetails.trackWeight}
+                    trackMeals={!!challengeDetails.trackMeals}
+                    trackWorkouts={!!challengeDetails.trackWorkouts}
+                    onGoalUpdate={refreshData}
                 />
             )}
             {/* Hero Section */}
