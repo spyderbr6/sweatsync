@@ -113,7 +113,9 @@ const schema = a.schema({
     // Personal tracking goals - only used if challenge has respective tracking enabled
     targetWeight: a.float(),
     startingWeight: a.float(),
+    currentWeight: a.float(),
     calorieGoal: a.integer(),
+    workoutsRequired: a.integer(), //not sure I need this
 
     points: a.integer().default(0),
     workoutsCompleted: a.integer().default(0),

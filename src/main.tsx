@@ -22,7 +22,7 @@ import { OnboardingFlow } from './components/OnboardingFlow/OnboardingFlow';
 import { useServiceWorkerUpdate } from './hooks/useServiceWorkerUpdate';
 import BottomNav from "./components/BottomNav/BottomNav";
 import { PostCreationProvider } from "./postCreationContext.tsx";
-import { PersonalStatsPage } from "./components/PersonalStats/PersonalStats.tsx";
+import PersonalStatsPage from "./personalStatsPage.tsx";
 
 
 Amplify.configure(outputs);
