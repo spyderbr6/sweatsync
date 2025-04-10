@@ -1,3 +1,4 @@
+// amplify/functions/imageAnalysis/handler.ts (with progressive analysis support)
 import { APIGatewayEvent, Context } from 'aws-lambda';
 import OpenAI from 'openai';
 
@@ -21,7 +22,8 @@ interface ImageAnalysisResult {
       unit?: 'lbs' | 'kg';
     };
   };
-  matches_description?: boolean; // New field for description validation
+  matches_description?: boolean;
+  needsDetailedAnalysis?: boolean; // Added this property
 }
 
 interface AppSyncEvent {
@@ -33,7 +35,6 @@ interface AppSyncEvent {
 
 export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult> => {
   try {
-    // No longer need to parse event.body since AppSync provides arguments directly
     const { base64Image, args } = event.arguments;
 
     if (!base64Image) {
@@ -47,11 +48,93 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
     }
 
     const openai = new OpenAI({ apiKey: openAiApiKey });
+    
+    // Check if this is a preliminary analysis or detailed analysis
+    const isPreliminary = args?.includes('preliminary classification') || false;
+    const isDetailed = args?.includes('detailed') || false;
+    
+    // Create the appropriate prompt based on analysis type
+    let promptText = '';
+    
+    if (isPreliminary) {
+      // For preliminary classification, we just need to determine the type
+      promptText = `Analyze this image and identify if it's a workout, meal, or weight tracking photo. 
+      ${args ? `The user describes this as: "${args.replace('- preliminary classification', '')}"` : ''}
+      
+      Return ONLY a simple JSON with the image type like this:
+      {
+        "type": "workout"|"meal"|"weight",
+        "suggestedData": {}
+      }
+      
+      Be very conservative with "weight" classification - only classify as weight if you clearly see a scale or weight measurement.`;
+    } else if (isDetailed) {
+      // For detailed analysis, focus on precise readings of numbers and values
+      const analysisType = args?.includes('weight') ? 'weight' : 'meal';
+      
+      if (analysisType === 'weight') {
+        promptText = `This is a weight tracking photo. Please carefully analyze the image and read the exact weight value shown on the scale. 
+        ${args ? `The user describes this as: "${args.replace('- detailed weight analysis, please read numbers carefully', '')}"` : ''}
+        
+        Pay special attention to the numbers displayed. Provide a detailed analysis in JSON format with the following:
+        
+        1. The precise weight value you can read (be exact with decimal points)
+        2. The unit of measurement (lbs or kg)
+        3. A brief content suggestion for the user's post
+        
+        Return ONLY a JSON object matching this structure:
+        {
+          "type": "weight",
+          "suggestedData": {
+            "content": "string",
+            "weight": { "value": number, "unit": "lbs"|"kg" }
+          }
+        }`;
+      } else {
+        promptText = `This is a meal photo. Please carefully analyze the food items and estimate calories.
+        ${args ? `The user describes this as: "${args.replace('- detailed meal analysis, please read numbers carefully', '')}"` : ''}
+        
+        Pay special attention to any calorie information if visible. Provide a detailed analysis in JSON format with the following:
+        
+        1. The name of the meal
+        2. List of visible food items
+        3. Estimated total calories based on portion size and components
+        4. A brief content suggestion for the user's post
+        
+        Return ONLY a JSON object matching this structure:
+        {
+          "type": "meal",
+          "suggestedData": {
+            "content": "string",
+            "meal": { "name": "string", "foods": ["string"], "calories": number }
+          }
+        }`;
+      }
+    } else {
+      // Standard full analysis (for workout images or when no specific mode is indicated)
+      promptText = `Analyze this image and identify if it's a workout, meal, or weight tracking photo. 
+      ${args ? `The user describes this as: "${args}". Verify if this description matches what you see in the image.` : ''}
 
-    // Create prompt incorporating user description if provided
-    const descriptionPrompt = args 
-      ? `The user describes this as: "${args}". Verify if this description matches what you see in the image.`
-      : '';
+      Provide a detailed analysis in a structured JSON format with the following requirements:
+
+      1. Determine the type ('workout', 'meal', or 'weight')
+      2. For workouts: Identify the type of exercise and estimate intensity
+      3. For meals: List the visible food items and estimate total calories based on portion size and components of the meal.
+      4. For weight tracking: Try to read any visible weight values. Your accuracy on weight measurement must be high.
+      5. Provide a brief descriptive content suggestion
+      ${args ? '6. Include "matches_description": true/false based on if the image matches the user description' : ''}
+
+      Return ONLY a JSON object matching this structure:
+      {
+        "type": "workout"|"meal"|"weight",
+        "suggestedData": {
+          "content": "string",
+          "exercise": { "type": "string", "intensity": "low"|"medium"|"high" },
+          "meal": { "name": "string", "foods": ["string"], "calories": number },
+          "weight": { "value": number, "unit": "lbs"|"kg" }
+        }${args ? ',\n"matches_description": boolean' : ''}
+      }`;
+    }
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -61,28 +144,7 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
           content: [
             {
               type: 'text',
-              text: `Analyze this image and identify if it's a workout, meal, or weight tracking photo. 
-              ${descriptionPrompt}
-
-              Provide a detailed analysis in a structured JSON format with the following requirements:
-
-              1. Determine the type ('workout', 'meal', or 'weight')
-              2. For workouts: Identify the type of exercise and estimate intensity
-              3. For meals: List the visible food items and estimate total calories based on portion size and components of the meal.
-              4. For weight tracking: Try to read any visible weight values. Your accuracy on weight measurement must be high.
-              5. Provide a brief descriptive content suggestion
-              ${args ? '6. Include "matches_description": true/false based on if the image matches the user description' : ''}
-
-              Return ONLY a JSON object matching this structure:
-              {
-                "type": "workout"|"meal"|"weight",
-                "suggestedData": {
-                  "content": "string",
-                  "exercise": { "type": "string", "intensity": "low"|"medium"|"high" },
-                  "meal": { "name": "string", "foods": ["string"], "calories": number },
-                  "weight": { "value": number, "unit": "lbs"|"kg" }
-                }${args ? ',\n"matches_description": boolean' : ''}
-              }`
+              text: promptText
             },
             {
               type: 'image_url',
@@ -93,7 +155,8 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
           ]
         }
       ],
-      max_tokens: 500,
+      // Use fewer tokens for preliminary classification
+      max_tokens: isPreliminary ? 150 : 500,
     });
 
     // Parse and validate the response
@@ -104,23 +167,25 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
 
     let parsedResult: ImageAnalysisResult;
     try {
-
-
       const cleanedContent = content
-      .replace(/```json\n?/g, '')  // Remove opening ```json
-      .replace(/```\n?/g, '')      // Remove closing ```
-      .trim();                     // Remove any extra whitespace
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
 
-    console.log('Cleaned content:', cleanedContent);  // Add debug log
+      console.log('Cleaned content:', cleanedContent);
 
       parsedResult = JSON.parse(cleanedContent) as ImageAnalysisResult;
       
-      // Add debug logging
       console.log('Parsed result:', parsedResult);
       
       // Validate the type field
       if (!['workout', 'meal', 'weight'].includes(parsedResult.type)) {
         throw new Error('Invalid post type in response');
+      }
+
+      // If this is preliminary and we need more detail, indicate this in the result
+      if (isPreliminary && (parsedResult.type === 'weight' || parsedResult.type === 'meal')) {
+        parsedResult.needsDetailedAnalysis = true;
       }
 
       // Remove null fields from suggestedData
@@ -133,9 +198,7 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
         });
       }
 
-      // Return the result directly - no need to wrap in response structure
       return parsedResult;
-
     } catch (error) {
       console.error('Error parsing GPT-4 Vision response:', {
         error,
@@ -144,9 +207,8 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
       });
       throw error;
     }
-
   } catch (error) {
     console.error('Error in image analysis:', error);
-    throw error; // AppSync will handle error formatting
+    throw error;
   }
 };
