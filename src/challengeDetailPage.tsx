@@ -204,7 +204,7 @@ export default function ChallengeDetailPage() {
                     }}
                 />
             )}
-            {challengeDetails.userParticipation?.status === 'ACTIVE' && (
+            {challengeDetails.userParticipation?.status === 'ACTIVE' && !challengeDetails?.dailyChallenges && (
                 <ChallengeGoalComponent
                     challengeId={challengeId || ''}
                     trackWeight={!!challengeDetails.trackWeight}

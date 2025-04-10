@@ -42,6 +42,8 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [analysisStatus, setAnalysisStatus] = useState<string>('');
+
 
   // Initialize with a complete workout post data
   const [postData, setPostData] = useState<PostData>({
@@ -189,8 +191,17 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
       try {
         setLoading(true);
+
+        setAnalysisStatus('Analyzing image...');
+
         // Analyze the image
         const analysis = await analyzeImage(selectedFile);
+
+        if (analysis.type === 'weight') {
+          setAnalysisStatus('Reading weight data...');
+        } else if (analysis.type === 'meal') {
+          setAnalysisStatus('Identifying meal details...');
+        }
 
         // Create a new state object based on analysis.type
         setPostData((prevData) => {
@@ -524,6 +535,12 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
                 alt="Preview"
                 className="w-full h-64 object-cover rounded-lg"
               />
+              {loading && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center text-white p-4 rounded-lg">
+                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-2"></div>
+                  <p className="text-sm font-medium">{analysisStatus || 'Analyzing image...'}</p>
+                </div>
+              )}
             </>
           )}
         </div>
