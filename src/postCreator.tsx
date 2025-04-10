@@ -504,6 +504,13 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   if (step === 'initial') {
     return (
       <div className="p-4 bg-white rounded-lg shadow">
+        {loading && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center text-white p-4 rounded-lg">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-2"></div>
+            <p className="text-sm font-medium">{analysisStatus || 'Analyzing image...'}</p>
+          </div>
+        )}
+
         <div
           className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors"
           onClick={() => fileInputRef.current?.click()}
@@ -535,12 +542,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
                 alt="Preview"
                 className="w-full h-64 object-cover rounded-lg"
               />
-              {loading && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center text-white p-4 rounded-lg">
-                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white mb-2"></div>
-                  <p className="text-sm font-medium">{analysisStatus || 'Analyzing image...'}</p>
-                </div>
-              )}
+
             </>
           )}
         </div>
