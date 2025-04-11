@@ -48,15 +48,15 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
     }
 
     const openai = new OpenAI({ apiKey: openAiApiKey });
-    
+
     // Check if this is a preliminary analysis or detailed analysis
     const isPreliminary = args?.includes('preliminary classification') || false;
     const isMealDetailed = args?.includes('meal photo') || false;
     const isWeightDetailed = args?.includes('weight measurement') || false;
-    
+
     // Create the appropriate prompt based on analysis type
     let promptText = '';
-    
+
     if (isPreliminary) {
       // For preliminary classification, we just need to determine the type
       promptText = `Analyze this image and identify if it's a workout, meal, or weight tracking photo. 
@@ -107,26 +107,34 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
         }
       }`;
     } else if (isWeightDetailed) {
-      // Detailed analysis for weight photos
-      promptText = `This is a weight tracking photo. Please CAREFULLY analyze the image and read the EXACT weight value shown on the scale. 
-      
-      IMPORTANT: Your primary task is to find and extract the numeric weight value shown on the scale.
-      
-      1. Look for digital display or dial showing numbers
-      2. Read the precise weight value (e.g., 165.2, 73.5, etc.)
-      3. Identify the unit (lbs or kg)
-      
-      Return ONLY a JSON object with this EXACT structure:
-      {
-        "type": "weight",
-        "suggestedData": {
-          "content": "brief description",
-          "weight": { 
-            "value": 123.4,  // NUMERIC VALUE ONLY, no text
-            "unit": "lbs" or "kg"
+      // Detailed analysis for weight photos with emphasis on digital scales
+      promptText = `This is a weight tracking photo. Your ONLY task is to read the weight value shown on the scale display.
+
+          CRITICAL INSTRUCTIONS:
+          - This is likely a digital bathroom scale with an LCD or LED display
+          - Look carefully for numbers displayed on a screen or digital readout
+          - Find and extract ONLY the numeric weight value (e.g., 170.2, 185.6, 73.5)
+          - Identify if the unit is pounds (lbs) or kilograms (kg)
+          - Return EXACTLY the number shown, including decimal places
+          
+          IMPORTANT: Do not interpret, round, or convert the weight - report exactly what you see.
+          
+          Return ONLY a JSON object with this structure:
+          {
+            "type": "weight",
+            "suggestedData": {
+              "content": "Weight check: NUMBER lbs/kg",
+              "weight": { 
+                "value": 170.2,  // MUST be the exact numeric value you see
+                "unit": "lbs"    // or "kg", based on what's shown
+              }
+            }
           }
-        }
-      }`;
+          
+          Examples of digital scale readings:
+          - If you see "170.2 lb" on display → value: 170.2, unit: "lbs"
+          - If you see "77.5 kg" on display → value: 77.5, unit: "kg"
+          - If you see just "165" without decimals → value: 165, unit: "lbs" (or "kg" if indicated)`;
     } else {
       // Standard full analysis (for workout images or when no specific mode is indicated)
       promptText = `Analyze this image and identify if it's a workout, meal, or weight tracking photo. 
@@ -192,9 +200,9 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
       console.log('Cleaned content:', cleanedContent);
 
       parsedResult = JSON.parse(cleanedContent) as ImageAnalysisResult;
-      
+
       console.log('Parsed result:', parsedResult);
-      
+
       // Validate the type field
       if (!['workout', 'meal', 'weight'].includes(parsedResult.type)) {
         throw new Error('Invalid post type in response');
@@ -205,6 +213,55 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
         parsedResult.needsDetailedAnalysis = true;
       }
 
+      if (parsedResult.type === 'weight') {
+        console.log('Weight data validation check:', {
+          hasWeightData: !!parsedResult.suggestedData.weight,
+          weightValue: parsedResult.suggestedData.weight?.value,
+          weightValueType: typeof parsedResult.suggestedData.weight?.value,
+          content: parsedResult.suggestedData.content
+        });
+        
+        // If weight data is missing but we have content, try to extract weight from content
+        if ((!parsedResult.suggestedData.weight || !parsedResult.suggestedData.weight.value) && 
+            parsedResult.suggestedData.content) {
+          
+          console.log('Attempting to extract weight from content:', parsedResult.suggestedData.content);
+          
+          // Look for patterns like "170.2 lbs" or "weight: 170.2"
+          const weightRegex = /(\d+\.\d+|\d+)\s*(lbs?|pounds?|kgs?|kilograms?)/i;
+          const match = parsedResult.suggestedData.content.match(weightRegex);
+          
+          if (match) {
+            const extractedValue = parseFloat(match[1]);
+            const extractedUnit = match[2].toLowerCase().startsWith('lb') || 
+                                match[2].toLowerCase().startsWith('pound') ? 'lbs' : 'kg';
+            
+            console.log(`Extracted weight from content: ${extractedValue} ${extractedUnit}`);
+            
+            if (!parsedResult.suggestedData.weight) {
+              parsedResult.suggestedData.weight = {
+                value: extractedValue,
+                unit: extractedUnit
+              };
+            } else {
+              parsedResult.suggestedData.weight.value = extractedValue;
+              parsedResult.suggestedData.weight.unit = extractedUnit;
+            }
+          }
+        }
+        
+        // Ensure weight value is numeric
+        if (parsedResult.suggestedData.weight && typeof parsedResult.suggestedData.weight.value === 'string') {
+          // Try to convert string to number
+          const numericValue = parseFloat(parsedResult.suggestedData.weight.value);
+          if (!isNaN(numericValue)) {
+            console.log('Converting string weight value to number:', parsedResult.suggestedData.weight.value, '->', numericValue);
+            parsedResult.suggestedData.weight.value = numericValue;
+          }
+        }
+      }
+
+
       // Specific validation for meal data
       if (parsedResult.type === 'meal') {
         console.log('Meal data validation check:', {
@@ -213,7 +270,7 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
           caloriesValue: parsedResult.suggestedData.meal?.calories,
           caloriesType: typeof parsedResult.suggestedData.meal?.calories
         });
-        
+
         // Ensure meal has proper structure
         if (!parsedResult.suggestedData.meal) {
           parsedResult.suggestedData.meal = {
@@ -222,7 +279,7 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
             calories: 0
           };
         }
-        
+
         // Ensure calories is numeric
         if (parsedResult.suggestedData.meal && typeof parsedResult.suggestedData.meal.calories === 'string') {
           // Try to convert string to number if possible
@@ -235,16 +292,18 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
             parsedResult.suggestedData.meal.calories = 0;
           }
         }
-        
+
         // Ensure foods array exists
         if (!parsedResult.suggestedData.meal.foods) {
           parsedResult.suggestedData.meal.foods = [];
         }
-        
+
         // Ensure meal name exists
         if (!parsedResult.suggestedData.meal.name) {
           parsedResult.suggestedData.meal.name = 'Meal';
         }
+
+        
       }
 
       // Remove null fields from suggestedData
