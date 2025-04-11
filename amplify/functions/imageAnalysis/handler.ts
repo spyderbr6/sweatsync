@@ -1,4 +1,4 @@
-// amplify/functions/imageAnalysis/handler.ts (with progressive analysis support)
+// amplify/functions/imageAnalysis/handler.ts
 import { APIGatewayEvent, Context } from 'aws-lambda';
 import OpenAI from 'openai';
 
@@ -23,7 +23,7 @@ interface ImageAnalysisResult {
     };
   };
   matches_description?: boolean;
-  needsDetailedAnalysis?: boolean; // Added this property
+  needsDetailedAnalysis?: boolean;
 }
 
 interface AppSyncEvent {
@@ -51,7 +51,8 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
     
     // Check if this is a preliminary analysis or detailed analysis
     const isPreliminary = args?.includes('preliminary classification') || false;
-    const isDetailed = args?.includes('detailed') || false;
+    const isMealDetailed = args?.includes('meal photo') || false;
+    const isWeightDetailed = args?.includes('weight measurement') || false;
     
     // Create the appropriate prompt based on analysis type
     let promptText = '';
@@ -68,48 +69,64 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
       }
       
       Be very conservative with "weight" classification - only classify as weight if you clearly see a scale or weight measurement.`;
-    } else if (isDetailed) {
-      // For detailed analysis, focus on precise readings of numbers and values
-      const analysisType = args?.includes('weight') ? 'weight' : 'meal';
+    } else if (isMealDetailed) {
+      // Detailed analysis for meal photos
+      promptText = `This is a meal photo. Please carefully analyze the food items and estimate calories.
+      ${args ? `The user describes this as: "${args.replace('This is a meal photo. Please carefully analyze the food items and estimate calories if possible.', '')}"` : ''}
       
-      if (analysisType === 'weight') {
-        promptText = `This is a weight tracking photo. Please carefully analyze the image and read the exact weight value shown on the scale. 
-        ${args ? `The user describes this as: "${args.replace('- detailed weight analysis, please read numbers carefully', '')}"` : ''}
-        
-        Pay special attention to the numbers displayed. Provide a detailed analysis in JSON format with the following:
-        
-        1. The precise weight value you can read (be exact with decimal points)
-        2. The unit of measurement (lbs or kg)
-        3. A brief content suggestion for the user's post
-        
-        Return ONLY a JSON object matching this structure:
-        {
-          "type": "weight",
-          "suggestedData": {
-            "content": "string",
-            "weight": { "value": number, "unit": "lbs"|"kg" }
+      Pay attention to food items and portion sizes. Provide a detailed analysis in JSON format with the following:
+      
+      1. The name of the meal (e.g., "Grilled Chicken Salad", "Protein Breakfast")
+      2. List of visible food items
+      3. Estimated total calories based on portion size and components
+      4. A brief content suggestion for the user's post
+      
+      Return ONLY a JSON object matching this structure:
+      {
+        "type": "meal",
+        "suggestedData": {
+          "content": "string",
+          "meal": { 
+            "name": "string", 
+            "foods": ["string"], 
+            "calories": number  // MUST be a number, estimate if unsure
           }
-        }`;
-      } else {
-        promptText = `This is a meal photo. Please carefully analyze the food items and estimate calories.
-        ${args ? `The user describes this as: "${args.replace('- detailed meal analysis, please read numbers carefully', '')}"` : ''}
-        
-        Pay special attention to any calorie information if visible. Provide a detailed analysis in JSON format with the following:
-        
-        1. The name of the meal
-        2. List of visible food items
-        3. Estimated total calories based on portion size and components
-        4. A brief content suggestion for the user's post
-        
-        Return ONLY a JSON object matching this structure:
-        {
-          "type": "meal",
-          "suggestedData": {
-            "content": "string",
-            "meal": { "name": "string", "foods": ["string"], "calories": number }
-          }
-        }`;
+        }
       }
+      
+      EXAMPLE of good output:
+      {
+        "type": "meal",
+        "suggestedData": {
+          "content": "Healthy lunch to fuel my workout today!",
+          "meal": { 
+            "name": "Protein-packed lunch", 
+            "foods": ["grilled chicken breast", "quinoa", "roasted vegetables", "avocado"], 
+            "calories": 550
+          }
+        }
+      }`;
+    } else if (isWeightDetailed) {
+      // Detailed analysis for weight photos
+      promptText = `This is a weight tracking photo. Please CAREFULLY analyze the image and read the EXACT weight value shown on the scale. 
+      
+      IMPORTANT: Your primary task is to find and extract the numeric weight value shown on the scale.
+      
+      1. Look for digital display or dial showing numbers
+      2. Read the precise weight value (e.g., 165.2, 73.5, etc.)
+      3. Identify the unit (lbs or kg)
+      
+      Return ONLY a JSON object with this EXACT structure:
+      {
+        "type": "weight",
+        "suggestedData": {
+          "content": "brief description",
+          "weight": { 
+            "value": 123.4,  // NUMERIC VALUE ONLY, no text
+            "unit": "lbs" or "kg"
+          }
+        }
+      }`;
     } else {
       // Standard full analysis (for workout images or when no specific mode is indicated)
       promptText = `Analyze this image and identify if it's a workout, meal, or weight tracking photo. 
@@ -186,6 +203,48 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
       // If this is preliminary and we need more detail, indicate this in the result
       if (isPreliminary && (parsedResult.type === 'weight' || parsedResult.type === 'meal')) {
         parsedResult.needsDetailedAnalysis = true;
+      }
+
+      // Specific validation for meal data
+      if (parsedResult.type === 'meal') {
+        console.log('Meal data validation check:', {
+          hasMealData: !!parsedResult.suggestedData.meal,
+          mealName: parsedResult.suggestedData.meal?.name,
+          caloriesValue: parsedResult.suggestedData.meal?.calories,
+          caloriesType: typeof parsedResult.suggestedData.meal?.calories
+        });
+        
+        // Ensure meal has proper structure
+        if (!parsedResult.suggestedData.meal) {
+          parsedResult.suggestedData.meal = {
+            name: 'Meal',
+            foods: [],
+            calories: 0
+          };
+        }
+        
+        // Ensure calories is numeric
+        if (parsedResult.suggestedData.meal && typeof parsedResult.suggestedData.meal.calories === 'string') {
+          // Try to convert string to number if possible
+          const numericCalories = parseFloat(parsedResult.suggestedData.meal.calories);
+          if (!isNaN(numericCalories)) {
+            console.log('Converting string calories value to number:', parsedResult.suggestedData.meal.calories, '->', numericCalories);
+            parsedResult.suggestedData.meal.calories = numericCalories;
+          } else {
+            // Set a default if we couldn't parse
+            parsedResult.suggestedData.meal.calories = 0;
+          }
+        }
+        
+        // Ensure foods array exists
+        if (!parsedResult.suggestedData.meal.foods) {
+          parsedResult.suggestedData.meal.foods = [];
+        }
+        
+        // Ensure meal name exists
+        if (!parsedResult.suggestedData.meal.name) {
+          parsedResult.suggestedData.meal.name = 'Meal';
+        }
       }
 
       // Remove null fields from suggestedData
