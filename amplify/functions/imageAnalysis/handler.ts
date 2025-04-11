@@ -190,6 +190,8 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
       throw new Error('No content in GPT-4 Vision response');
     }
 
+    console.log('Raw GPT response:', content);
+
     let parsedResult: ImageAnalysisResult;
     try {
       const cleanedContent = content
@@ -220,24 +222,24 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
           weightValueType: typeof parsedResult.suggestedData.weight?.value,
           content: parsedResult.suggestedData.content
         });
-        
+
         // If weight data is missing but we have content, try to extract weight from content
-        if ((!parsedResult.suggestedData.weight || !parsedResult.suggestedData.weight.value) && 
-            parsedResult.suggestedData.content) {
-          
+        if ((!parsedResult.suggestedData.weight || !parsedResult.suggestedData.weight.value) &&
+          parsedResult.suggestedData.content) {
+
           console.log('Attempting to extract weight from content:', parsedResult.suggestedData.content);
-          
+
           // Look for patterns like "170.2 lbs" or "weight: 170.2"
           const weightRegex = /(\d+\.\d+|\d+)\s*(lbs?|pounds?|kgs?|kilograms?)/i;
           const match = parsedResult.suggestedData.content.match(weightRegex);
-          
+
           if (match) {
             const extractedValue = parseFloat(match[1]);
-            const extractedUnit = match[2].toLowerCase().startsWith('lb') || 
-                                match[2].toLowerCase().startsWith('pound') ? 'lbs' : 'kg';
-            
+            const extractedUnit = match[2].toLowerCase().startsWith('lb') ||
+              match[2].toLowerCase().startsWith('pound') ? 'lbs' : 'kg';
+
             console.log(`Extracted weight from content: ${extractedValue} ${extractedUnit}`);
-            
+
             if (!parsedResult.suggestedData.weight) {
               parsedResult.suggestedData.weight = {
                 value: extractedValue,
@@ -249,7 +251,7 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
             }
           }
         }
-        
+
         // Ensure weight value is numeric
         if (parsedResult.suggestedData.weight && typeof parsedResult.suggestedData.weight.value === 'string') {
           // Try to convert string to number
@@ -261,6 +263,44 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
         }
       }
 
+      // If there's content but no weight data
+      if (parsedResult.type === 'weight' && (!parsedResult.suggestedData.weight || !parsedResult.suggestedData.weight.value)) {
+        console.warn('WARNING: GPT recognized image as weight type but did not return a weight value.');
+        console.warn('Response content:', content);
+
+        // Let's try a more desperate extraction approach - look for any numbers in the content
+        const anyNumberRegex = /(\d+\.\d+|\d+)/g;
+        const allNumbers = content.match(anyNumberRegex);
+
+        if (allNumbers && allNumbers.length > 0) {
+          console.log('Found numbers in response:', allNumbers);
+
+          // Simple heuristic: A weight is likely between 50-500 for lbs or 20-220 for kg
+          // Try to find a reasonable weight value
+          const possibleWeights = allNumbers
+            .map(num => parseFloat(num))
+            .filter(num => (num > 50 && num < 500) || (num > 20 && num < 220));
+
+          if (possibleWeights.length > 0) {
+            console.log('Possible weight values found:', possibleWeights);
+
+            // Use the middle value if multiple candidates
+            const weightValue = possibleWeights[Math.floor(possibleWeights.length / 2)];
+
+            // Guess the unit based on value
+            const unit = weightValue > 100 ? 'lbs' : 'kg';
+
+            if (!parsedResult.suggestedData.weight) {
+              parsedResult.suggestedData.weight = { value: weightValue, unit };
+            } else {
+              parsedResult.suggestedData.weight.value = weightValue;
+              parsedResult.suggestedData.weight.unit = unit;
+            }
+
+            console.log(`Extracted possible weight from numbers: ${weightValue} ${unit}`);
+          }
+        }
+      }
 
       // Specific validation for meal data
       if (parsedResult.type === 'meal') {
@@ -303,7 +343,7 @@ export const handler = async (event: AppSyncEvent): Promise<ImageAnalysisResult>
           parsedResult.suggestedData.meal.name = 'Meal';
         }
 
-        
+
       }
 
       // Remove null fields from suggestedData
