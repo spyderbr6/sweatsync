@@ -1,4 +1,4 @@
-// src/utils/imageAnalysis.ts (updated for progressive analysis)
+// src/utils/imageAnalysis.ts
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../../amplify/data/resource";
 import { PostType } from '../types/posts';
@@ -24,7 +24,7 @@ interface ImageAnalysisResult {
     };
   };
   matches_description?: boolean;
-  needsDetailedAnalysis?: boolean; // Added this property
+  needsDetailedAnalysis?: boolean;
 }
 
 // Function to resize the image to a smaller version
@@ -97,28 +97,68 @@ export async function analyzeImage(file: File, description?: string): Promise<Im
     
     if (typeof initialResponse.data === 'string') {
       result = JSON.parse(initialResponse.data) as ImageAnalysisResult;
+      console.log('Initial classification result:', result);
       
-      // For weight and meal images, do a second pass with higher resolution
-      if (result.type === 'weight' || (result.type === 'meal' && !result.suggestedData.meal?.calories)) {
-        console.log(`Detected ${result.type} image, performing detailed analysis with full resolution`);
+      // For weight images, do a second pass with higher resolution
+      if (result.type === 'weight') {
+        console.log('Detected weight image, performing detailed analysis with full resolution');
         
         // Get full resolution for detailed analysis
         const fullResBase64 = await fileToBase64(file);
+        console.log('Full resolution image size:', fullResBase64.length);
         
         const detailedResponse = await client.queries.imageAnalysis({
           base64Image: fullResBase64,
-          args: `${description || ''} - detailed ${result.type} analysis, please read numbers carefully`
+          args: `This is a weight measurement image. Please read the exact weight value shown on the scale. Look carefully at the numbers and provide the precise measurement.`
         });
         
         if (typeof detailedResponse.data === 'string') {
           // Replace initial results with detailed analysis
-          result = JSON.parse(detailedResponse.data) as ImageAnalysisResult;
+          const detailedResult = JSON.parse(detailedResponse.data) as ImageAnalysisResult;
+          console.log('Detailed weight analysis result:', detailedResult);
+          
+          // Ensure we have the weight data
+          if (!detailedResult.suggestedData.weight || !detailedResult.suggestedData.weight.value) {
+            console.warn('Detailed analysis did not return weight value');
+          }
+          
+          result = detailedResult;
         }
-      } else {
-        console.log(`Using initial analysis results for ${result.type} image`);
+      } 
+      // For meal images, do a second pass with higher resolution
+      else if (result.type === 'meal') {
+        console.log('Detected meal image, performing detailed analysis with full resolution');
+        
+        // Get full resolution for detailed analysis
+        const fullResBase64 = await fileToBase64(file);
+        console.log('Full resolution image size:', fullResBase64.length);
+        
+        const detailedResponse = await client.queries.imageAnalysis({
+          base64Image: fullResBase64,
+          args: `This is a meal photo. Please carefully analyze the food items and estimate calories if possible.`
+        });
+        
+        if (typeof detailedResponse.data === 'string') {
+          // Replace initial results with detailed analysis
+          const detailedResult = JSON.parse(detailedResponse.data) as ImageAnalysisResult;
+          console.log('Detailed meal analysis result:', detailedResult);
+          
+          // Ensure we have the meal data
+          if (!detailedResult.suggestedData.meal) {
+            console.warn('Detailed analysis did not return meal data');
+            // Create a basic meal structure if missing
+            detailedResult.suggestedData.meal = {
+              name: 'Meal',
+              foods: [],
+              calories: 0
+            };
+          }
+          
+          result = detailedResult;
+        }
       }
       
-      // Validate the result type
+      // Validate the type
       if (!['workout', 'meal', 'weight'].includes(result.type)) {
         console.warn('Invalid type received from analysis:', result.type);
         return {
