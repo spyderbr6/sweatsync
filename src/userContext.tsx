@@ -34,7 +34,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [picture, setProfilePicture] = useState<string | null>(null);
   const [pictureUrl, setProfileThumbnail] = useState<string | null>(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
   const { getStorageUrl } = useUrlCache();
 
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
@@ -107,16 +106,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setProfileThumbnail('/profileDefault.png');
       }
 
-      // Reset retry count on success
-      setRetryCount(0);
-
     } catch (err) {
       console.error(`Error in fetchUserData (attempt ${retry + 1}/${MAX_RETRIES + 1}):`, err);
 
       // Retry logic for transient errors
       if (retry < MAX_RETRIES) {
         console.log(`Retrying in ${RETRY_DELAY}ms...`);
-        setRetryCount(retry + 1);
         setTimeout(() => {
           fetchUserData(retry + 1);
         }, RETRY_DELAY);
@@ -130,10 +125,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Don't reset hasCompletedOnboarding on error - preserve it
     } finally {
       // Only set loading to false if we're not going to retry
-      if (retry >= MAX_RETRIES) {
-        setIsLoading(false);
-        setRetryCount(0);
-      } else if (retry === 0) {
+      if (retry >= MAX_RETRIES || retry === 0) {
         setIsLoading(false);
       }
     }
