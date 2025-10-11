@@ -34,11 +34,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [picture, setProfilePicture] = useState<string | null>(null);
   const [pictureUrl, setProfileThumbnail] = useState<string | null>(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { getStorageUrl } = useUrlCache();
 
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
 
-  const fetchUserData = async () => {
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 2000; // 2 seconds
+
+  const fetchUserData = async (retry = 0): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -94,7 +98,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           setProfilePicture(originalUrl);
           setProfileThumbnail(thumbnailUrl);
         } catch (urlError) {
-          console.error('8A. Error getting picture URLs:', urlError);
+          console.error('Error getting picture URLs:', urlError);
           setProfilePicture('/profileDefault.png');
           setProfileThumbnail('/profileDefault.png');
         }
@@ -103,13 +107,35 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setProfileThumbnail('/profileDefault.png');
       }
 
+      // Reset retry count on success
+      setRetryCount(0);
+
     } catch (err) {
-      console.error('Error in fetchUserData:', err);
+      console.error(`Error in fetchUserData (attempt ${retry + 1}/${MAX_RETRIES + 1}):`, err);
+
+      // Retry logic for transient errors
+      if (retry < MAX_RETRIES) {
+        console.log(`Retrying in ${RETRY_DELAY}ms...`);
+        setRetryCount(retry + 1);
+        setTimeout(() => {
+          fetchUserData(retry + 1);
+        }, RETRY_DELAY);
+        return;
+      }
+
+      // Only set error and defaults after all retries exhausted
       setError(err instanceof Error ? err : new Error('Failed to fetch user data'));
       setProfilePicture('/profileDefault.png');
       setProfileThumbnail('/profileDefault.png');
+      // Don't reset hasCompletedOnboarding on error - preserve it
     } finally {
-      setIsLoading(false);
+      // Only set loading to false if we're not going to retry
+      if (retry >= MAX_RETRIES) {
+        setIsLoading(false);
+        setRetryCount(0);
+      } else if (retry === 0) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -117,15 +143,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (authStatus === 'authenticated') {
       fetchUserData();
-    } else {
-      // Reset states when not authenticated
+    } else if (authStatus === 'unauthenticated') {
+      // Only reset states when explicitly unauthenticated (logged out)
+      // Don't reset during 'configuring' state to avoid premature resets
       setUserId(null);
       setUsername(null);
       setUserAttributes(null);
       setProfilePicture('/profileDefault.png');
       setProfileThumbnail('/profileDefault.png');
       setHasCompletedOnboarding(null);
+      setIsLoading(false);
     }
+    // For 'configuring' state, do nothing - preserve existing state
   }, [authStatus]);
 
   const value = {
