@@ -14,11 +14,10 @@ export const WorkoutForm: React.FC<BaseFormProps<WorkoutPostData>> = ({
   onChange,
   isSubmitting
 }) => {
-  
-  /*
+
   // Initialize exercise object with required fields if it doesn't exist
   const updateExercise = (updates: Partial<WorkoutPostData['exercise']>) => {
-    const currentExercise = data.exercise || { type: '' };
+    const currentExercise = data.exercise || { type: '', intensity: 'medium' };
     onChange({
       ...data,
       exercise: {
@@ -27,12 +26,18 @@ export const WorkoutForm: React.FC<BaseFormProps<WorkoutPostData>> = ({
       }
     });
   };
-  */
 
   return (
     <div className="space-y-4">
       <div>
+        <label
+          htmlFor="workoutDescription"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Description
+        </label>
         <textarea
+          id="workoutDescription"
           value={data.content || ''}
           onChange={(e) => onChange({ ...data, content: e.target.value })}
           placeholder="Share details about your workout..."
@@ -40,13 +45,14 @@ export const WorkoutForm: React.FC<BaseFormProps<WorkoutPostData>> = ({
           disabled={isSubmitting}
         />
       </div>
-{/*
+
       <div>
-        <label 
-          htmlFor="exerciseType" 
+        <label
+          htmlFor="exerciseType"
           className="block text-sm font-medium text-gray-700 mb-1"
         >
           Exercise Type
+          <span className="text-gray-500 text-xs ml-1">(optional)</span>
         </label>
         <select
           id="exerciseType"
@@ -56,21 +62,27 @@ export const WorkoutForm: React.FC<BaseFormProps<WorkoutPostData>> = ({
           disabled={isSubmitting}
         >
           <option value="">Select type</option>
-          <option value="Lifting">Weight Training</option>
+          <option value="Strength">Strength Training</option>
+          <option value="Cardio">Cardio</option>
           <option value="Running">Running</option>
           <option value="Cycling">Cycling</option>
+          <option value="Swimming">Swimming</option>
           <option value="Yoga">Yoga</option>
+          <option value="Pilates">Pilates</option>
+          <option value="HIIT">HIIT</option>
+          <option value="Sports">Sports</option>
           <option value="Other">Other</option>
         </select>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label 
-            htmlFor="duration" 
+          <label
+            htmlFor="duration"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
             Duration (minutes)
+            <span className="text-gray-500 text-xs ml-1">(optional)</span>
           </label>
           <input
             type="number"
@@ -80,32 +92,32 @@ export const WorkoutForm: React.FC<BaseFormProps<WorkoutPostData>> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             disabled={isSubmitting}
             min="0"
+            placeholder="e.g. 45"
           />
         </div>
 
         <div>
-          <label 
-            htmlFor="intensity" 
+          <label
+            htmlFor="intensity"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
             Intensity
+            <span className="text-gray-500 text-xs ml-1">(optional)</span>
           </label>
           <select
             id="intensity"
-            value={data.exercise?.intensity || ''}
-            onChange={(e) => updateExercise({ intensity: e.target.value as 'low' | 'medium' | 'high' | undefined })}
+            value={data.exercise?.intensity || 'medium'}
+            onChange={(e) => updateExercise({ intensity: e.target.value as 'low' | 'medium' | 'high' })}
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             disabled={isSubmitting}
           >
-            <option value="">Select intensity</option>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
         </div>
       </div>
-      */}
     </div>
-    
+
   );
 };
