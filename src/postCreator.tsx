@@ -1,15 +1,17 @@
 // src/postCreator.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera } from 'lucide-react';
+import { Camera, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../amplify/data/resource";
-import { PostData, WorkoutPostData, MealPostData, WeightPostData } from './types/posts';
+import { PostData, WorkoutPostData, MealPostData, WeightPostData, PostType } from './types/posts';
 import { useUser } from './userContext';
 import { useDataVersion } from './dataVersionContext';
 import { uploadImageWithThumbnails } from './utils/imageUploadUtils';
 import { WorkoutForm } from './components/PostForms/WorkoutForm';
 import { MealForm } from './components/PostForms/MealForm';
 import { WeightForm } from './components/PostForms/WeightForm';
+import { StepIndicator } from './components/StepIndicator/StepIndicator';
+import { PostTypeSelector } from './components/PostTypeSelector/PostTypeSelector';
 import { listChallenges } from './challengeOperations';
 import { validateChallengePost, ValidatePostContext } from './challengeRules';
 import { getChallengeStyle } from './styles/challengeStyles';
@@ -37,10 +39,12 @@ interface ChallengeSelectability {
 const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const { userId, userAttributes } = useUser();
   const { incrementVersion } = useDataVersion();
-  const [step, setStep] = useState<'initial' | 'details'>('initial');
+  const [step, setStep] = useState<'initial' | 'details' | 'challenges'>('initial');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [analyzingImage, setAnalyzingImage] = useState(false);
+  const [detectedType, setDetectedType] = useState<PostType | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize with a complete workout post data
@@ -177,6 +181,35 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     });
   };
 
+  const handlePostTypeChange = (newType: PostType) => {
+    // When type changes, preserve content and challengeIds but update type-specific data
+    const commonData = {
+      content: postData.content,
+      url: postData.url,
+      challengeIds: postData.challengeIds,
+      smiley: postData.challengeIds.length
+    };
+
+    if (newType === 'meal') {
+      setPostData({
+        type: 'meal',
+        ...commonData,
+        meal: (postData.type === 'meal' ? (postData as MealPostData).meal : { name: '', foods: [], calories: 0, time: '' })
+      } as MealPostData);
+    } else if (newType === 'weight') {
+      setPostData({
+        type: 'weight',
+        ...commonData,
+        weight: (postData.type === 'weight' ? (postData as WeightPostData).weight : { value: 0, unit: 'lbs', time: '' })
+      } as WeightPostData);
+    } else {
+      setPostData({
+        type: 'workout',
+        ...commonData,
+        exercise: (postData.type === 'workout' ? (postData as WorkoutPostData).exercise : { type: '', intensity: 'medium' })
+      } as WorkoutPostData);
+    }
+  };
 
   const handleFileSelect = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -188,24 +221,24 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       setPreviewUrl(url);
 
       try {
-        setLoading(true);
+        setAnalyzingImage(true);
         // Analyze the image
         const analysis = await analyzeImage(selectedFile);
+        setDetectedType(analysis.type);
 
         // Create a new state object based on analysis.type
         setPostData((prevData) => {
           const commonData = {
             content: analysis.suggestedData.content || '',
-            url: prevData.url, // preserve the URL if needed
-            challengeIds: prevData.challengeIds, // keep any selected challenges
-            smiley: prevData.challengeIds.length, // recalc or preserve count
+            url: prevData.url,
+            challengeIds: prevData.challengeIds,
+            smiley: prevData.challengeIds.length,
           };
 
           if (analysis.type === 'meal') {
             return {
               type: 'meal',
               ...commonData,
-              // Ensure that meal is defined
               meal:
                 analysis.suggestedData.meal ?? {
                   name: '',
@@ -217,56 +250,46 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
             return {
               type: 'weight',
               ...commonData,
-              // Ensure that weight is defined
               weight:
                 analysis.suggestedData.weight ?? {
                   value: 0,
-                  unit: 'lbs', // or 'kg' if preferred
-                  time: '', // you may want to set a default or current timestamp
+                  unit: 'lbs',
+                  time: '',
                 },
             } as WeightPostData;
           } else {
-            // default to workout
             return {
               type: 'workout',
               ...commonData,
-              // Ensure that exercise is defined (if required by your union)
               exercise:
                 analysis.suggestedData.exercise ?? {
                   type: '',
-                  intensity: 'medium', // adjust default intensity as needed
+                  intensity: 'medium',
                 },
             } as WorkoutPostData;
           }
         });
       } catch (error) {
         console.error('Error analyzing image:', error);
-        // Optionally, default to workout type if analysis fails
+        // Default to workout type if analysis fails
+        setDetectedType('workout');
       } finally {
-        setLoading(false);
+        setAnalyzingImage(false);
         setStep('details');
       }
     }
   };
 
-
-  /*
-  const handleRemoveImage = () => {
+  const handleChangePhoto = () => {
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
     setFile(null);
     setPreviewUrl(null);
+    setDetectedType(undefined);
     setStep('initial');
-    setPostData({
-      type: 'workout',
-      content: '',
-      url: '',
-      challengeIds: [],
-      smiley: 0
-    });
+    // Keep the content and form data in case user wants to reuse it
   };
-  */
 
   const toggleChallenge = (challengeId: string) => {
     const selectability = challengeSelectability[challengeId];
@@ -280,7 +303,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       return {
         ...prev,
         challengeIds: newChallengeIds,
-        smiley: newChallengeIds.length, // update smiley with the count
+        smiley: newChallengeIds.length,
       };
     });
   };
@@ -297,7 +320,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       // Validate selected challenges
       if (postData.challengeIds.length > 0) {
         const validationContext: ValidatePostContext = {
-          challengeId: postData.challengeIds[0], // Validate first challenge
+          challengeId: postData.challengeIds[0],
           userId,
           postId: 'pending',
           timestamp: new Date().toISOString(),
@@ -357,25 +380,17 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       if (postData.type === 'weight' && (postData as WeightPostData).weight?.value) {
         try {
           const weightValue = (postData as WeightPostData).weight.value;
-
-          // Import the utility function
           const { updateUserWeightInChallenges } = await import('./utils/updateChallengeWeight');
-
-          // Update weight in all weight-tracking challenges
           await updateUserWeightInChallenges(userId, weightValue);
         } catch (weightError) {
           console.error('Error updating weight in challenges:', weightError);
-          // Continue with the post submission even if weight update fails
         }
       }
 
       // If this is a workout post linked to specific challenges, increment workout counts
       if (postData.type === 'workout' && postData.challengeIds.length > 0) {
         try {
-          // Import the utility function
           const { incrementWorkoutCount } = await import('./utils/updateChallengeWeight');
-
-          // Update workout count for each challenge
           await Promise.all(
             postData.challengeIds.map(challengeId =>
               incrementWorkoutCount(userId, challengeId)
@@ -383,7 +398,6 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
           );
         } catch (workoutError) {
           console.error('Error updating workout counts:', workoutError);
-          // Continue with the post submission even if workout update fails
         }
       }
 
@@ -397,6 +411,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
       });
       setFile(null);
       setPreviewUrl(null);
+      setDetectedType(undefined);
       setStep('initial');
       incrementVersion();
       onSuccess();
@@ -440,66 +455,73 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     }
   };
 
+  const renderChallengeSelection = () => {
+    if (availableChallenges.length === 0) return null;
 
-  const renderChallengeSelection = () => (
-    <div className="mt-4">
-      <h3 className="text-sm font-medium text-gray-700 mb-2">Tag Your Challenges</h3>
-      <div className="flex flex-wrap gap-2">
-        {availableChallenges.map(challenge => {
-          const selectability = challengeSelectability[challenge.id];
-          const isSelected = postData.challengeIds.includes(challenge.id);
-          const style = getChallengeStyle(
-            challenge.challengeType,
-            isSelected ? 'selected' : !selectability?.canSelect ? 'disabled' : 'default'
-          );
+    return (
+      <div className="mt-6 pt-6 border-t border-gray-200">
+        <h3 className="text-sm font-medium text-gray-700 mb-3">
+          Tag Challenges <span className="text-gray-500 font-normal">(optional)</span>
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {availableChallenges.map(challenge => {
+            const selectability = challengeSelectability[challenge.id];
+            const isSelected = postData.challengeIds.includes(challenge.id);
+            const style = getChallengeStyle(
+              challenge.challengeType,
+              isSelected ? 'selected' : !selectability?.canSelect ? 'disabled' : 'default'
+            );
 
-          // Get style which includes the icon component
-          const IconComponent = style.icon;
+            const IconComponent = style.icon;
 
-          return (
-            <div key={challenge.id} className="relative group">
-              <button
-                onClick={() => selectability?.canSelect && toggleChallenge(challenge.id)}
-                disabled={!selectability?.canSelect}
-                className={`
-                  flex items-center gap-2 px-3 py-2 rounded-full
-                  transition-colors duration-200 relative z-10
-                `}
-                style={{
-                  backgroundColor: style.bgColor,
-                  borderColor: style.borderColor,
-                  color: style.textColor,
-                  opacity: style.opacity
-                }}
-              >
-                <IconComponent size={16} />
-                <span className="text-sm font-medium">{challenge.title}</span>
-              </button>
-
-              {!selectability?.canSelect && selectability?.reason && (
-                <div
-                  className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20"
+            return (
+              <div key={challenge.id} className="relative group">
+                <button
+                  type="button"
+                  onClick={() => selectability?.canSelect && toggleChallenge(challenge.id)}
+                  disabled={!selectability?.canSelect}
+                  className={`
+                    flex items-center gap-2 px-3 py-2 rounded-full
+                    transition-colors duration-200 relative z-10
+                  `}
+                  style={{
+                    backgroundColor: style.bgColor,
+                    borderColor: style.borderColor,
+                    color: style.textColor,
+                    opacity: style.opacity
+                  }}
                 >
-                  {selectability.reason}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+                  <IconComponent size={16} />
+                  <span className="text-sm font-medium">{challenge.title}</span>
+                </button>
 
+                {!selectability?.canSelect && selectability?.reason && (
+                  <div
+                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20"
+                  >
+                    {selectability.reason}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Step 1: Image Selection
   if (step === 'initial') {
     return (
-      <div className="p-4 bg-white rounded-lg shadow">
+      <div className="p-4 bg-white rounded-lg">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Create Post</h2>
         <div
-          className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors"
+          className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
           onClick={() => fileInputRef.current?.click()}
         >
-          <Camera className="mx-auto h-12 w-12 text-gray-400" />
-          <p className="mt-2 text-sm font-medium text-gray-900">Share your progress</p>
-          <p className="mt-1 text-xs text-gray-500">Click to select a picture</p>
+          <Camera className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+          <p className="text-base font-medium text-gray-900 mb-1">Share your progress</p>
+          <p className="text-sm text-gray-500">Click to select a photo</p>
         </div>
         <input
           type="file"
@@ -512,10 +534,31 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     );
   }
 
+  // Step 2 & 3: Details and Challenges (combined for better UX)
+  const currentStepNumber = step === 'details' ? 2 : 3;
+  const steps = ['Photo', 'Details', 'Review'];
+
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white rounded-lg">
       <div className="p-4">
-        {/* Preview Image */}
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Create Post</h2>
+
+        {/* Step Indicator */}
+        <StepIndicator
+          currentStep={currentStepNumber}
+          totalSteps={2}
+          steps={['Photo', 'Details']}
+        />
+
+        {/* Analyzing Image Overlay */}
+        {analyzingImage && (
+          <div className="mb-4 flex items-center justify-center py-8 bg-blue-50 rounded-lg border border-blue-200">
+            <Loader2 className="animate-spin h-6 w-6 text-blue-600 mr-3" />
+            <span className="text-blue-900 font-medium">Analyzing your image...</span>
+          </div>
+        )}
+
+        {/* Image Preview with Change Button */}
         <div className="relative mb-4">
           {previewUrl && (
             <>
@@ -524,31 +567,55 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
                 alt="Preview"
                 className="w-full h-64 object-cover rounded-lg"
               />
+              <button
+                type="button"
+                onClick={handleChangePhoto}
+                className="absolute top-2 right-2 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium shadow-md transition-all flex items-center gap-2"
+                disabled={loading}
+              >
+                <ImageIcon size={16} />
+                Change Photo
+              </button>
             </>
           )}
         </div>
 
-        {/* Challenge Selection */}
-        {renderChallengeSelection()}
+        {!analyzingImage && (
+          <>
+            {/* Post Type Selector */}
+            <PostTypeSelector
+              selectedType={postData.type}
+              detectedType={detectedType}
+              onChange={handlePostTypeChange}
+              disabled={loading}
+            />
 
-        {/* Form Section */}
-        {renderForm()}
+            {/* Form Section - Description and Type-Specific Fields */}
+            {renderForm()}
+
+            {/* Challenge Selection - Moved to end */}
+            {renderChallengeSelection()}
+          </>
+        )}
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+        <div className="flex justify-between gap-3 mt-6 pt-4 border-t">
           <button
-            onClick={() => setStep('initial')}
+            type="button"
+            onClick={handleChangePhoto}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            disabled={loading}
+            disabled={loading || analyzingImage}
           >
-            Cancel
+            Back
           </button>
           <button
+            type="button"
             onClick={handleSubmit}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            disabled={loading}
+            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            disabled={loading || analyzingImage}
           >
-            {loading ? 'Posting...' : 'Share'}
+            {loading && <Loader2 className="animate-spin h-4 w-4" />}
+            {loading ? 'Posting...' : 'Share Post'}
           </button>
         </div>
       </div>

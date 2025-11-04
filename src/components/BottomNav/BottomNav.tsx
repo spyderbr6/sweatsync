@@ -10,7 +10,6 @@ const BottomNav: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { openPostModal } = usePostCreation();
-    const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const { userId } = useUser();
@@ -91,21 +90,6 @@ const BottomNav: React.FC = () => {
                 onUnreadCountChange={setUnreadCount}
                 onRequestClose={() => setShowNotifications(false)}
             />}
-            {/* Placeholder Health Modal */}
-            {isHealthModalOpen && (
-                <div className="modal-overlay" onClick={() => setIsHealthModalOpen(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h2>Coming Soon!</h2>
-                        <p>Health tracking features are under development.</p>
-                        <button
-                            onClick={() => setIsHealthModalOpen(false)}
-                            className="modal-close-button"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
-            )}
         </>
     );
 };
