@@ -1,6 +1,6 @@
 // src/postCreator.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Camera, Loader2, Image as ImageIcon } from 'lucide-react';
 import { generateClient } from "aws-amplify/api";
 import type { Schema } from "../amplify/data/resource";
 import { PostData, WorkoutPostData, MealPostData, WeightPostData, PostType } from './types/posts';
@@ -39,7 +39,7 @@ interface ChallengeSelectability {
 const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
   const { userId, userAttributes } = useUser();
   const { incrementVersion } = useDataVersion();
-  const [step, setStep] = useState<'initial' | 'details' | 'challenges'>('initial');
+  const [step, setStep] = useState<'initial' | 'details'>('initial');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -534,10 +534,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
     );
   }
 
-  // Step 2 & 3: Details and Challenges (combined for better UX)
-  const currentStepNumber = step === 'details' ? 2 : 3;
-  const steps = ['Photo', 'Details', 'Review'];
-
+  // Step 2: Details (combined with challenges for better UX)
   return (
     <div className="bg-white rounded-lg">
       <div className="p-4">
@@ -545,7 +542,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ onSuccess, onError }) => {
 
         {/* Step Indicator */}
         <StepIndicator
-          currentStep={currentStepNumber}
+          currentStep={2}
           totalSteps={2}
           steps={['Photo', 'Details']}
         />
